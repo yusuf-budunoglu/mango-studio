@@ -1,0 +1,28 @@
+# motion-studio
+
+Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu editörü.
+
+## Komutlar
+- `npm run dev` — geliştirme sunucusu
+- `npm test` — motor testleri (Vitest)
+- `npx tsc -b` — tip kontrolü
+- `npx oxlint src` — lint
+
+## Mimari
+- `src/engine/types.ts` — proje formatı (Project → Layer → Block). Editör, motor, şablonlar ve ileride MCP bu formatı paylaşır. **Formatı değiştirmeden önce sor.**
+- `src/engine/evaluate.ts` — `evaluate(project, t)`: saf fonksiyon, aynı `t` için hep aynı sonucu vermeli. Önizleme ve video çıktısı bunu kullanır.
+- `src/engine/presets.ts` — animasyon blokları. Yeni blok = buraya bir kayıt + test.
+- `src/engine/easing.ts` — hız eğrileri (`motion` paketinden).
+- `src/store/projectStore.ts` — Zustand + zundo. Proje değişiklikleri sadece store aksiyonlarıyla yapılır (geri alma buna bağlı). Oynatma zamanı ayrı store'da, geri almaya girmez.
+- `src/components/Stage.tsx` — React Three Fiber önizleme. Her karede `evaluate` çalışır, React yeniden çizilmez.
+- `src/components/LayerPanel.tsx` — katman ekleme/düzenleme; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
+- `src/export/` — MP4 çıktısı (Mediabunny + WebCodecs). `bridge.ts` Canvas içindeki sahneyle bağlantı; kareler `advance()` ile tek tek çizilir. Metin (troika) worker'da hazırlandığı için kare yakalamadan önce `pendingTextSyncs` beklenir.
+- `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Blok = timeline aksiyonu; çakışan bloklar şeritlere bölünür.
+
+## Test
+- Geliştirme modunda `window.__stores` (project, playback) tarayıcı otomasyon testleri için açık.
+
+## Kurallar
+- GSAP kullanma (lisansı kodsuz animasyon araçlarını yasaklıyor).
+- Raylight'tan kod, şablon veya asset kopyalama.
+- Yeni blok ya da eğri eklerken `evaluate.test.ts`'e test ekle.

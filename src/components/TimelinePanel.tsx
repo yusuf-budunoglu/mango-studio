@@ -1,0 +1,150 @@
+import { Timeline } from '@xzdarcy/react-timeline-editor'
+import type { TimelineEditor, TimelineState } from '@xzdarcy/react-timeline-editor'
+import '@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { EASINGS } from '../engine/easing'
+import { PRESETS } from '../engine/presets'
+import type { Block } from '../engine/types'
+import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
+
+type TimelineRow = TimelineEditor['editorData'][number]
+
+const ROW_HEIGHT = 34
+const LANE_SEP = '::'
+const trackIdOf = (rowId: string) => rowId.split(LANE_SEP)[0]
+
+/** Çakışmayan blokları aynı şeride koyar, çakışanlar için yeni şerit açar. */
+function splitIntoLanes(blocks: Block[]): Block[][] {
+  const lanes: Block[][] = []
+  const laneEnds: number[] = []
+  for (const b of [...blocks].sort((x, y) => x.start - y.start)) {
+    let lane = laneEnds.findIndex((end) => end <= b.start + 1e-6)
+    if (lane === -1) {
+      lane = lanes.length
+      lanes.push([])
+    }
+    lanes[lane].push(b)
+    laneEnds[lane] = b.start + b.duration
+  }
+  return lanes.length ? lanes : [[]]
+}
+
+const EFFECTS = Object.fromEntries(Object.entries(PRESETS).map(([id, p]) => [id, { id, name: p.label }]))
+
+interface Props {
+  timelineRef: RefObject<TimelineState | null>
+  selectedTrackId: string
+  onSelectTrack: (id: string) => void
+}
+
+export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: Props) {
+  const project = useProjectStore((s) => s.project)
+  const selectedBlockId = useProjectStore((s) => s.selectedBlockId)
+  const selectBlock = useProjectStore((s) => s.selectBlock)
+  const setBlockTimes = useProjectStore((s) => s.setBlockTimes)
+  const setTime = usePlaybackStore((s) => s.setTime)
+  const setPlaying = usePlaybackStore((s) => s.setPlaying)
+
+  const namesRef = useRef<HTMLDivElement>(null)
+  const tracks = useMemo(() => [...project.layers, project.camera], [project])
+  const trackLanes = useMemo(() => tracks.map((track) => ({ track, lanes: splitIntoLanes(track.blocks) })), [tracks])
+
+  // Proje verisi → timeline'ın beklediği satır/aksiyon formatı. Her blok bir aksiyon;
+  // bir katmanın çakışan blokları alt alta ayrı satırlara (şeritlere) dağıtılır.
+  const editorData: TimelineRow[] = useMemo(
+    () =>
+      trackLanes.flatMap(({ track, lanes }) =>
+        lanes.map((blocks, lane) => ({
+          id: `${track.id}${LANE_SEP}${lane}`,
+          selected: track.id === selectedTrackId,
+          actions: blocks.map((b) => ({
+            id: b.id,
+            start: b.start,
+            end: b.start + b.duration,
+            effectId: b.preset,
+            selected: b.id === selectedBlockId,
+          })),
+        })),
+      ),
+    [trackLanes, selectedBlockId, selectedTrackId],
+  )
+
+  // Timeline kendi saatini çalıştırıyor; zamanı oradan önizlemeye aktarıyoruz.
+  useEffect(() => {
+    const listener = timelineRef.current?.listener
+    if (!listener) return
+    const onTime = ({ time }: { time: number }) => setTime(time)
+    const onPlay = () => setPlaying(true)
+    const onStop = () => setPlaying(false)
+    listener.on('setTimeByTick', onTime)
+    listener.on('afterSetTime', onTime)
+    listener.on('play', onPlay)
+    listener.on('paused', onStop)
+    listener.on('ended', onStop)
+    return () => {
+      listener.off('setTimeByTick', onTime)
+      listener.off('afterSetTime', onTime)
+      listener.off('play', onPlay)
+      listener.off('paused', onStop)
+      listener.off('ended', onStop)
+    }
+  }, [timelineRef, setTime, setPlaying])
+
+  return (
+    <div className="timeline-panel">
+      <div className="track-names" ref={namesRef}>
+        {trackLanes.map(({ track: t, lanes }) => (
+          <button
+            key={t.id}
+            type="button"
+            className={`track-name ${t.id === selectedTrackId ? 'is-selected' : ''}`}
+            style={{ height: ROW_HEIGHT * lanes.length }}
+            onClick={() => onSelectTrack(t.id)}
+          >
+            <span className="track-kind">{t.id === 'camera' ? '🎥' : 'kind' in t && t.kind === 'phone' ? '📱' : 'T'}</span>
+            {t.name}
+          </button>
+        ))}
+      </div>
+      <Timeline
+        ref={timelineRef}
+        editorData={editorData}
+        effects={EFFECTS}
+        scale={1}
+        scaleSplitCount={10}
+        scaleWidth={120}
+        startLeft={16}
+        rowHeight={ROW_HEIGHT}
+        minScaleCount={Math.ceil(project.duration) + 1}
+        gridSnap
+        dragLine
+        autoScroll
+        onScroll={({ scrollTop }) => {
+          if (namesRef.current) namesRef.current.scrollTop = scrollTop
+        }}
+        style={{ width: '100%', height: '100%' }}
+        onChange={(rows) => {
+          const times: Record<string, { start: number; end: number }> = {}
+          for (const row of rows) for (const a of row.actions) times[a.id] = { start: a.start, end: a.end }
+          setBlockTimes(times)
+        }}
+        onClickActionOnly={(_e, { action, row }) => {
+          selectBlock(action.id)
+          onSelectTrack(trackIdOf(row.id))
+        }}
+        onClickRow={(_e, { row }) => onSelectTrack(trackIdOf(row.id))}
+        getActionRender={(action) => {
+          const found = findBlock(project, action.id)
+          const preset = PRESETS[action.effectId]
+          const easing = found?.block.easing ?? preset?.defaultEasing
+          return (
+            <div className={`block block--${preset?.category ?? 'x'} ${action.selected ? 'is-selected' : ''}`}>
+              <span className="block-name">{preset?.label ?? action.effectId}</span>
+              <span className="block-easing">{easing ? EASINGS[easing]?.label : ''}</span>
+            </div>
+          )
+        }}
+      />
+    </div>
+  )
+}
