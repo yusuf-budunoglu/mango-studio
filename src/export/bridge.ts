@@ -5,6 +5,11 @@ export interface ExportBridge {
   begin: (width: number, height: number) => () => void
   /** Mevcut oynatma zamanına göre bir kare çizer. */
   renderFrame: () => void
+  /**
+   * Tutamaç ve kılavuz gibi düzenleme yardımcılarını anında gizler/gösterir (React çizimi
+   * beklemeden). Küçük resim gibi tek karelik yakalamalar kullanıcının sürüklemesini kesmesin diye.
+   */
+  setHelpersVisible: (visible: boolean) => void
 }
 
 export const exportBridge: { current: ExportBridge | null } = { current: null }

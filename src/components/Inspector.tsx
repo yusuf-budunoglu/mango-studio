@@ -7,9 +7,10 @@ import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectSt
 import { LayerPanel } from './LayerPanel'
 import { ProjectSettings } from './ProjectSettings'
 
-export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId: string; onSelectTrack: (id: string) => void }) {
+export function Inspector() {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
+  const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
   const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
   const updateBlock = useProjectStore((s) => s.updateBlock)
   const removeBlocks = useProjectStore((s) => s.removeBlocks)
@@ -27,7 +28,7 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
 
   return (
     <aside className="inspector">
-      <LayerPanel selectedTrackId={selectedTrackId} onSelectTrack={onSelectTrack} />
+      <LayerPanel />
 
       <section>
         <h2>{t('block.addTitle')}</h2>

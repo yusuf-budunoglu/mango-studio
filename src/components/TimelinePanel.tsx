@@ -37,14 +37,14 @@ const EFFECTS = Object.fromEntries(Object.keys(PRESETS).map((id) => [id, { id }]
 
 interface Props {
   timelineRef: RefObject<TimelineState | null>
-  selectedTrackId: string
-  onSelectTrack: (id: string) => void
 }
 
-export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: Props) {
+export function TimelinePanel({ timelineRef }: Props) {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
   const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
+  const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
+  const onSelectTrack = useProjectStore((s) => s.selectTrack)
   const selectBlock = useProjectStore((s) => s.selectBlock)
   const setBlockTimes = useProjectStore((s) => s.setBlockTimes)
   const setTime = usePlaybackStore((s) => s.setTime)

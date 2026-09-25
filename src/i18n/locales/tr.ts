@@ -28,6 +28,14 @@ const tr: Translation = {
     newer: 'Bu proje motion-studio’nun daha yeni bir sürümüyle kaydedilmiş. Açmak için uygulamayı güncelleyin.',
     rewind: 'Başa sar (Home)',
     playPause: 'Oynat / durdur (boşluk)',
+    tools: {
+      label: 'Önizleme araçları',
+      move: 'Taşı (W)',
+      rotate: 'Döndür (E)',
+      scale: 'Ölçekle (R)',
+      snap: 'Ortaya ve diğer katmanlara yapış',
+      guides: 'Güvenli alan kılavuzları',
+    },
     timeOf: '/ {{duration}} sn',
   },
   exportVideo: {

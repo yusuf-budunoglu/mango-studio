@@ -1,5 +1,6 @@
 import type { TimelineState } from '@xzdarcy/react-timeline-editor'
 import { useEffect, useRef, useState } from 'react'
+import { Grid2x2, Magnet, Move, RotateCw, Scaling } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useStore } from 'zustand'
 import { navigate } from '../router'
@@ -11,9 +12,41 @@ import { TimelinePanel } from '../components/TimelinePanel'
 import { NewerProjectVersionError } from '../engine/migrate'
 import { repository } from '../persistence/repository'
 import { downloadText, renderThumbnail, safeFileName } from '../persistence/thumbnail'
+import { useEditorStore, type TransformMode } from '../store/editorStore'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 type SaveStatus = 'saved' | 'pending' | 'saving' | 'error'
+
+const TOOLS: { mode: TransformMode; key: string; icon: typeof Move }[] = [
+  { mode: 'translate', key: 'move', icon: Move },
+  { mode: 'rotate', key: 'rotate', icon: RotateCw },
+  { mode: 'scale', key: 'scale', icon: Scaling },
+]
+
+/** Önizleme araçları: tutamaç modu, yapışma, güvenli alan kılavuzları. */
+function StageTools() {
+  const { t } = useTranslation()
+  const mode = useEditorStore((s) => s.transformMode)
+  const snapping = useEditorStore((s) => s.snapping)
+  const showGuides = useEditorStore((s) => s.showGuides)
+  const { setTransformMode, toggleSnapping, toggleGuides } = useEditorStore.getState()
+  return (
+    <div className="stage-tools" role="toolbar" aria-label={t('editor.tools.label')}>
+      {TOOLS.map(({ mode: m, key, icon: Icon }) => (
+        <button key={m} type="button" className={mode === m ? 'is-on' : ''} aria-pressed={mode === m} onClick={() => setTransformMode(m)} title={t(`editor.tools.${key}`)} aria-label={t(`editor.tools.${key}`)}>
+          <Icon size={15} strokeWidth={1.75} />
+        </button>
+      ))}
+      <span className="tool-sep" />
+      <button type="button" className={snapping ? 'is-on' : ''} aria-pressed={snapping} onClick={toggleSnapping} title={t('editor.tools.snap')} aria-label={t('editor.tools.snap')}>
+        <Magnet size={15} strokeWidth={1.75} />
+      </button>
+      <button type="button" className={showGuides ? 'is-on' : ''} aria-pressed={showGuides} onClick={toggleGuides} title={t('editor.tools.guides')} aria-label={t('editor.tools.guides')}>
+        <Grid2x2 size={15} strokeWidth={1.75} />
+      </button>
+    </div>
+  )
+}
 
 function TimeDisplay({ duration }: { duration: number }) {
   const { t } = useTranslation()
@@ -32,12 +65,19 @@ function useAutosave(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
     let timer: ReturnType<typeof setTimeout> | undefined
+    // Küçük resim her kayıtta değil, en fazla 20 saniyede bir yenilenir (bir kare çizmek gerekiyor).
+    let lastThumbnailAt = Date.now()
     const save = async () => {
       timer = undefined
       setStatus('saving')
       try {
         const project = useProjectStore.getState().project
-        await repository.save(project, await renderThumbnail(project))
+        let thumbnail: string | undefined
+        if (Date.now() - lastThumbnailAt > 20_000) {
+          thumbnail = await renderThumbnail(project)
+          if (thumbnail) lastThumbnailAt = Date.now()
+        }
+        await repository.save(project, thumbnail)
         setStatus('saved')
       } catch {
         setStatus('error')
@@ -65,7 +105,6 @@ export function Editor({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const timelineRef = useRef<TimelineState>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'newer'>('loading')
-  const [selectedTrackId, setSelectedTrackId] = useState('')
   const project = useProjectStore((s) => s.project)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const canUndo = useStore(useProjectStore.temporal, (s) => s.pastStates.length > 0)
@@ -82,7 +121,6 @@ export function Editor({ projectId }: { projectId: string }) {
       }
       useProjectStore.getState().loadProject(loaded)
       usePlaybackStore.getState().setTime(0)
-      setSelectedTrackId(loaded.layers[0]?.id ?? 'camera')
       setState('ready')
       // Şablondan yeni açılmış projenin henüz küçük resmi yok; sahne çizildikten sonra üret.
       setTimeout(() => {
@@ -98,6 +136,15 @@ export function Editor({ projectId }: { projectId: string }) {
       alive = false
     }
   }, [projectId])
+
+  // Projelere dönerken kartın küçük resmini son hale getir (kayıt zaten otomatik).
+  const leaveToVideos = async () => {
+    timelineRef.current?.pause()
+    const current = useProjectStore.getState().project
+    const thumbnail = await renderThumbnail(current).catch(() => undefined)
+    if (thumbnail) await repository.setThumbnail(current.id, thumbnail).catch(() => undefined)
+    navigate({ screen: 'videos' })
+  }
 
   const togglePlay = () => {
     const tl = timelineRef.current
@@ -151,8 +198,11 @@ export function Editor({ projectId }: { projectId: string }) {
         handled()
         const step = e.shiftKey ? 1 : 0.1
         store.nudgeBlocks(selected, e.key === 'ArrowLeft' ? -step : step)
+      } else if (!mod && (key === 'w' || key === 'e' || key === 'r')) {
+        useEditorStore.getState().setTransformMode(key === 'w' ? 'translate' : key === 'e' ? 'rotate' : 'scale')
       } else if (e.key === 'Escape') {
         store.selectBlock(null)
+        store.selectTrack('')
       } else if (e.key === 'Home') {
         seek(0)
       }
@@ -178,7 +228,7 @@ export function Editor({ projectId }: { projectId: string }) {
   return (
     <div className="app">
       <header className="topbar">
-        <button type="button" className="back" onClick={() => navigate({ screen: 'videos' })} title={t('topbar.backToProjectsTitle')}>
+        <button type="button" className="back" onClick={() => void leaveToVideos()} title={t('topbar.backToProjectsTitle')}>
           {t('topbar.backToProjects')}
         </button>
         <div className="brand">
@@ -209,6 +259,7 @@ export function Editor({ projectId }: { projectId: string }) {
         <div className="stage-wrap">
           <Stage />
           <div className="transport">
+            <StageTools />
             <button type="button" onClick={() => seek(0)} title={t('editor.rewind')}>
               ⏮
             </button>
@@ -218,10 +269,10 @@ export function Editor({ projectId }: { projectId: string }) {
             <TimeDisplay duration={project.duration} />
           </div>
         </div>
-        <Inspector selectedTrackId={selectedTrackId} onSelectTrack={setSelectedTrackId} />
+        <Inspector />
       </main>
 
-      <TimelinePanel timelineRef={timelineRef} selectedTrackId={selectedTrackId} onSelectTrack={setSelectedTrackId} />
+      <TimelinePanel timelineRef={timelineRef} />
     </div>
   )
 }

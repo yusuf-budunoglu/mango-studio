@@ -1,15 +1,18 @@
 import type { Project } from '../engine/types'
 import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
+import { manualDrag } from '../store/editorStore'
 import { usePlaybackStore } from '../store/projectStore'
 
 /**
  * Proje kartı için küçük resim: videonun başı genelde boş olduğundan sahne kısa süreliğine
- * temsili bir ana (sürenin %60'ı) alınıp çizilir, sonra kaldığı yere döner.
+ * temsili bir ana (sürenin %60'ı) alınıp çizilir, sonra kaldığı yere döner. Oynatma ya da
+ * elle sürükleme sürerken hiç denenmez; tutamaç o kare için anında gizlenir, kaldırılmaz.
  */
 export async function renderThumbnail(project: Project): Promise<string | undefined> {
   const bridge = exportBridge.current
-  if (!bridge || usePlaybackStore.getState().isPlaying || renderTimeOverride.current !== null) return undefined
+  if (!bridge || usePlaybackStore.getState().isPlaying || manualDrag.layerId || renderTimeOverride.current !== null) return undefined
   renderTimeOverride.current = Math.min(project.duration * 0.6, 4)
+  bridge.setHelpersVisible(false)
   try {
     bridge.renderFrame()
     if (pendingTextSyncs.size) {
@@ -19,6 +22,7 @@ export async function renderThumbnail(project: Project): Promise<string | undefi
     return captureThumbnail()
   } finally {
     renderTimeOverride.current = null
+    bridge.setHelpersVisible(true)
     bridge.renderFrame()
   }
 }

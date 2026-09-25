@@ -27,6 +27,14 @@ const en = {
     newer: 'This project was saved by a newer version of motion-studio. Update the app to open it.',
     rewind: 'Rewind (Home)',
     playPause: 'Play / pause (Space)',
+    tools: {
+      label: 'Preview tools',
+      move: 'Move (W)',
+      rotate: 'Rotate (E)',
+      scale: 'Scale (R)',
+      snap: 'Snap to center and other layers',
+      guides: 'Safe-area guides',
+    },
     timeOf: '/ {{duration}} s',
   },
   exportVideo: {

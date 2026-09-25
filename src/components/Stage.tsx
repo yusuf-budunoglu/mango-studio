@@ -1,12 +1,14 @@
-import { RoundedBox, Text } from '@react-three/drei'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Line, RoundedBox, Text, TransformControls } from '@react-three/drei'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type PerspectiveCamera, type Texture } from 'three'
+import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type Object3D, type PerspectiveCamera, type Texture } from 'three'
 import { displayText, evaluate } from '../engine/evaluate'
+import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
 import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
 import { fontUrl } from '../render/fonts'
+import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 // troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
@@ -19,11 +21,22 @@ interface TroikaText extends Mesh {
 type Applier = (state: LayerState) => void
 type Register = (id: string, fn: Applier) => void
 
-function applyTransform(group: Group, s: LayerState) {
+function applyTransform(group: Group, s: LayerState, layerId: string) {
+  group.visible = s.opacity > 0.001 && s.scale > 0.001
+  // Elle sürüklenen katmanın konumunu sürükleme bitene kadar tutamaç belirler.
+  if (manualDrag.layerId === layerId) return
   group.position.set(s.x, s.y, s.z)
   group.rotation.set(s.rotX, s.rotY, s.rotZ)
   group.scale.setScalar(Math.max(0.0001, s.scale))
-  group.visible = s.opacity > 0.001 && s.scale > 0.001
+}
+
+/** Önizlemede tıklayınca katmanı seçer. Görünmeyen katman tıklamayı arkasındakine bırakır. */
+function selectOnClick(layerId: string) {
+  return (e: ThreeEvent<MouseEvent>) => {
+    if (!e.eventObject.visible) return
+    e.stopPropagation()
+    useProjectStore.getState().selectTrack(layerId)
+  }
 }
 
 /** Grubun tüm malzemelerinin opaklığını, her malzemenin kendi temel opaklığıyla çarparak ayarlar. */
@@ -63,7 +76,7 @@ function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: 
   useLayoutEffect(() => {
     register(layer.id, (s) => {
       if (!group.current || !text.current) return
-      applyTransform(group.current, s)
+      applyTransform(group.current, s, layer.id)
       const str = displayText(layer, s, numberLocale)
       text.current.fillOpacity = s.opacity
       if (text.current.text !== str) {
@@ -82,7 +95,7 @@ function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: 
   })
 
   return (
-    <group ref={group}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
       <Text
         ref={text}
         font={fontUrl(layer.fontFamily, layer.fontWeight)}
@@ -108,13 +121,13 @@ function PhoneLayer({ layer, register }: { layer: Layer; register: Register }) {
   useLayoutEffect(() => {
     register(layer.id, (s) => {
       if (!group.current) return
-      applyTransform(group.current, s)
+      applyTransform(group.current, s, layer.id)
       applyOpacity(group.current, s.opacity)
     })
   })
 
   return (
-    <group ref={group}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
       <RoundedBox args={[1.7, 3.4, 0.16]} radius={0.16} smoothness={6}>
         <meshStandardMaterial color="#15171c" metalness={0.7} roughness={0.25} />
       </RoundedBox>
@@ -153,13 +166,13 @@ function ImageLayer({ layer, register }: { layer: Layer; register: Register }) {
   useLayoutEffect(() => {
     register(layer.id, (s) => {
       if (!group.current) return
-      applyTransform(group.current, s)
+      applyTransform(group.current, s, layer.id)
       applyOpacity(group.current, s.opacity)
     })
   })
 
   return (
-    <group ref={group}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
       <mesh>
         <planeGeometry args={[width, height]} />
         {image ? (
@@ -177,15 +190,106 @@ function ShapeLayer({ layer, register }: { layer: Layer; register: Register }) {
   useLayoutEffect(() => {
     register(layer.id, (s) => {
       if (!group.current) return
-      applyTransform(group.current, s)
+      applyTransform(group.current, s, layer.id)
       applyOpacity(group.current, s.opacity)
     })
   })
   return (
-    <group ref={group}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
       <RoundedBox args={[1, 1, 0.2]} radius={0.1}>
         <meshStandardMaterial color={layer.color} />
       </RoundedBox>
+    </group>
+  )
+}
+
+const SNAP_THRESHOLD = 0.12
+/** Tutamaç ve kılavuzların toplandığı grup; tek karelik yakalamalarda gizlenir. */
+const EDITOR_HELPERS = 'editor-helpers'
+const GUIDE_COLOR = '#ff4fd8'
+
+/**
+ * Seçili katmana taşı / döndür / ölçekle tutamacı. Bırakınca sonuç, animasyon etkisi
+ * korunarak katmanın temel değerlerine yazılır (manualTransformPatch).
+ */
+function LayerGizmo({ project }: { project: Project }) {
+  const selectedId = useProjectStore((s) => s.selectedTrackId)
+  const mode = useEditorStore((s) => s.transformMode)
+  const snapping = useEditorStore((s) => s.snapping)
+  const clean = useEditorStore((s) => s.cleanRenders > 0)
+  const isPlaying = usePlaybackStore((s) => s.isPlaying)
+  const scene = useThree((s) => s.scene)
+  const [target, setTarget] = useState<Object3D | null>(null)
+  // three.js nesneleri değiştirilebilir; tutamaç işlemleri nesneyi her seferinde sahneden bulur.
+  const object = () => (layer ? scene.getObjectByName(`layer:${layer.id}`) : undefined)
+  const [guides, setGuides] = useState<{ x: number | null; y: number | null; z: number } | null>(null)
+  const drag = useRef<{ layer: Layer; evaluated: LayerState; candidates: { x: number[]; y: number[] } } | null>(null)
+  const layer = project.layers.find((l) => l.id === selectedId)
+
+  // Katmanın three.js nesnesi React çiziminden sonra oluşur; o yüzden efektte bulunur.
+  useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect -- three.js sahnesiyle eşitleme: nesne ancak çizimden sonra var.
+    setTarget(layer ? (scene.getObjectByName(`layer:${layer.id}`) ?? null) : null)
+  }, [layer, scene])
+
+  if (!layer || !target || clean || isPlaying) return null
+
+  const onStart = () => {
+    const frame = evaluate(project, usePlaybackStore.getState().time)
+    const others = project.layers.filter((l) => l.id !== layer.id).map((l) => frame.layers[l.id])
+    drag.current = {
+      layer,
+      evaluated: frame.layers[layer.id],
+      // Yapışma çizgileri: ekran ortası ve diğer katmanların o anki konumları.
+      candidates: { x: [0, ...others.map((o) => o.x)], y: [0, ...others.map((o) => o.y)] },
+    }
+    manualDrag.layerId = layer.id
+  }
+
+  const onChange = () => {
+    const d = drag.current
+    const obj = object()
+    if (!d || !obj) return
+    if (mode === 'scale') obj.scale.setScalar(Math.max(0.01, obj.scale.x))
+    if (mode === 'translate' && snapping) {
+      const snapped = snapToGuides(obj.position.x, obj.position.y, d.candidates, SNAP_THRESHOLD)
+      obj.position.x = snapped.x
+      obj.position.y = snapped.y
+      setGuides(snapped.guideX !== null || snapped.guideY !== null ? { x: snapped.guideX, y: snapped.guideY, z: obj.position.z } : null)
+    }
+  }
+
+  const onEnd = () => {
+    const d = drag.current
+    drag.current = null
+    manualDrag.layerId = null
+    manualDrag.releasedAt = performance.now()
+    setGuides(null)
+    const obj = object()
+    if (!d || !obj) return
+    const patch = manualTransformPatch(d.layer, d.evaluated, {
+      position: [obj.position.x, obj.position.y, obj.position.z],
+      rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+      scale: obj.scale.x,
+    })
+    useProjectStore.getState().updateLayer(d.layer.id, patch)
+  }
+
+  return (
+    <group name={EDITOR_HELPERS}>
+      <TransformControls
+        object={target}
+        mode={mode}
+        size={0.8}
+        rotationSnap={snapping ? Math.PI / 12 : null}
+        showY={mode !== 'scale'}
+        showZ={mode !== 'scale'}
+        onMouseDown={onStart}
+        onObjectChange={onChange}
+        onMouseUp={onEnd}
+      />
+      {guides?.x != null && <Line points={[[guides.x, -20, guides.z], [guides.x, 20, guides.z]]} color={GUIDE_COLOR} lineWidth={1} dashed dashSize={0.1} gapSize={0.06} />}
+      {guides?.y != null && <Line points={[[-40, guides.y, guides.z], [40, guides.y, guides.z]]} color={GUIDE_COLOR} lineWidth={1} dashed dashSize={0.1} gapSize={0.06} />}
     </group>
   )
 }
@@ -199,12 +303,21 @@ function ExportBridge() {
   const setDpr = useThree((s) => s.setDpr)
   const size = useThree((s) => s.size)
   const viewport = useThree((s) => s.viewport)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
+
+  // Otomatik tarayıcı testleri için sahneye erişim (sadece geliştirmede).
+  useEffect(() => {
+    if (import.meta.env.DEV) Object.assign(window, { __r3f: { scene, camera, canvas: gl.domElement } })
+  }, [scene, camera, gl])
 
   useEffect(() => {
     exportBridge.current = {
       canvas: gl.domElement,
       begin: (width, height) => {
         const previous = { width: size.width, height: size.height, dpr: viewport.dpr }
+        // Tutamaç ve kılavuzlar videoya girmesin.
+        useEditorStore.getState().beginCleanRender()
         setFrameloop('never')
         setDpr(1)
         setSize(width, height)
@@ -212,14 +325,19 @@ function ExportBridge() {
           setDpr(previous.dpr)
           setSize(previous.width, previous.height)
           setFrameloop('always')
+          useEditorStore.getState().endCleanRender()
         }
       },
       renderFrame: () => advance(performance.now()),
+      setHelpersVisible: (visible) => {
+        const helpers = scene.getObjectByName(EDITOR_HELPERS)
+        if (helpers) helpers.visible = visible
+      },
     }
     return () => {
       exportBridge.current = null
     }
-  }, [gl, advance, setFrameloop, setSize, setDpr, size, viewport.dpr])
+  }, [gl, advance, setFrameloop, setSize, setDpr, size, viewport.dpr, scene])
 
   return null
 }
@@ -267,6 +385,7 @@ function Scene({ project }: { project: Project }) {
         <Bloom intensity={0.7} luminanceThreshold={0.6} mipmapBlur />
         <Vignette darkness={0.55} offset={0.3} />
       </EffectComposer>
+      <LayerGizmo project={project} />
       <ExportBridge />
     </>
   )
@@ -274,15 +393,28 @@ function Scene({ project }: { project: Project }) {
 
 export function Stage() {
   const project = useProjectStore((s) => s.project)
+  const showGuides = useEditorStore((s) => s.showGuides)
   return (
     <div className="stage" style={{ aspectRatio: `${project.width} / ${project.height}` }}>
       <Canvas
         camera={{ position: project.camera.position, fov: project.camera.fov }}
         dpr={[1, 2]}
         gl={{ preserveDrawingBuffer: true }}
+        onPointerMissed={(e) => {
+          // Boşluğa tıklamak seçimi kaldırır; tutamaç sürüklemesinin sonundaki tıklama hariç.
+          if (e.type === 'click' && !gizmoJustReleased()) useProjectStore.getState().selectTrack('')
+        }}
       >
         <Scene project={project} />
       </Canvas>
+      {showGuides && (
+        // Güvenli alanlar: %90 (hareket) ve %80 (metin). HTML katmanı, videoya girmez.
+        <div className="safe-guides" aria-hidden="true">
+          <div className="safe-action" />
+          <div className="safe-title" />
+          <div className="safe-center" />
+        </div>
+      )}
     </div>
   )
 }

@@ -127,8 +127,8 @@ function LayerFields({ layer }: { layer: Layer }) {
   )
 }
 
-export function LayerPanel({ selectedTrackId, onSelectTrack }: { selectedTrackId: string; onSelectTrack: (id: string) => void }) {
-  const layer = useProjectStore((s) => s.project.layers.find((l) => l.id === selectedTrackId))
+export function LayerPanel() {
+  const layer = useProjectStore((s) => s.project.layers.find((l) => l.id === s.selectedTrackId))
   const addLayer = useProjectStore((s) => s.addLayer)
   const { t } = useTranslation()
 
@@ -137,7 +137,7 @@ export function LayerPanel({ selectedTrackId, onSelectTrack }: { selectedTrackId
       <h2>{t('layer.title')}</h2>
       <div className="add-layer">
         {ADDABLE.map((kind) => (
-          <button key={kind} type="button" onClick={() => onSelectTrack(addLayer(kind, +usePlaybackStore.getState().time.toFixed(2)))}>
+          <button key={kind} type="button" onClick={() => addLayer(kind, +usePlaybackStore.getState().time.toFixed(2))}>
             {t(`layer.add.${kind}`)}
           </button>
         ))}

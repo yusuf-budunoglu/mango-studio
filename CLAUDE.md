@@ -15,6 +15,8 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - `src/engine/easing.ts` — hız eğrileri (`motion` paketinden).
 - `src/store/projectStore.ts` — Zustand + zundo. Proje değişiklikleri sadece store aksiyonlarıyla yapılır (geri alma buna bağlı). Oynatma zamanı ayrı store'da, geri almaya girmez.
 - `src/components/Stage.tsx` — React Three Fiber önizleme. Her karede `evaluate` çalışır, React yeniden çizilmez.
+- Önizlemede düzenleme (`Stage.tsx` → `LayerGizmo`): tıklayınca seçim, drei `TransformControls` ile taşı/döndür/ölçekle (W/E/R). Bırakınca `manualTransformPatch` (`src/engine/manualTransform.ts`) animasyon etkisini koruyarak katmanın temel değerlerini günceller. Sürükleme sürerken `manualDrag.layerId` o katmanın motor tarafından ezilmesini engeller. Yardımcılar (`editor-helpers` grubu) video çıktısında kaldırılır, küçük resimde o kare için gizlenir; asla sürükleme sırasında React ile kaldırma.
+- Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
 - `src/components/LayerPanel.tsx` — katman ekleme/düzenleme; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
 - `src/export/` — MP4 çıktısı (Mediabunny + WebCodecs). `bridge.ts` Canvas içindeki sahneyle bağlantı; kareler `advance()` ile tek tek çizilir. Metin (troika) worker'da hazırlandığı için kare yakalamadan önce `pendingTextSyncs` beklenir.
 - `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Blok = timeline aksiyonu; çakışan bloklar şeritlere bölünür. Ctrl+tekerlek ile zoom.
@@ -27,7 +29,7 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Geri alma: zundo `handleSet` 600 ms içindeki ardışık değişiklikleri tek adımda birleştirir; `loadProject` geçmişi sıfırlar.
 
 ## Kısayollar
-Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ 0,1 sn kaydır (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
+Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ 0,1 sn kaydır (Shift: 1 sn) · W/E/R taşı/döndür/ölçekle · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
 
 ## Proje formatı sürümleri
 - `Project.version` ve `PROJECT_VERSION` (`src/engine/types.ts`). Formatı değiştirirken sürümü artır ve `src/engine/migrate.ts`'e bir adım ekle; eski adımları değiştirme. Kayıttan yükleme ve dosyadan içe aktarma `migrateProject`'ten geçer.

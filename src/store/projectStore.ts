@@ -18,6 +18,9 @@ interface ClipboardEntry {
 
 interface ProjectStore {
   project: Project
+  /** Seçili katman id'si, 'camera' ya da seçim yoksa ''. Önizleme, timeline ve panel paylaşır. */
+  selectedTrackId: TrackId
+  selectTrack: (id: TrackId) => void
   /** Seçili bloklar; ilk eleman özellik panelinde gösterilen "birincil" seçimdir. */
   selectedBlockIds: string[]
   selectBlock: (id: string | null, additive?: boolean) => void
@@ -115,6 +118,8 @@ export const useProjectStore = create<ProjectStore>()(
   temporal(
     (set, get) => ({
       project: DEFAULT_TEMPLATE.build(),
+      selectedTrackId: '',
+      selectTrack: (id) => set({ selectedTrackId: id }),
       selectedBlockIds: [],
       selectBlock: (id, additive = false) =>
         set((s) => {
@@ -204,13 +209,14 @@ export const useProjectStore = create<ProjectStore>()(
           id: newId('l'),
           blocks: [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: round(time), duration: 0.8 }],
         }
-        set((s) => ({ project: { ...s.project, layers: [...s.project.layers, layer] } }))
+        set((s) => ({ project: { ...s.project, layers: [...s.project.layers, layer] }, selectedTrackId: layer.id }))
         return layer.id
       },
       removeLayer: (layerId) =>
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.filter((l) => l.id !== layerId) },
           selectedBlockIds: [],
+          selectedTrackId: s.selectedTrackId === layerId ? '' : s.selectedTrackId,
         })),
       updateProject: (patch) =>
         set((s) => ({
@@ -224,7 +230,7 @@ export const useProjectStore = create<ProjectStore>()(
         // Yükleme bir düzenleme sayılmasın: kaydı durdur, yükle, geçmişi temizle.
         const history = useProjectStore.temporal.getState()
         history.pause()
-        set({ project, selectedBlockIds: [] })
+        set({ project, selectedBlockIds: [], selectedTrackId: project.layers[0]?.id ?? 'camera' })
         history.resume()
         history.clear()
       },
