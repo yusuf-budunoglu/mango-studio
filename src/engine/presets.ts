@@ -16,7 +16,7 @@ export interface ParamSpec {
 
 interface PresetBase {
   /** adı ve kategori adı çeviri dosyalarında: `presets.<id>`, `categories.<category>` */
-  category: 'in' | 'out' | 'emphasis' | 'text' | 'camera'
+  category: 'in' | 'out' | 'emphasis' | 'move' | 'text' | 'camera' | 'transition'
   defaultEasing: string
   defaultDuration: number
   /** paneldeki ayarlar; `apply` bunların varsayılanlarla birleşmiş halini alır */
@@ -92,6 +92,24 @@ export const PRESETS: Record<string, Preset> = {
     target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
     apply: (s, e) => { s.textReveal = Math.min(s.textReveal, e) },
   },
+  move: {
+    // Anahtar kare gibi: bulunduğu yerden (öncekilerin bıraktığı yerden) hedefe gider ve orada kalır.
+    target: 'layer', category: 'move', defaultEasing: 'ease-in-out', defaultDuration: 1,
+    params: [
+      { key: 'dx', default: 1, min: -20, max: 20, step: 0.1 },
+      { key: 'dy', default: 0, min: -20, max: 20, step: 0.1 },
+      { key: 'dz', default: 0, min: -20, max: 20, step: 0.1 },
+      { key: 'rotate', default: 0, min: -720, max: 720, step: 5 },
+      { key: 'scaleBy', default: 1, min: 0.05, max: 10, step: 0.05 },
+    ],
+    apply: (s, e, _p, { dx, dy, dz, rotate, scaleBy }) => {
+      s.x += dx * e
+      s.y += dy * e
+      s.z += dz * e
+      s.rotZ += rotate * DEG * e
+      s.scale *= 1 + (scaleBy - 1) * e
+    },
+  },
   'word-reveal': {
     target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
     apply: (s, e) => { s.wordReveal = Math.min(s.wordReveal, e) },
@@ -137,6 +155,31 @@ export const PRESETS: Record<string, Preset> = {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
     params: [{ key: 'from', default: -3, min: -20, max: 10, step: 0.25 }, { key: 'to', default: 0, min: -20, max: 10, step: 0.25 }],
     apply: (s, e, _p, { from, to }) => { s.focusZ = from + (to - from) * e },
+  },
+  'fade-black': {
+    // Geçiş: ortasında ekran tamamen kararır; iki sahnenin arasına koyulur.
+    target: 'camera', category: 'transition', defaultEasing: 'ease-in-out', defaultDuration: 0.8,
+    apply: (s, e) => {
+      s.overlayOpacity = Math.max(s.overlayOpacity, 1 - Math.abs(2 * e - 1))
+      s.overlayWhite = 0
+    },
+  },
+  'fade-white': {
+    target: 'camera', category: 'transition', defaultEasing: 'ease-in-out', defaultDuration: 0.8,
+    apply: (s, e) => {
+      s.overlayOpacity = Math.max(s.overlayOpacity, 1 - Math.abs(2 * e - 1))
+      s.overlayWhite = 1
+    },
+  },
+  flash: {
+    // Kısa beyaz parlama: hızla açılır, yavaşça söner.
+    target: 'camera', category: 'transition', defaultEasing: 'linear', defaultDuration: 0.5,
+    apply: (s, _e, p) => {
+      if (p <= 0 || p >= 1) return
+      const peak = 0.15
+      s.overlayOpacity = Math.max(s.overlayOpacity, p < peak ? p / peak : 1 - (p - peak) / (1 - peak))
+      s.overlayWhite = 1
+    },
   },
   'camera-pan': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,

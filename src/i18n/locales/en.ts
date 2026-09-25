@@ -122,6 +122,11 @@ const en = {
     delete_other: 'Delete {{count}} blocks',
   },
   params: {
+    scaleBy: 'Scale ×',
+    dx: 'Move X',
+    dy: 'Move Y',
+    dz: 'Move Z',
+    rotate: 'Rotate (°)',
     distance: 'Distance',
     amount: 'Amount',
     cycles: 'Cycles',
@@ -188,6 +193,10 @@ const en = {
     deleteWarning_other: 'This file is used in {{count}} projects; it will disappear there.',
     kinds: { image: 'Image', svg: 'SVG', video: 'Video', audio: 'Audio' },
   },
+  curve: {
+    handleStart: 'Start handle',
+    handleEnd: 'End handle',
+  },
   timeline: {
     zoomIn: 'Zoom in (Ctrl + wheel)',
     zoomOut: 'Zoom out (Ctrl + wheel)',
@@ -220,6 +229,8 @@ const en = {
     moveTo: 'Move to layer',
   },
   categories: {
+    move: 'move',
+    transition: 'transition',
     in: 'in',
     out: 'out',
     emphasis: 'emphasis',
@@ -247,6 +258,10 @@ const en = {
     'camera-pull': 'Pull out',
     'camera-orbit': 'Orbit',
     'focus-pull': 'Focus pull',
+    move: 'Custom move',
+    'fade-black': 'Fade through black',
+    'fade-white': 'Fade through white',
+    flash: 'Flash',
     'camera-pan': 'Pan',
   },
   easings: {
@@ -261,6 +276,7 @@ const en = {
     'spring-gentle': 'Spring · gentle',
     'spring-snappy': 'Spring · snappy',
     'spring-bouncy': 'Spring · bouncy',
+    custom: 'Custom curve',
   },
   import: {
     invalidJson: "Couldn't read the file: it isn't valid JSON.",

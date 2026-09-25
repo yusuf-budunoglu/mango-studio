@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
 import type { DepthOfFieldEffect } from 'postprocessing'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CanvasTexture, Color, SRGBColorSpace, Vector3, type Object3D, type PerspectiveCamera } from 'three'
+import { CanvasTexture, Color, DoubleSide, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
 import { resolveEffects, type ProjectEffects } from '../engine/effects'
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
@@ -203,6 +203,7 @@ function ExportBridge() {
 
 function Scene({ project }: { project: Project }) {
   const dofRef = useRef<DepthOfFieldEffect | null>(null)
+  const overlayRef = useRef<Mesh>(null)
   const appliers = useRef(new Map<string, Applier>())
   const groups = useRef(new Map<string, Object3D>())
   const scene = useThree((s) => s.scene)
@@ -231,6 +232,22 @@ function Scene({ project }: { project: Project }) {
       camera.fov = c.fov
       camera.updateProjectionMatrix()
     }
+    // Geçiş örtüsü: kameranın hemen önünde, görüş alanını tam kaplayan düz renk.
+    const overlay = overlayRef.current
+    if (overlay) {
+      overlay.visible = c.overlayOpacity > 0.001
+      if (overlay.visible) {
+        const distance = camera.near * 2
+        const height = 2 * distance * Math.tan((camera.fov * Math.PI) / 360) * 1.05
+        overlay.position.copy(camera.position)
+        overlay.quaternion.copy(camera.quaternion)
+        overlay.translateZ(-distance)
+        overlay.scale.set(height * camera.aspect, height, 1)
+        const material = overlay.material as MeshBasicMaterial
+        material.opacity = c.overlayOpacity
+        material.color.setScalar(c.overlayWhite)
+      }
+    }
   })
 
   return (
@@ -242,6 +259,14 @@ function Scene({ project }: { project: Project }) {
       {project.layers.map((layer) => (
         <LayerNode key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
       ))}
+      {/* Geçiş örtüsü. three.js önce grup sırasına bakar ve katman gruplarının sırası var; örtü en sonda
+          çizilsin diye kendisi de en yüksek sıralı bir grubun içinde. */}
+      <group renderOrder={100000}>
+        <mesh ref={overlayRef} visible={false} renderOrder={100000} frustumCulled={false}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0} depthTest={false} depthWrite={false} toneMapped={false} side={DoubleSide} />
+        </mesh>
+      </group>
       <SceneEffects effects={resolveEffects(project.effects)} dofRef={dofRef} />
       <LayerGizmo project={project} />
       <ExportBridge />

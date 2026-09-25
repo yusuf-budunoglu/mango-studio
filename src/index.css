@@ -12,6 +12,8 @@
   --c-vurgu: #6b5ca5;
   --c-metin: #9a7b1f;
   --c-kamera: #2f7d4a;
+  --c-move: #3a6fb0;
+  --c-transition: #8a3a6a;
   color-scheme: dark;
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
@@ -276,3 +278,18 @@ button.danger { color: var(--danger); }
 .asset-picker { display: grid; gap: 4px; }
 .asset-upload { justify-self: start; font-size: 12px !important; color: var(--accent) !important; cursor: pointer; }
 .asset-upload:hover { text-decoration: underline; }
+
+.block--move { background: var(--c-move); }
+.block--transition { background: var(--c-transition); }
+
+/* Hız eğrisi grafiği */
+.curve { display: grid; gap: 6px; }
+.curve svg { width: 100%; max-width: 220px; aspect-ratio: 1; justify-self: center; touch-action: none; user-select: none; }
+.curve-box { fill: #11151b; stroke: var(--line); }
+.curve-diagonal { stroke: #2a323d; stroke-dasharray: 3 3; }
+.curve-line { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+.curve-arm { stroke: #7d8894; stroke-width: 1; }
+.curve-handle { fill: #fff; stroke: var(--accent); stroke-width: 2; cursor: grab; }
+.curve-handle:active { cursor: grabbing; }
+.curve-values { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.curve-values input { padding: 4px !important; font-size: 12px; }

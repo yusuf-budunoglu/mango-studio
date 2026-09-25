@@ -19,8 +19,10 @@ export interface Block {
   start: number
   /** saniye */
   duration: number
-  /** boşsa preset'in varsayılan eğrisi kullanılır */
+  /** boşsa preset'in varsayılan eğrisi kullanılır; 'custom' ise `bezier` */
   easing?: string
+  /** özel hız eğrisi (CSS cubic-bezier gibi): x1, y1, x2, y2 */
+  bezier?: [number, number, number, number]
   params?: Record<string, number>
 }
 
@@ -154,6 +156,10 @@ export interface CameraState {
   targetY: number
   /** alan derinliği açıkken netlik düzleminin z konumu */
   focusZ: number
+  /** geçiş örtüsü: 0 = görünmez, 1 = ekran tamamen kaplı */
+  overlayOpacity: number
+  /** örtü rengi: 0 = siyah, 1 = beyaz */
+  overlayWhite: number
 }
 
 export interface FrameState {

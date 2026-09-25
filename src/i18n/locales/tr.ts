@@ -123,6 +123,11 @@ const tr: Translation = {
     delete_other: '{{count}} bloğu sil',
   },
   params: {
+    scaleBy: 'Ölçek ×',
+    dx: 'X kaydır',
+    dy: 'Y kaydır',
+    dz: 'Z kaydır',
+    rotate: 'Döndür (°)',
     distance: 'Mesafe',
     amount: 'Miktar',
     cycles: 'Tekrar',
@@ -189,6 +194,10 @@ const tr: Translation = {
     deleteWarning_other: 'Bu dosya {{count}} projede kullanılıyor; oradan da kaybolur.',
     kinds: { image: 'Görsel', svg: 'SVG', video: 'Video', audio: 'Ses' },
   },
+  curve: {
+    handleStart: 'Başlangıç tutamacı',
+    handleEnd: 'Bitiş tutamacı',
+  },
   timeline: {
     zoomIn: 'Yakınlaş (Ctrl + tekerlek)',
     zoomOut: 'Uzaklaş (Ctrl + tekerlek)',
@@ -221,6 +230,8 @@ const tr: Translation = {
     moveTo: 'Katmana taşı',
   },
   categories: {
+    move: 'hareket',
+    transition: 'geçiş',
     in: 'giriş',
     out: 'çıkış',
     emphasis: 'vurgu',
@@ -248,6 +259,10 @@ const tr: Translation = {
     'camera-pull': 'Uzaklaş (pull-out)',
     'camera-orbit': 'Etrafında dön',
     'focus-pull': 'Odak kaydır',
+    move: 'Özel hareket',
+    'fade-black': 'Siyaha kararma',
+    'fade-white': 'Beyaza açılma',
+    flash: 'Flaş',
     'camera-pan': 'Yana kay (pan)',
   },
   easings: {
@@ -262,6 +277,7 @@ const tr: Translation = {
     'spring-gentle': 'Yay · yumuşak',
     'spring-snappy': 'Yay · canlı',
     'spring-bouncy': 'Yay · zıplayan',
+    custom: 'Özel eğri',
   },
   import: {
     invalidJson: 'Dosya okunamadı: geçerli bir JSON değil.',

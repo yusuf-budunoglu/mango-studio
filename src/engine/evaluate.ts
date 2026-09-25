@@ -1,4 +1,4 @@
-import { getEasing } from './easing'
+import { easingFor } from './easing'
 import { PRESETS, resolveParams } from './presets'
 import type { Block, CameraState, FrameState, Layer, LayerState, Project } from './types'
 
@@ -33,7 +33,7 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     const preset = PRESETS[block.preset]
     if (!preset || preset.target !== 'layer') continue
     const p = progress(block, time)
-    const e = getEasing(block.easing ?? preset.defaultEasing)(p)
+    const e = easingFor(block, preset.defaultEasing)(p)
     preset.apply(s, e, p, resolveParams(preset, block.params))
   }
   return s
@@ -49,12 +49,14 @@ export function evaluateCamera(project: Project, time: number): CameraState {
     targetX: 0,
     targetY: 0,
     focusZ: 0,
+    overlayOpacity: 0,
+    overlayWhite: 0,
   }
   for (const block of sortedBlocks(cam.blocks)) {
     const preset = PRESETS[block.preset]
     if (!preset || preset.target !== 'camera') continue
     const p = progress(block, time)
-    const e = getEasing(block.easing ?? preset.defaultEasing)(p)
+    const e = easingFor(block, preset.defaultEasing)(p)
     preset.apply(s, e, p, resolveParams(preset, block.params))
   }
   return s

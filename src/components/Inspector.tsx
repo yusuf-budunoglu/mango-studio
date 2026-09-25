@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EASINGS } from '../engine/easing'
+import { DEFAULT_BEZIER, EASINGS, easingFor } from '../engine/easing'
 import { PRESETS, presetsFor } from '../engine/presets'
 import { categoryLabel, easingLabel, paramLabel, presetLabel } from '../i18n/labels'
 import { findAudio, findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 import { AudioPanel } from './AudioPanel'
+import { CurveEditor } from './CurveEditor'
 import { LayerPanel } from './LayerPanel'
 import { EffectsPanel } from './EffectsPanel'
 import { ProjectSettings } from './ProjectSettings'
@@ -77,7 +78,13 @@ export function Inspector() {
             <select
               id="block-easing"
               value={block.easing ?? ''}
-              onChange={(e) => updateBlock(block.id, { easing: e.target.value || undefined })}
+              onChange={(e) =>
+                updateBlock(block.id, {
+                  easing: e.target.value || undefined,
+                  // Özel eğriye ilk geçişte, o ana kadarki eğriye yakın bir başlangıç ver.
+                  ...(e.target.value === 'custom' && !block.bezier ? { bezier: DEFAULT_BEZIER } : {}),
+                })
+              }
             >
               <option value="">{t('block.defaultEasing', { easing: easingLabel(preset.defaultEasing) })}</option>
               {Object.keys(EASINGS).map((id) => (
@@ -85,7 +92,13 @@ export function Inspector() {
                   {easingLabel(id)}
                 </option>
               ))}
+              <option value="custom">{easingLabel('custom')}</option>
             </select>
+            <CurveEditor
+              fn={easingFor(block, preset.defaultEasing)}
+              bezier={block.easing === 'custom' ? (block.bezier ?? DEFAULT_BEZIER) : undefined}
+              onChange={(bezier) => updateBlock(block.id, { bezier })}
+            />
             <div className="row">
               <div>
                 <label htmlFor="block-start">{t('block.start')}</label>

@@ -31,3 +31,23 @@ export const EASINGS: Record<string, EasingFn> = {
 export function getEasing(name: string | undefined): EasingFn {
   return (name && EASINGS[name]) || EASINGS.linear
 }
+
+/** Varsayılan özel eğri: CSS'teki ease-in-out. */
+export const DEFAULT_BEZIER: [number, number, number, number] = [0.42, 0, 0.58, 1]
+
+const bezierCache = new Map<string, EasingFn>()
+
+/** Bloğun eğrisi: özel (bezier) ya da isimli; boşsa preset'in varsayılanı. */
+export function easingFor(block: { easing?: string; bezier?: [number, number, number, number] }, fallback: string): EasingFn {
+  if (block.easing === 'custom') {
+    const [x1, y1, x2, y2] = block.bezier ?? DEFAULT_BEZIER
+    const key = `${x1},${y1},${x2},${y2}`
+    let fn = bezierCache.get(key)
+    if (!fn) {
+      fn = cubicBezier(Math.min(1, Math.max(0, x1)), y1, Math.min(1, Math.max(0, x2)), y2)
+      bezierCache.set(key, fn)
+    }
+    return fn
+  }
+  return getEasing(block.easing ?? fallback)
+}

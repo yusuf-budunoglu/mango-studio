@@ -50,6 +50,11 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Yeni dil: `locales/<kod>.ts` dosyasını `Translation` tipinde yaz (eksik anahtar derleme hatası verir), `src/i18n/index.ts` içinde `LANGUAGES` ve `resources`'a ekle. `i18n.test.ts` anahtar ve değişken eşitliğini kontrol eder.
 - Şablon içeriği ve yeni katman adları oluşturulduğu andaki dilde üretilir; sonradan dil değişince proje içeriği değişmez. Videodaki sayı biçimi projede (`numberLocale`).
 
+## İleri seviye bloklar
+- `move` (özel hareket): katmanı hedefe götürür ve orada bırakır; art arda bloklar anahtar kare gibi yol çizer.
+- Geçişler (`fade-black`, `fade-white`, `flash`) kamera satırında; `Stage.tsx`'teki tam ekran örtüyü sürer. Örtü en yüksek `renderOrder`'lı bir grupta: three.js önce grup sırasına bakar.
+- Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts). Panelde `CurveEditor` tutamaçları.
+
 ## Dosyalar ve ses
 - `src/persistence/assets.ts` — dosya deposu (IndexedDB): proje `asset:<id>` referansı tutar, `resolveAssetUrl` blob URL'ye çevirir. Eski projelerdeki data URL'ler de çalışır.
 - "Dosyaya kaydet" (`projectFile.ts`) kullanılan dosyaları `embeddedAssets` olarak gömer; "Dosyadan aç" geri yükler.
