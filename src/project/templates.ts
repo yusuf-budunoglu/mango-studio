@@ -133,7 +133,7 @@ export const TEMPLATES: Template[] = [
       const screen = `${import.meta.env.BASE_URL}templates/screens/fintech.png`
       const cut = (from: number, to: number) => [b('fade-in', from, 0), b('fade-out', to, 0)]
       const glide = (start: number, duration: number, params: Record<string, number>) =>
-        b('move', start, duration, { params: { dx: 0, ...params }, easing: 'custom', bezier: [0.12, 0.72, 0.3, 1] })
+        b('move', start, duration, { params: { dx: 0, ...params }, easing: 'custom', bezier: [0.03, 0.95, 0.12, 1] })
       const whip = (start: number, duration: number, params: Record<string, number>) => b('move', start, duration, { params: { dx: 0, ...params }, easing: 'ease-in' })
       const focus = (at: number, z: number, blur = 1) => b('focus-pull', at, 0, { params: { from: z, to: z, blur } })
       const phone = (n: number, spec: Omit<LayerSpec, 'name' | 'kind' | 'color'>) =>
