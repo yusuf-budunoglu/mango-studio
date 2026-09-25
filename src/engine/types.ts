@@ -1,5 +1,6 @@
 // Proje formatı: editör, motor, şablonlar ve (ileride) MCP hepsi bu yapıyı okuyup yazar.
-// Formatı değiştirirken PROJECT_VERSION'ı artır ve migrate.ts'e bir adım ekle.
+// Formatı değiştirirken PROJECT_VERSION'ı artır ve migrate.ts'e bir adım ekle. Varsayılanı olan
+// isteğe bağlı yeni alanlar (hidden, locked…) eski projeleri bozmadığı için sürüm gerektirmez.
 
 export const PROJECT_VERSION = 1
 
@@ -44,6 +45,10 @@ export interface Layer {
   rotation: Vec3
   scale: number
   opacity: number
+  /** gizli katman önizlemede ve videoda çizilmez */
+  hidden?: boolean
+  /** kilitli katman timeline'da ve önizlemede sürüklenemez */
+  locked?: boolean
   blocks: Block[]
 }
 

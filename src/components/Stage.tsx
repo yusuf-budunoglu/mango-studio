@@ -21,6 +21,17 @@ interface TroikaText extends Mesh {
 type Applier = (state: LayerState) => void
 type Register = (id: string, fn: Applier) => void
 
+/**
+ * Katman sırası ve görünürlüğü: listede üstteki katman aynı derinlikte önde çizilir
+ * (renderOrder), gizli katman hiç çizilmez. Troika metni sonradan eklediği için her karede uygulanır.
+ */
+function applyLayerOrder(group: Object3D, order: number, hidden: boolean) {
+  if (hidden) group.visible = false
+  group.traverse((o) => {
+    o.renderOrder = order
+  })
+}
+
 function applyTransform(group: Group, s: LayerState, layerId: string) {
   group.visible = s.opacity > 0.001 && s.scale > 0.001
   // Elle sürüklenen katmanın konumunu sürükleme bitene kadar tutamaç belirler.
@@ -30,12 +41,15 @@ function applyTransform(group: Group, s: LayerState, layerId: string) {
   group.scale.setScalar(Math.max(0.0001, s.scale))
 }
 
-/** Önizlemede tıklayınca katmanı seçer. Görünmeyen katman tıklamayı arkasındakine bırakır. */
-function selectOnClick(layerId: string) {
+/**
+ * Önizlemede tıklayınca katmanı seçer. Görünmeyen katman tıklamayı arkasındakine bırakır;
+ * kilitli katman önizlemeden seçilmez (listeden seçilebilir).
+ */
+function selectOnClick(layer: Layer) {
   return (e: ThreeEvent<MouseEvent>) => {
-    if (!e.eventObject.visible) return
+    if (!e.eventObject.visible || layer.locked) return
     e.stopPropagation()
-    useProjectStore.getState().selectTrack(layerId)
+    useProjectStore.getState().selectTrack(layer.id)
   }
 }
 
@@ -95,7 +109,7 @@ function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: 
   })
 
   return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
       <Text
         ref={text}
         font={fontUrl(layer.fontFamily, layer.fontWeight)}
@@ -127,7 +141,7 @@ function PhoneLayer({ layer, register }: { layer: Layer; register: Register }) {
   })
 
   return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
       <RoundedBox args={[1.7, 3.4, 0.16]} radius={0.16} smoothness={6}>
         <meshStandardMaterial color="#15171c" metalness={0.7} roughness={0.25} />
       </RoundedBox>
@@ -172,7 +186,7 @@ function ImageLayer({ layer, register }: { layer: Layer; register: Register }) {
   })
 
   return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
       <mesh>
         <planeGeometry args={[width, height]} />
         {image ? (
@@ -195,7 +209,7 @@ function ShapeLayer({ layer, register }: { layer: Layer; register: Register }) {
     })
   })
   return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer.id)}>
+    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
       <RoundedBox args={[1, 1, 0.2]} radius={0.1}>
         <meshStandardMaterial color={layer.color} />
       </RoundedBox>
@@ -232,7 +246,7 @@ function LayerGizmo({ project }: { project: Project }) {
     setTarget(layer ? (scene.getObjectByName(`layer:${layer.id}`) ?? null) : null)
   }, [layer, scene])
 
-  if (!layer || !target || clean || isPlaying) return null
+  if (!layer || !target || clean || isPlaying || layer.locked || layer.hidden) return null
 
   const onStart = () => {
     const frame = evaluate(project, usePlaybackStore.getState().time)
@@ -344,8 +358,12 @@ function ExportBridge() {
 
 function Scene({ project }: { project: Project }) {
   const appliers = useRef(new Map<string, Applier>())
+  const groups = useRef(new Map<string, Object3D>())
+  const scene = useThree((s) => s.scene)
   const register: Register = (id, fn) => {
     appliers.current.set(id, fn)
+    const group = scene.getObjectByName(`layer:${id}`)
+    if (group) groups.current.set(id, group)
   }
 
   // Her karede: zamanı oku → motoru çalıştır → sonucu nesnelere uygula.
@@ -353,7 +371,11 @@ function Scene({ project }: { project: Project }) {
   useFrame((state) => {
     const camera = state.camera as PerspectiveCamera
     const frame = evaluate(project, renderTimeOverride.current ?? usePlaybackStore.getState().time)
-    for (const layer of project.layers) appliers.current.get(layer.id)?.(frame.layers[layer.id])
+    project.layers.forEach((layer, index) => {
+      appliers.current.get(layer.id)?.(frame.layers[layer.id])
+      const group = groups.current.get(layer.id)
+      if (group) applyLayerOrder(group, project.layers.length - index, !!layer.hidden)
+    })
     const c = frame.camera
     camera.position.set(c.x, c.y, c.z)
     camera.lookAt(c.targetX, c.targetY, 0)

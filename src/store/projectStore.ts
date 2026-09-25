@@ -35,6 +35,13 @@ interface ProjectStore {
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
   addLayer: (kind: LayerKind, time: number) => string
   removeLayer: (layerId: string) => void
+  /** Katmanı listede `toIndex` konumuna taşır (0 = en üst = en önde). */
+  moveLayer: (layerId: string, toIndex: number) => void
+  duplicateLayer: (layerId: string) => void
+  /** Bloğu başka bir satıra taşır; hedef, bloğun türüne uymuyorsa (kamera/katman) bir şey yapmaz. */
+  moveBlockToTrack: (blockId: string, trackId: TrackId) => void
+  /** Oynatma kafasının üstündeki blokları ikiye böler. */
+  splitBlocks: (blockIds: string[], at: number) => void
   updateProject: (patch: ProjectSettings) => void
   /** Başka bir projeyi açar; geri alma geçmişi sıfırlanır. */
   loadProject: (project: Project) => void
@@ -218,6 +225,62 @@ export const useProjectStore = create<ProjectStore>()(
           selectedBlockIds: [],
           selectedTrackId: s.selectedTrackId === layerId ? '' : s.selectedTrackId,
         })),
+      moveLayer: (layerId, toIndex) =>
+        set((s) => {
+          const layers = [...s.project.layers]
+          const from = layers.findIndex((l) => l.id === layerId)
+          const to = Math.max(0, Math.min(layers.length - 1, toIndex))
+          if (from === -1 || from === to) return {}
+          const [layer] = layers.splice(from, 1)
+          layers.splice(to, 0, layer)
+          return { project: { ...s.project, layers } }
+        }),
+      duplicateLayer: (layerId) =>
+        set((s) => {
+          const index = s.project.layers.findIndex((l) => l.id === layerId)
+          if (index === -1) return {}
+          const source = s.project.layers[index]
+          const copy: Layer = {
+            ...source,
+            id: newId('l'),
+            name: i18n.t('home.copyName', { name: source.name }),
+            blocks: source.blocks.map((b) => ({ ...b, id: newId('b') })),
+          }
+          const layers = [...s.project.layers]
+          layers.splice(index, 0, copy)
+          return { project: { ...s.project, layers }, selectedTrackId: copy.id, selectedBlockIds: [] }
+        }),
+      moveBlockToTrack: (blockId, trackId) =>
+        set((s) => {
+          const found = findBlock(s.project, blockId)
+          const preset = found && PRESETS[found.block.preset]
+          if (!found || !preset || found.track.id === trackId) return {}
+          const targetIsCamera = trackId === 'camera'
+          if ((preset.target === 'camera') !== targetIsCamera) return {}
+          if (!targetIsCamera && !s.project.layers.some((l) => l.id === trackId)) return {}
+          const block = found.block
+          return {
+            project: mapBlocks(s.project, (blocks, id) =>
+              id === trackId ? [...blocks, block] : blocks.filter((b) => b.id !== blockId),
+            ),
+            selectedTrackId: trackId,
+          }
+        }),
+      splitBlocks: (blockIds, at) =>
+        set((s) => {
+          const created: string[] = []
+          const t = round(at)
+          const project = mapBlocks(s.project, (blocks) =>
+            blocks.flatMap((b) => {
+              // Sadece oynatma kafası bloğun içindeyse (kenarlarında değil) böl.
+              if (!blockIds.includes(b.id) || t <= b.start + 0.01 || t >= b.start + b.duration - 0.01) return [b]
+              const second = { ...b, id: newId('b'), start: t, duration: round(b.start + b.duration - t) }
+              created.push(second.id)
+              return [{ ...b, duration: round(t - b.start) }, second]
+            }),
+          )
+          return created.length ? { project, selectedBlockIds: created } : {}
+        }),
       updateProject: (patch) =>
         set((s) => ({
           project: {

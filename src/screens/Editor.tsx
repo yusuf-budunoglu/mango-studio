@@ -198,6 +198,15 @@ export function Editor({ projectId }: { projectId: string }) {
         handled()
         const step = e.shiftKey ? 1 : 0.1
         store.nudgeBlocks(selected, e.key === 'ArrowLeft' ? -step : step)
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        // Seçili blok yokken oklar oynatma kafasını bir kare (Shift: 1 sn) oynatır.
+        handled()
+        const step = e.shiftKey ? 1 : 1 / project.fps
+        const now = usePlaybackStore.getState().time
+        seek(Math.min(project.duration, Math.max(0, now + (e.key === 'ArrowLeft' ? -step : step))))
+      } else if (!mod && key === 's') {
+        handled()
+        store.splitBlocks(selected, usePlaybackStore.getState().time)
       } else if (!mod && (key === 'w' || key === 'e' || key === 'r')) {
         useEditorStore.getState().setTransformMode(key === 'w' ? 'translate' : key === 'e' ? 'rotate' : 'scale')
       } else if (e.key === 'Escape') {

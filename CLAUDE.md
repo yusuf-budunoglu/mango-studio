@@ -19,7 +19,9 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
 - `src/components/LayerPanel.tsx` — katman ekleme/düzenleme; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
 - `src/export/` — MP4 çıktısı (Mediabunny + WebCodecs). `bridge.ts` Canvas içindeki sahneyle bağlantı; kareler `advance()` ile tek tek çizilir. Metin (troika) worker'da hazırlandığı için kare yakalamadan önce `pendingTextSyncs` beklenir.
-- `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Blok = timeline aksiyonu; çakışan bloklar şeritlere bölünür. Ctrl+tekerlek ile zoom.
+- `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Blok = timeline aksiyonu; çakışan bloklar şeritlere bölünür. Ctrl+tekerlek ile zoom, genişliğe sığdır. Blok sağ tık menüsü (çoğalt, böl, katmana taşı, sil).
+- `src/components/TrackList.tsx` — sol sütun: `dnd-kit` ile sürükleyerek sıralama (listede üstteki katman aynı derinlikte önde, `renderOrder`), göz (gizle) / kilit, çift tıkla yeniden adlandırma, sağ tık menüsü. Kütüphane blokları satırlar arası sürüklemeyi desteklemediği için taşıma menüden yapılır.
+- `hidden` katman önizlemede ve videoda çizilmez; `locked` katman timeline'da ve önizlemede sürüklenemez, önizlemeden seçilmez.
 - `src/project/templates.ts` — kendi şablonlarımız (sadece metin/şekil/telefon, dış asset yok). Her `build()` yeni id'ler üretir.
 - `src/persistence/repository.ts` — proje kaydı (şimdilik IndexedDB, `idb-keyval`). Supabase'e geçişte aynı arayüz korunacak. `parseProjectFile` içe aktarılan JSON'u doğrular.
 - `src/layout/` — `AppShell` (sol menü + üst çubuk: arama, dil seçici). Editör hariç tüm sayfalar bunun içinde.
@@ -29,7 +31,7 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Geri alma: zundo `handleSet` 600 ms içindeki ardışık değişiklikleri tek adımda birleştirir; `loadProject` geçmişi sıfırlar.
 
 ## Kısayollar
-Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ 0,1 sn kaydır (Shift: 1 sn) · W/E/R taşı/döndür/ölçekle · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
+Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ seçili blokları 0,1 sn kaydır (Shift: 1 sn) · W/E/R taşı/döndür/ölçekle · S oynatma kafasından böl · ←/→ seçim yokken 1 kare (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
 
 ## Proje formatı sürümleri
 - `Project.version` ve `PROJECT_VERSION` (`src/engine/types.ts`). Formatı değiştirirken sürümü artır ve `src/engine/migrate.ts`'e bir adım ekle; eski adımları değiştirme. Kayıttan yükleme ve dosyadan içe aktarma `migrateProject`'ten geçer.

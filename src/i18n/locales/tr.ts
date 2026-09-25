@@ -127,6 +127,23 @@ const tr: Translation = {
     zoomIn: 'Yakınlaş (Ctrl + tekerlek)',
     zoomOut: 'Uzaklaş (Ctrl + tekerlek)',
     end: 'Bitiş',
+    fit: 'Genişliğe sığdır',
+  },
+  tracks: {
+    reorder: 'Sıralamak için sürükleyin. Üstteki katman öndedir.',
+    show: 'Katmanı göster',
+    hide: 'Katmanı gizle',
+    lock: 'Katmanı kilitle',
+    unlock: 'Kilidi aç',
+    rename: 'Yeniden adlandır',
+    duplicate: 'Çoğalt',
+    moveUp: 'Yukarı taşı',
+    moveDown: 'Aşağı taşı',
+  },
+  blockMenu: {
+    duplicate: 'Çoğalt',
+    split: 'Oynatma kafasından böl',
+    moveTo: 'Katmana taşı',
   },
   categories: {
     in: 'giriş',

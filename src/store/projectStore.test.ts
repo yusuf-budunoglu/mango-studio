@@ -56,6 +56,55 @@ describe('blok işlemleri', () => {
   })
 })
 
+describe('katman yönetimi', () => {
+  it('katmanı listede taşır', () => {
+    const ids = store().project.layers.map((l) => l.id)
+    store().moveLayer(ids[3], 0)
+    expect(store().project.layers.map((l) => l.id)).toEqual([ids[3], ids[0], ids[1], ids[2]])
+    store().moveLayer(ids[3], 99)
+    expect(store().project.layers.at(-1)!.id).toBe(ids[3])
+  })
+
+  it('katmanı yeni kimliklerle, hemen üstüne çoğaltır', () => {
+    const source = titleLayer()
+    store().duplicateLayer(source.id)
+    const layers = store().project.layers
+    const copy = layers[1]
+    expect(layers[2].id).toBe(source.id)
+    expect(copy.id).not.toBe(source.id)
+    expect(copy.text).toBe(source.text)
+    expect(copy.blocks.map((b) => b.preset)).toEqual(source.blocks.map((b) => b.preset))
+    expect(copy.blocks.some((b) => source.blocks.some((o) => o.id === b.id))).toBe(false)
+    expect(store().selectedTrackId).toBe(copy.id)
+  })
+
+  it('bloğu başka katmana taşır, kamera bloğunu katmana taşımaz', () => {
+    const [slide] = titleLayer().blocks
+    const logo = store().project.layers[0]
+    store().moveBlockToTrack(slide.id, logo.id)
+    expect(findBlock(store().project, slide.id)!.track.id).toBe(logo.id)
+    expect(titleLayer().blocks.some((b) => b.id === slide.id)).toBe(false)
+
+    const cameraBlock = store().project.camera.blocks[0]
+    store().moveBlockToTrack(cameraBlock.id, logo.id)
+    expect(findBlock(store().project, cameraBlock.id)!.track.id).toBe('camera')
+  })
+
+  it('bloğu oynatma kafasından böler, kenardaysa bölmez', () => {
+    const typewriter = titleLayer().blocks[1]
+    const end = typewriter.start + typewriter.duration
+    store().splitBlocks([typewriter.id], typewriter.start + 0.4)
+    const parts = titleLayer().blocks.filter((b) => b.preset === 'typewriter').sort((a, b) => a.start - b.start)
+    expect(parts).toHaveLength(2)
+    expect(parts[0].duration).toBeCloseTo(0.4)
+    expect(parts[1].start).toBeCloseTo(typewriter.start + 0.4)
+    expect(parts[1].start + parts[1].duration).toBeCloseTo(end)
+
+    store().splitBlocks([parts[0].id], parts[0].start)
+    expect(titleLayer().blocks.filter((b) => b.preset === 'typewriter')).toHaveLength(2)
+  })
+})
+
 describe('videonun sınırları', () => {
   it('bitişe yakın eklenen blok videonun içinde kalır', () => {
     const duration = store().project.duration

@@ -126,6 +126,23 @@ const en = {
     zoomIn: 'Zoom in (Ctrl + wheel)',
     zoomOut: 'Zoom out (Ctrl + wheel)',
     end: 'End',
+    fit: 'Fit to width',
+  },
+  tracks: {
+    reorder: 'Drag to reorder. Higher layers are in front.',
+    show: 'Show layer',
+    hide: 'Hide layer',
+    lock: 'Lock layer',
+    unlock: 'Unlock layer',
+    rename: 'Rename',
+    duplicate: 'Duplicate',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+  },
+  blockMenu: {
+    duplicate: 'Duplicate',
+    split: 'Split at playhead',
+    moveTo: 'Move to layer',
   },
   categories: {
     in: 'in',
