@@ -1,5 +1,6 @@
 import { del, get, set } from 'idb-keyval'
 import { newId } from '../engine/ids'
+import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
 import type { Project } from '../engine/types'
 
@@ -72,24 +73,24 @@ export function parseProjectFile(json: string): Project {
   try {
     data = JSON.parse(json)
   } catch {
-    throw new Error('Dosya okunamadı: geçerli bir JSON değil.')
+    throw new Error(i18n.t('import.invalidJson'))
   }
   const p = data as Project
-  const fail = (what: string) => {
-    throw new Error(`Bu bir motion-studio proje dosyası değil (${what}).`)
+  const fail = (reason: string, values?: Record<string, string>) => {
+    throw new Error(i18n.t('import.notProject', { reason: i18n.t(`import.reasons.${reason}`, values) }))
   }
-  if (!p || typeof p !== 'object') fail('boş dosya')
-  if (typeof p.name !== 'string' || !isNum(p.duration) || !isNum(p.fps) || !isNum(p.width) || !isNum(p.height)) fail('proje bilgileri eksik')
-  if (!p.camera || !Array.isArray(p.camera.blocks) || !isVec3(p.camera.position)) fail('kamera eksik')
-  if (!Array.isArray(p.layers)) fail('katman listesi yok')
+  if (!p || typeof p !== 'object') fail('empty')
+  if (typeof p.name !== 'string' || !isNum(p.duration) || !isNum(p.fps) || !isNum(p.width) || !isNum(p.height)) fail('details')
+  if (!p.camera || !Array.isArray(p.camera.blocks) || !isVec3(p.camera.position)) fail('camera')
+  if (!Array.isArray(p.layers)) fail('layers')
   for (const layer of p.layers) {
     if (typeof layer.id !== 'string' || !isVec3(layer.position) || !isVec3(layer.rotation) || !Array.isArray(layer.blocks)) {
-      fail(`"${layer?.name ?? '?'}" katmanı bozuk`)
+      fail('layer', { name: layer?.name ?? '?' })
     }
   }
   for (const block of [...p.camera.blocks, ...p.layers.flatMap((l) => l.blocks)]) {
-    if (!PRESETS[block.preset]) fail(`bilinmeyen animasyon: ${block.preset}`)
-    if (!isNum(block.start) || !isNum(block.duration)) fail('blok zamanı bozuk')
+    if (!PRESETS[block.preset]) fail('preset', { preset: block.preset })
+    if (!isNum(block.start) || !isNum(block.duration)) fail('timing')
   }
   return { ...p, id: newId('p') }
 }

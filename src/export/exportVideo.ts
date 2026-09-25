@@ -1,5 +1,6 @@
 import { BufferTarget, CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny'
 import type { Project } from '../engine/types'
+import i18n from '../i18n'
 import { usePlaybackStore } from '../store/projectStore'
 import { exportBridge, pendingTextSyncs } from './bridge'
 
@@ -11,11 +12,11 @@ const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
  */
 export async function exportVideo(project: Project, onProgress: (ratio: number) => void): Promise<Blob> {
   const bridge = exportBridge.current
-  if (!bridge) throw new Error('Önizleme henüz hazır değil.')
+  if (!bridge) throw new Error(i18n.t('exportVideo.notReady'))
 
   const { width, height, fps, duration } = project
   const codec = await getFirstEncodableVideoCodec(['avc', 'vp9', 'av1'], { width, height })
-  if (!codec) throw new Error('Bu tarayıcı video kodlamayı desteklemiyor. Chrome veya Edge deneyin.')
+  if (!codec) throw new Error(i18n.t('exportVideo.unsupported'))
 
   const playback = usePlaybackStore.getState()
   const previousTime = playback.time
@@ -49,7 +50,7 @@ export async function exportVideo(project: Project, onProgress: (ratio: number) 
     await output.finalize()
     onProgress(1)
     const buffer = (output.target as BufferTarget).buffer
-    if (!buffer) throw new Error('Video dosyası oluşturulamadı.')
+    if (!buffer) throw new Error(i18n.t('exportVideo.failed'))
     return new Blob([buffer], { type: output.format.mimeType })
   } finally {
     restore()

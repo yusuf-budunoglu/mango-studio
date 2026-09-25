@@ -52,6 +52,8 @@ export interface Project {
   width: number
   height: number
   background: string
+  /** videodaki sayıların biçimi (count-up), ör. 'en-US' → 1,000 · 'tr-TR' → 1.000; boşsa en-US */
+  numberLocale?: string
   layers: Layer[]
   camera: CameraTrack
 }

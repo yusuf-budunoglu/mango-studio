@@ -3,7 +3,8 @@ import { TEMPLATES } from '../project/templates'
 import { findBlock, useProjectStore } from './projectStore'
 
 const store = () => useProjectStore.getState()
-const titleLayer = () => store().project.layers.find((l) => l.name === 'Başlık')!
+// Uygulama lansmanı şablonunda 2. katman başlıktır.
+const titleLayer = () => store().project.layers[1]
 const allBlocks = () => [store().project.camera, ...store().project.layers].flatMap((t) => t.blocks)
 
 let clock = new Date('2026-09-25T10:00:00Z').getTime()

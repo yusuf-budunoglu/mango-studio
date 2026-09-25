@@ -66,7 +66,7 @@ describe('evaluate', () => {
 
 describe('easing', () => {
   it('tüm eğriler 0 da başlar, 1 de biter', () => {
-    for (const [name, { fn }] of Object.entries(EASINGS)) {
+    for (const [name, fn] of Object.entries(EASINGS)) {
       expect(fn(0), name).toBeCloseTo(0, 2)
       expect(fn(1), name).toBeCloseTo(1, 2)
     }

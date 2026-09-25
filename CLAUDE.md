@@ -26,6 +26,13 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 ## Kısayollar
 Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ 0,1 sn kaydır (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
 
+## Diller (i18n)
+- `i18next` + `react-i18next`. Ana dil **İngilizce** (`src/i18n/locales/en.ts`), Türkçe `tr.ts`. Seçim localStorage'da tutulur, tarayıcı diline bakılmaz.
+- Kullanıcıya görünen **her** metin `t('...')` ile gelir; bileşenlerde düz metin yazma.
+- Motor dilden bağımsız: animasyon/eğri/kategori adları `presets.<id>`, `easings.<id>`, `categories.<id>` anahtarlarında (`src/i18n/labels.ts`).
+- Yeni dil: `locales/<kod>.ts` dosyasını `Translation` tipinde yaz (eksik anahtar derleme hatası verir), `src/i18n/index.ts` içinde `LANGUAGES` ve `resources`'a ekle. `i18n.test.ts` anahtar ve değişken eşitliğini kontrol eder.
+- Şablon içeriği ve yeni katman adları oluşturulduğu andaki dilde üretilir; sonradan dil değişince proje içeriği değişmez. Videodaki sayı biçimi projede (`numberLocale`).
+
 ## Test
 - Geliştirme modunda `window.__stores` (project, playback) tarayıcı otomasyon testleri için açık.
 

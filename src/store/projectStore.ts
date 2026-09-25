@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
 import { newId } from '../engine/ids'
+import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
 import type { Block, Layer, LayerKind, Project } from '../engine/types'
 import { DEFAULT_TEMPLATE } from '../project/templates'
@@ -8,7 +9,7 @@ import { DEFAULT_TEMPLATE } from '../project/templates'
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
 
-type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background'>>
+type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'numberLocale'>>
 
 interface ClipboardEntry {
   trackId: TrackId
@@ -36,11 +37,20 @@ interface ProjectStore {
   loadProject: (project: Project) => void
 }
 
-const LAYER_DEFAULTS: Record<LayerKind, Omit<Layer, 'id' | 'blocks'>> = {
-  text: { name: 'Metin', kind: 'text', text: 'Yeni metin', color: '#ffffff', fontSize: 0.4, position: [0, 0, 0.5], rotation: [0, 0, 0], scale: 1, opacity: 1 },
-  phone: { name: 'Telefon', kind: 'phone', color: '#4fc3cf', position: [0, 0, 0], rotation: [0, -15, 0], scale: 1, opacity: 1 },
-  shape: { name: 'Şekil', kind: 'shape', color: '#ffb86c', position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1 },
-  image: { name: 'Görsel', kind: 'image', color: '#ffffff', position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1 },
+/** Yeni katmanın varsayılanları; adı ve metni o anki arayüz dilinde. */
+function layerDefaults(kind: LayerKind): Omit<Layer, 'id' | 'blocks'> {
+  const t = (key: string) => i18n.t(`layer.defaults.${key}`)
+  const base = { position: [0, 0, 0] as Layer['position'], rotation: [0, 0, 0] as Layer['rotation'], scale: 1, opacity: 1 }
+  switch (kind) {
+    case 'text':
+      return { ...base, name: t('text'), kind, text: t('newText'), color: '#ffffff', fontSize: 0.4, position: [0, 0, 0.5] }
+    case 'phone':
+      return { ...base, name: t('phone'), kind, color: '#4fc3cf', rotation: [0, -15, 0] }
+    case 'shape':
+      return { ...base, name: t('shape'), kind, color: '#ffb86c' }
+    case 'image':
+      return { ...base, name: t('image'), kind, color: '#ffffff' }
+  }
 }
 
 // Kopyalanan bloklar geri alma geçmişinin dışında, bellekte tutulur.
@@ -187,7 +197,7 @@ export const useProjectStore = create<ProjectStore>()(
         })),
       addLayer: (kind, time) => {
         const layer: Layer = {
-          ...LAYER_DEFAULTS[kind],
+          ...layerDefaults(kind),
           id: newId('l'),
           blocks: [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: round(time), duration: 0.8 }],
         }

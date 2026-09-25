@@ -159,11 +159,11 @@ button.danger { color: var(--danger); }
   cursor: grab;
 }
 .block-easing { opacity: 0.7; font-size: 11px; }
-.block--giriş { background: var(--c-giris); }
-.block--çıkış { background: var(--c-cikis); }
-.block--vurgu { background: var(--c-vurgu); }
-.block--metin { background: var(--c-metin); }
-.block--kamera { background: var(--c-kamera); }
+.block--in { background: var(--c-giris); }
+.block--out { background: var(--c-cikis); }
+.block--emphasis { background: var(--c-vurgu); }
+.block--text { background: var(--c-metin); }
+.block--camera { background: var(--c-kamera); }
 .block.is-selected { box-shadow: inset 0 0 0 2px #fff; }
 
 /* Üst çubuk ekleri */
@@ -196,3 +196,8 @@ button.danger { color: var(--danger); }
 .card-sub { padding: 0 14px; font-size: 13px; color: var(--muted); }
 .card-actions { display: flex; gap: 6px; padding: 0 14px 14px; }
 .card-actions button { padding: 4px 10px; font-size: 13px; }
+
+/* Dil seçici */
+.language-select { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.language-select select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

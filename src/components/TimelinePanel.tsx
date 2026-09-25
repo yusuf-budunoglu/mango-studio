@@ -2,8 +2,9 @@ import { Timeline } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEditor, TimelineState } from '@xzdarcy/react-timeline-editor'
 import '@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css'
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { EASINGS } from '../engine/easing'
+import { useTranslation } from 'react-i18next'
 import { PRESETS } from '../engine/presets'
+import { easingLabel, presetLabel } from '../i18n/labels'
 import type { Block } from '../engine/types'
 import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 
@@ -31,7 +32,7 @@ function splitIntoLanes(blocks: Block[]): Block[][] {
   return lanes.length ? lanes : [[]]
 }
 
-const EFFECTS = Object.fromEntries(Object.entries(PRESETS).map(([id, p]) => [id, { id, name: p.label }]))
+const EFFECTS = Object.fromEntries(Object.keys(PRESETS).map((id) => [id, { id }]))
 
 interface Props {
   timelineRef: RefObject<TimelineState | null>
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: Props) {
+  const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
   const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
   const selectBlock = useProjectStore((s) => s.selectBlock)
@@ -112,10 +114,10 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
   return (
     <div className="timeline-panel" ref={panelRef}>
       <div className="zoom-controls">
-        <button type="button" onClick={() => zoom(1 / 1.25)} title="Uzaklaş (Ctrl + tekerlek)" aria-label="Uzaklaş">
+        <button type="button" onClick={() => zoom(1 / 1.25)} title={t('timeline.zoomOut')} aria-label={t('timeline.zoomOut')}>
           −
         </button>
-        <button type="button" onClick={() => zoom(1.25)} title="Yakınlaş (Ctrl + tekerlek)" aria-label="Yakınlaş">
+        <button type="button" onClick={() => zoom(1.25)} title={t('timeline.zoomIn')} aria-label={t('timeline.zoomIn')}>
           +
         </button>
       </div>
@@ -166,8 +168,8 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
           const easing = found?.block.easing ?? preset?.defaultEasing
           return (
             <div className={`block block--${preset?.category ?? 'x'} ${action.selected ? 'is-selected' : ''}`}>
-              <span className="block-name">{preset?.label ?? action.effectId}</span>
-              <span className="block-easing">{easing ? EASINGS[easing]?.label : ''}</span>
+              <span className="block-name">{presetLabel(action.effectId)}</span>
+              <span className="block-easing">{easing ? easingLabel(easing) : ''}</span>
             </div>
           )
         }}

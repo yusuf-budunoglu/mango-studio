@@ -55,7 +55,7 @@ function useImageTexture(url: string | undefined) {
   return url && loaded?.url === url ? loaded : null
 }
 
-function TextLayer({ layer, register }: { layer: Layer; register: Register }) {
+function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: Register; numberLocale?: string }) {
   const group = useRef<Group>(null)
   const text = useRef<TroikaText>(null)
 
@@ -63,7 +63,7 @@ function TextLayer({ layer, register }: { layer: Layer; register: Register }) {
     register(layer.id, (s) => {
       if (!group.current || !text.current) return
       applyTransform(group.current, s)
-      const str = displayText(layer, s)
+      const str = displayText(layer, s, numberLocale)
       text.current.fillOpacity = s.opacity
       if (text.current.text !== str) {
         text.current.text = str
@@ -248,7 +248,7 @@ function Scene({ project }: { project: Project }) {
       <directionalLight position={[3, 4, 5]} intensity={2} />
       <pointLight position={[-4, -2, 3]} intensity={30} color="#6c5ce7" />
       {project.layers.map((layer) => {
-        if (layer.kind === 'text') return <TextLayer key={layer.id} layer={layer} register={register} />
+        if (layer.kind === 'text') return <TextLayer key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
         if (layer.kind === 'phone') return <PhoneLayer key={layer.id} layer={layer} register={register} />
         if (layer.kind === 'image') return <ImageLayer key={layer.id} layer={layer} register={register} />
         return <ShapeLayer key={layer.id} layer={layer} register={register} />

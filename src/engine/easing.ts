@@ -13,20 +13,21 @@ function normalizedSpring(bounce: number): EasingFn {
   return (p) => (p >= 1 ? 1 : generator.next(p * totalMs).value)
 }
 
-export const EASINGS: Record<string, { label: string; fn: EasingFn }> = {
-  linear: { label: 'Doğrusal', fn: (p) => p },
-  'ease-in': { label: 'Yavaş başla', fn: easeIn },
-  'ease-out': { label: 'Yavaş bitir', fn: easeOut },
-  'ease-in-out': { label: 'Yumuşak', fn: easeInOut },
-  'ease-out-expo': { label: 'Sert fren (expo)', fn: cubicBezier(0.16, 1, 0.3, 1) },
-  'ease-out-circ': { label: 'Dairesel', fn: circOut },
-  'ease-out-back': { label: 'Hafif taşma', fn: backOut },
-  anticipate: { label: 'Geri çekil, fırla', fn: anticipate },
-  'spring-gentle': { label: 'Yay · yumuşak', fn: normalizedSpring(0.15) },
-  'spring-snappy': { label: 'Yay · canlı', fn: normalizedSpring(0.3) },
-  'spring-bouncy': { label: 'Yay · zıplayan', fn: normalizedSpring(0.5) },
+/** Adları çeviri dosyalarında: `easings.<id>`. */
+export const EASINGS: Record<string, EasingFn> = {
+  linear: (p) => p,
+  'ease-in': easeIn,
+  'ease-out': easeOut,
+  'ease-in-out': easeInOut,
+  'ease-out-expo': cubicBezier(0.16, 1, 0.3, 1),
+  'ease-out-circ': circOut,
+  'ease-out-back': backOut,
+  anticipate,
+  'spring-gentle': normalizedSpring(0.15),
+  'spring-snappy': normalizedSpring(0.3),
+  'spring-bouncy': normalizedSpring(0.5),
 }
 
 export function getEasing(name: string | undefined): EasingFn {
-  return (name && EASINGS[name]?.fn) || EASINGS.linear.fn
+  return (name && EASINGS[name]) || EASINGS.linear
 }

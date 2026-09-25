@@ -1,12 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
-const ADDABLE: { kind: LayerKind; label: string }[] = [
-  { kind: 'text', label: '+ Metin' },
-  { kind: 'image', label: '+ Görsel' },
-  { kind: 'phone', label: '+ Telefon' },
-  { kind: 'shape', label: '+ Şekil' },
-]
+const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'shape']
 
 /** Yüklenen görseli en fazla 2048 px'e küçültüp data URL'e çevirir; proje dosyası şişmesin. */
 async function readImage(file: File, maxSize = 2048): Promise<string> {
@@ -30,6 +26,7 @@ function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; l
 }
 
 function LayerFields({ layer }: { layer: Layer }) {
+  const { t } = useTranslation()
   const updateLayer = useProjectStore((s) => s.updateLayer)
   const removeLayer = useProjectStore((s) => s.removeLayer)
   const update = (patch: Partial<Layer>) => updateLayer(layer.id, patch)
@@ -41,26 +38,26 @@ function LayerFields({ layer }: { layer: Layer }) {
 
   return (
     <>
-      <label htmlFor="layer-name">Ad</label>
+      <label htmlFor="layer-name">{t('layer.name')}</label>
       <input id="layer-name" value={layer.name} onChange={(e) => update({ name: e.target.value })} />
 
       {layer.kind === 'text' && (
         <>
-          <label htmlFor="layer-text">Metin</label>
+          <label htmlFor="layer-text">{t('layer.text')}</label>
           <textarea id="layer-text" rows={2} value={layer.text ?? ''} onChange={(e) => update({ text: e.target.value })} />
-          <NumberField id="layer-font" label="Yazı boyutu" value={layer.fontSize ?? 0.4} step={0.05} onChange={(v) => update({ fontSize: Math.max(0.05, v) })} />
-          <label htmlFor="layer-align">Hiza</label>
+          <NumberField id="layer-font" label={t('layer.fontSize')} value={layer.fontSize ?? 0.4} step={0.05} onChange={(v) => update({ fontSize: Math.max(0.05, v) })} />
+          <label htmlFor="layer-align">{t('layer.align')}</label>
           <select id="layer-align" value={layer.align ?? 'center'} onChange={(e) => update({ align: e.target.value as Layer['align'] })}>
-            <option value="left">Sola</option>
-            <option value="center">Ortaya</option>
-            <option value="right">Sağa</option>
+            <option value="left">{t('layer.alignLeft')}</option>
+            <option value="center">{t('layer.alignCenter')}</option>
+            <option value="right">{t('layer.alignRight')}</option>
           </select>
         </>
       )}
 
       {(layer.kind === 'image' || layer.kind === 'phone') && (
         <>
-          <label htmlFor="layer-image">{layer.kind === 'phone' ? 'Ekran görüntüsü' : 'Görsel'}</label>
+          <label htmlFor="layer-image">{layer.kind === 'phone' ? t('layer.screenshot') : t('layer.image')}</label>
           <input
             id="layer-image"
             type="file"
@@ -73,7 +70,7 @@ function LayerFields({ layer }: { layer: Layer }) {
           />
           {layer.image && (
             <button type="button" onClick={() => update({ image: undefined })}>
-              Görseli kaldır
+              {t('layer.removeImage')}
             </button>
           )}
         </>
@@ -81,25 +78,25 @@ function LayerFields({ layer }: { layer: Layer }) {
 
       {layer.kind !== 'image' && (
         <>
-          <label htmlFor="layer-color">{layer.kind === 'phone' ? 'Ekran rengi' : 'Renk'}</label>
+          <label htmlFor="layer-color">{layer.kind === 'phone' ? t('layer.screenColor') : t('layer.color')}</label>
           <input id="layer-color" type="color" value={layer.color} onChange={(e) => update({ color: e.target.value })} />
         </>
       )}
 
       <div className="row">
-        <NumberField id="layer-x" label="X" value={layer.position[0]} onChange={(v) => setVec('position', 0, v)} />
-        <NumberField id="layer-y" label="Y" value={layer.position[1]} onChange={(v) => setVec('position', 1, v)} />
+        <NumberField id="layer-x" label={t('layer.x')} value={layer.position[0]} onChange={(v) => setVec('position', 0, v)} />
+        <NumberField id="layer-y" label={t('layer.y')} value={layer.position[1]} onChange={(v) => setVec('position', 1, v)} />
       </div>
       <div className="row">
-        <NumberField id="layer-z" label="Derinlik (Z)" value={layer.position[2]} onChange={(v) => setVec('position', 2, v)} />
-        <NumberField id="layer-roty" label="Y dönüşü (°)" value={layer.rotation[1]} step={1} onChange={(v) => setVec('rotation', 1, v)} />
+        <NumberField id="layer-z" label={t('layer.depth')} value={layer.position[2]} onChange={(v) => setVec('position', 2, v)} />
+        <NumberField id="layer-roty" label={t('layer.rotationY')} value={layer.rotation[1]} step={1} onChange={(v) => setVec('rotation', 1, v)} />
       </div>
       <div className="row">
-        <NumberField id="layer-scale" label="Ölçek" value={layer.scale} step={0.05} onChange={(v) => update({ scale: Math.max(0.01, v) })} />
-        <NumberField id="layer-opacity" label="Opaklık" value={layer.opacity} step={0.05} onChange={(v) => update({ opacity: Math.min(1, Math.max(0, v)) })} />
+        <NumberField id="layer-scale" label={t('layer.scale')} value={layer.scale} step={0.05} onChange={(v) => update({ scale: Math.max(0.01, v) })} />
+        <NumberField id="layer-opacity" label={t('layer.opacity')} value={layer.opacity} step={0.05} onChange={(v) => update({ opacity: Math.min(1, Math.max(0, v)) })} />
       </div>
       <button type="button" className="danger" onClick={() => removeLayer(layer.id)}>
-        Katmanı sil
+        {t('layer.delete')}
       </button>
     </>
   )
@@ -108,18 +105,19 @@ function LayerFields({ layer }: { layer: Layer }) {
 export function LayerPanel({ selectedTrackId, onSelectTrack }: { selectedTrackId: string; onSelectTrack: (id: string) => void }) {
   const layer = useProjectStore((s) => s.project.layers.find((l) => l.id === selectedTrackId))
   const addLayer = useProjectStore((s) => s.addLayer)
+  const { t } = useTranslation()
 
   return (
     <section>
-      <h2>Katman</h2>
+      <h2>{t('layer.title')}</h2>
       <div className="add-layer">
-        {ADDABLE.map(({ kind, label }) => (
+        {ADDABLE.map((kind) => (
           <button key={kind} type="button" onClick={() => onSelectTrack(addLayer(kind, +usePlaybackStore.getState().time.toFixed(2)))}>
-            {label}
+            {t(`layer.add.${kind}`)}
           </button>
         ))}
       </div>
-      {layer ? <LayerFields key={layer.id} layer={layer} /> : <p className="hint">Soldaki listeden bir katman seçin.</p>}
+      {layer ? <LayerFields key={layer.id} layer={layer} /> : <p className="hint">{t('layer.empty')}</p>}
     </section>
   )
 }

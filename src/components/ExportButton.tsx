@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { exportVideo } from '../export/exportVideo'
 import { useProjectStore } from '../store/projectStore'
 
 type Status = { kind: 'idle' } | { kind: 'running'; progress: number } | { kind: 'error'; message: string }
 
 export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
+  const { t } = useTranslation()
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
 
   const run = async () => {
@@ -29,7 +31,7 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   return (
     <div className="export">
       <button type="button" className="primary" onClick={run} disabled={status.kind === 'running'}>
-        {status.kind === 'running' ? `Dışa aktarılıyor… %${Math.round(status.progress * 100)}` : 'MP4 indir'}
+        {status.kind === 'running' ? t('exportVideo.progress', { percent: Math.round(status.progress * 100) }) : t('exportVideo.button')}
       </button>
       {status.kind === 'error' && <span className="export-error">{status.message}</span>}
     </div>

@@ -1,9 +1,11 @@
 import type { TimelineState } from '@xzdarcy/react-timeline-editor'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useStore } from 'zustand'
 import { navigate } from '../router'
 import { ExportButton } from '../components/ExportButton'
 import { Inspector } from '../components/Inspector'
+import { LanguageSelect } from '../components/LanguageSelect'
 import { Stage } from '../components/Stage'
 import { TimelinePanel } from '../components/TimelinePanel'
 import { repository } from '../persistence/repository'
@@ -12,18 +14,12 @@ import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 type SaveStatus = 'saved' | 'pending' | 'saving' | 'error'
 
-const SAVE_LABEL: Record<SaveStatus, string> = {
-  saved: 'Kaydedildi',
-  pending: 'Değişiklikler var…',
-  saving: 'Kaydediliyor…',
-  error: 'Kaydedilemedi',
-}
-
 function TimeDisplay({ duration }: { duration: number }) {
+  const { t } = useTranslation()
   const time = usePlaybackStore((s) => s.time)
   return (
     <span className="time">
-      {time.toFixed(2)} <span>/ {duration.toFixed(2)} sn</span>
+      {time.toFixed(2)} <span>{t('editor.timeOf', { duration: duration.toFixed(2) })}</span>
     </span>
   )
 }
@@ -65,6 +61,7 @@ function useAutosave(enabled: boolean) {
 }
 
 export function Editor({ projectId }: { projectId: string }) {
+  const { t } = useTranslation()
   const timelineRef = useRef<TimelineState>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
   const [selectedTrackId, setSelectedTrackId] = useState('')
@@ -165,42 +162,43 @@ export function Editor({ projectId }: { projectId: string }) {
     return (
       <div className="home">
         <main className="home-main">
-          <p className="home-error">Bu proje bulunamadı. Silinmiş ya da başka bir tarayıcıda kaydedilmiş olabilir.</p>
+          <p className="home-error">{t('editor.missing')}</p>
           <button type="button" onClick={() => navigate({ screen: 'home' })}>
-            Projelere dön
+            {t('topbar.backToProjectsTitle')}
           </button>
         </main>
       </div>
     )
   }
-  if (state === 'loading') return <div className="loading">Proje açılıyor…</div>
+  if (state === 'loading') return <div className="loading">{t('editor.loading')}</div>
 
   return (
     <div className="app">
       <header className="topbar">
-        <button type="button" className="back" onClick={() => navigate({ screen: 'home' })} title="Projelere dön">
-          ← Projeler
+        <button type="button" className="back" onClick={() => navigate({ screen: 'home' })} title={t('topbar.backToProjectsTitle')}>
+          {t('topbar.backToProjects')}
         </button>
         <div className="brand">
           motion<span>studio</span>
         </div>
         <div className="project-name">{project.name}</div>
-        <span className={`save-status save-status--${saveStatus}`}>{SAVE_LABEL[saveStatus]}</span>
+        <span className={`save-status save-status--${saveStatus}`}>{t(`save.${saveStatus}`)}</span>
         <div className="controls">
-          <button type="button" onClick={() => useProjectStore.temporal.getState().undo()} disabled={!canUndo} title="Geri al (Ctrl+Z)">
-            ↶ Geri al
+          <button type="button" onClick={() => useProjectStore.temporal.getState().undo()} disabled={!canUndo} title={t('topbar.undoTitle')}>
+            {t('topbar.undo')}
           </button>
-          <button type="button" onClick={() => useProjectStore.temporal.getState().redo()} disabled={!canRedo} title="Yinele (Ctrl+Y)">
-            ↷ Yinele
+          <button type="button" onClick={() => useProjectStore.temporal.getState().redo()} disabled={!canRedo} title={t('topbar.redoTitle')}>
+            {t('topbar.redo')}
           </button>
           <button
             type="button"
             onClick={() => downloadText(`${safeFileName(project.name)}.motion.json`, JSON.stringify(project, null, 2))}
-            title="Projeyi dosya olarak indir"
+            title={t('topbar.saveToFileTitle')}
           >
-            Dosyaya kaydet
+            {t('topbar.saveToFile')}
           </button>
           <ExportButton beforeExport={() => timelineRef.current?.pause()} />
+          <LanguageSelect />
         </div>
       </header>
 
@@ -208,10 +206,10 @@ export function Editor({ projectId }: { projectId: string }) {
         <div className="stage-wrap">
           <Stage />
           <div className="transport">
-            <button type="button" onClick={() => seek(0)} title="Başa sar (Home)">
+            <button type="button" onClick={() => seek(0)} title={t('editor.rewind')}>
               ⏮
             </button>
-            <button type="button" className="play" onClick={togglePlay} title="Oynat / durdur (boşluk)">
+            <button type="button" className="play" onClick={togglePlay} title={t('editor.playPause')}>
               {isPlaying ? '⏸' : '▶'}
             </button>
             <TimeDisplay duration={project.duration} />

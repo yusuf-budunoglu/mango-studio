@@ -41,7 +41,7 @@ describe('proje dosyası', () => {
 
   it('bozuk dosyada anlaşılır hata verir', () => {
     expect(() => parseProjectFile('{nope')).toThrow(/JSON/)
-    expect(() => parseProjectFile('{"name":"x"}')).toThrow(/proje bilgileri/)
+    expect(() => parseProjectFile('{"name":"x"}')).toThrow(/project details/)
     const project = TEMPLATES[0].build()
     project.layers[0].blocks[0].preset = 'uçan-halı'
     expect(() => parseProjectFile(JSON.stringify(project))).toThrow(/uçan-halı/)

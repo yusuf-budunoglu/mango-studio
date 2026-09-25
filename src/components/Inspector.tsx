@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EASINGS } from '../engine/easing'
 import { PRESETS, presetsFor } from '../engine/presets'
+import { categoryLabel, easingLabel, paramLabel, presetLabel } from '../i18n/labels'
 import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 import { LayerPanel } from './LayerPanel'
 import { ProjectSettings } from './ProjectSettings'
 
 export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId: string; onSelectTrack: (id: string) => void }) {
+  const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
   const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
   const updateBlock = useProjectStore((s) => s.updateBlock)
@@ -27,15 +30,13 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
       <LayerPanel selectedTrackId={selectedTrackId} onSelectTrack={onSelectTrack} />
 
       <section>
-        <h2>Blok ekle</h2>
-        <p className="hint">
-          Satır: <b>{track?.name ?? '—'}</b> · oynatma kafasının olduğu yere eklenir
-        </p>
-        <label htmlFor="add-preset">Animasyon</label>
+        <h2>{t('block.addTitle')}</h2>
+        <p className="hint">{t('block.addHint', { track: track?.name ?? '—' })}</p>
+        <label htmlFor="add-preset">{t('block.animation')}</label>
         <select id="add-preset" value={chosenPreset} onChange={(e) => setPresetToAdd(e.target.value)}>
           {available.map(([id, p]) => (
             <option key={id} value={id}>
-              {p.category} · {p.label}
+              {categoryLabel(p.category)} · {presetLabel(id)}
             </option>
           ))}
         </select>
@@ -45,40 +46,40 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
           disabled={!track || !chosenPreset}
           onClick={() => chosenPreset && addBlock(selectedTrackId, chosenPreset, +usePlaybackStore.getState().time.toFixed(2))}
         >
-          Ekle
+          {t('block.add')}
         </button>
       </section>
 
       <section>
-        <h2>Seçili blok</h2>
+        <h2>{t('block.selectedTitle')}</h2>
         {selectedBlockIds.length > 1 && (
           <p className="hint">
-            <b>{selectedBlockIds.length} blok seçili.</b> Ok tuşlarıyla kaydırın, Ctrl+C / Ctrl+D ile kopyalayın ya da çoğaltın.
+            <b>{t('block.multiSelected', { count: selectedBlockIds.length })}</b> {t('block.multiHint')}
           </p>
         )}
         {!block || !preset ? (
-          <p className="hint">Timeline'da bir bloğa tıklayın. Shift ile birden fazla seçebilirsiniz.</p>
+          <p className="hint">{t('block.empty')}</p>
         ) : (
           <>
             <p className="block-title">
-              {preset.label} <span>· {found?.track.name}</span>
+              {presetLabel(block.preset)} <span>· {found?.track.name}</span>
             </p>
-            <label htmlFor="block-easing">Hız eğrisi</label>
+            <label htmlFor="block-easing">{t('block.easing')}</label>
             <select
               id="block-easing"
               value={block.easing ?? ''}
               onChange={(e) => updateBlock(block.id, { easing: e.target.value || undefined })}
             >
-              <option value="">Varsayılan ({EASINGS[preset.defaultEasing]?.label})</option>
-              {Object.entries(EASINGS).map(([id, e]) => (
+              <option value="">{t('block.defaultEasing', { easing: easingLabel(preset.defaultEasing) })}</option>
+              {Object.keys(EASINGS).map((id) => (
                 <option key={id} value={id}>
-                  {e.label}
+                  {easingLabel(id)}
                 </option>
               ))}
             </select>
             <div className="row">
               <div>
-                <label htmlFor="block-start">Başlangıç (sn)</label>
+                <label htmlFor="block-start">{t('block.start')}</label>
                 <input
                   id="block-start"
                   type="number"
@@ -89,7 +90,7 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
                 />
               </div>
               <div>
-                <label htmlFor="block-duration">Süre (sn)</label>
+                <label htmlFor="block-duration">{t('block.duration')}</label>
                 <input
                   id="block-duration"
                   type="number"
@@ -102,7 +103,7 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
             </div>
             {Object.entries(block.params ?? {}).map(([key, value]) => (
               <div key={key}>
-                <label htmlFor={`param-${key}`}>{key}</label>
+                <label htmlFor={`param-${key}`}>{paramLabel(key)}</label>
                 <input
                   id={`param-${key}`}
                   type="number"
@@ -113,7 +114,7 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
               </div>
             ))}
             <button type="button" className="danger" onClick={() => removeBlocks(selectedBlockIds)}>
-              {selectedBlockIds.length > 1 ? `${selectedBlockIds.length} bloğu sil` : 'Bloğu sil'}
+              {t('block.delete', { count: selectedBlockIds.length })}
             </button>
           </>
         )}
