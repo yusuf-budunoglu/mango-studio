@@ -8,6 +8,7 @@ import { Inspector } from '../components/Inspector'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { Stage } from '../components/Stage'
 import { TimelinePanel } from '../components/TimelinePanel'
+import { NewerProjectVersionError } from '../engine/migrate'
 import { repository } from '../persistence/repository'
 import { downloadText, renderThumbnail, safeFileName } from '../persistence/thumbnail'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
@@ -63,7 +64,7 @@ function useAutosave(enabled: boolean) {
 export function Editor({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
   const timelineRef = useRef<TimelineState>(null)
-  const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
+  const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'newer'>('loading')
   const [selectedTrackId, setSelectedTrackId] = useState('')
   const project = useProjectStore((s) => s.project)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
@@ -90,6 +91,8 @@ export function Editor({ projectId }: { projectId: string }) {
           if (thumb) void repository.setThumbnail(loaded.id, thumb)
         })
       }, 1500)
+    }).catch((err: unknown) => {
+      if (alive) setState(err instanceof NewerProjectVersionError ? 'newer' : 'missing')
     })
     return () => {
       alive = false
@@ -158,11 +161,11 @@ export function Editor({ projectId }: { projectId: string }) {
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  if (state === 'missing') {
+  if (state === 'missing' || state === 'newer') {
     return (
       <div className="home">
         <main className="home-main">
-          <p className="home-error">{t('editor.missing')}</p>
+          <p className="home-error">{state === 'newer' ? t('editor.newer') : t('editor.missing')}</p>
           <button type="button" onClick={() => navigate({ screen: 'home' })}>
             {t('topbar.backToProjectsTitle')}
           </button>

@@ -24,6 +24,7 @@ const en = {
   editor: {
     loading: 'Opening project…',
     missing: 'This project could not be found. It may have been deleted, or saved in another browser.',
+    newer: 'This project was saved by a newer version of motion-studio. Update the app to open it.',
     rewind: 'Rewind (Home)',
     playPause: 'Play / pause (Space)',
     timeOf: '/ {{duration}} s',
@@ -51,6 +52,13 @@ const en = {
     empty: 'Select a layer from the list on the left.',
     name: 'Name',
     text: 'Text',
+    font: 'Font',
+    weight: 'Weight',
+    weightRegular: 'Regular',
+    weightBold: 'Bold',
+    textWidth: 'Box width',
+    letterSpacing: 'Letter spacing',
+    lineHeight: 'Line height',
     fontSize: 'Font size',
     align: 'Alignment',
     alignLeft: 'Left',
@@ -109,6 +117,7 @@ const en = {
   timeline: {
     zoomIn: 'Zoom in (Ctrl + wheel)',
     zoomOut: 'Zoom out (Ctrl + wheel)',
+    end: 'End',
   },
   categories: {
     in: 'in',
@@ -159,6 +168,7 @@ const en = {
       layers: 'no layer list',
       layer: 'layer "{{name}}" is broken',
       preset: 'unknown animation: {{preset}}',
+      newer: 'it was saved by a newer version of the app',
       timing: 'block timing is broken',
     },
   },

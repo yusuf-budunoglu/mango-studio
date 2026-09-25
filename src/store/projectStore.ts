@@ -143,7 +143,10 @@ export const useProjectStore = create<ProjectStore>()(
       addBlock: (trackId, presetName, start) => {
         const preset = PRESETS[presetName]
         if (!preset) return
-        const block: Block = { id: newId('b'), preset: presetName, start: round(start), duration: preset.defaultDuration }
+        const total = get().project.duration
+        // Blok videonun içinde kalsın: bitişe çok yakınsa geri çek, gerekirse kısalt.
+        const at = round(Math.min(Math.max(0, start), Math.max(0, total - 0.1)))
+        const block: Block = { id: newId('b'), preset: presetName, start: at, duration: round(Math.max(0.1, Math.min(preset.defaultDuration, total - at))) }
         set((s) => ({
           project: mapBlocks(s.project, (blocks, id) => (id === trackId ? [...blocks, block] : blocks)),
           selectedBlockIds: [block.id],

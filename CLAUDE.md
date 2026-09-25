@@ -29,6 +29,14 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 ## Kısayollar
 Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ 0,1 sn kaydır (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
 
+## Proje formatı sürümleri
+- `Project.version` ve `PROJECT_VERSION` (`src/engine/types.ts`). Formatı değiştirirken sürümü artır ve `src/engine/migrate.ts`'e bir adım ekle; eski adımları değiştirme. Kayıttan yükleme ve dosyadan içe aktarma `migrateProject`'ten geçer.
+- Blok ayarları preset'te tanımlı (`params: ParamSpec[]`); motor `resolveParams` ile varsayılanları doldurur, panel hepsini gösterir.
+
+## Yazı tipleri
+- `src/assets/fonts/*.woff`, `python scripts/build-fonts.py` ile Fontsource (devDependency) paketlerinden üretilir: latin + latin-ext + Noto Sans Symbols 2 tek dosyada, çünkü troika tek font dosyası kabul ediyor ve `.woff2` açamıyor. Lisanslar (OFL) aynı klasörde.
+- Metin çizimi dış sunucuya istek atmamalı; yeni font eklerken betiğe ekle ve Türkçe harfleri kontrol et.
+
 ## Diller (i18n)
 - `i18next` + `react-i18next`. Ana dil **İngilizce** (`src/i18n/locales/en.ts`), Türkçe `tr.ts`. Seçim localStorage'da tutulur, tarayıcı diline bakılmaz.
 - Kullanıcıya görünen **her** metin `t('...')` ile gelir; bileşenlerde düz metin yazma.

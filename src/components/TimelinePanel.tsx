@@ -11,6 +11,7 @@ import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectSt
 type TimelineRow = TimelineEditor['editorData'][number]
 
 const ROW_HEIGHT = 34
+const START_LEFT = 16
 const ZOOM_MIN = 40
 const ZOOM_MAX = 480
 const LANE_SEP = '::'
@@ -53,6 +54,7 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
   const panelRef = useRef<HTMLDivElement>(null)
   // Timeline yakınlaştırma: 1 saniyenin kaç piksel olduğu.
   const [scaleWidth, setScaleWidth] = useState(120)
+  const [scrollLeft, setScrollLeft] = useState(0)
   const zoom = (factor: number) => setScaleWidth((w) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(w * factor))))
   const tracks = useMemo(() => [...project.layers, project.camera], [project])
   const trackLanes = useMemo(() => tracks.map((track) => ({ track, lanes: splitIntoLanes(track.blocks) })), [tracks])
@@ -69,12 +71,14 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
             id: b.id,
             start: b.start,
             end: b.start + b.duration,
+            // Bloklar videonun bitişinden öteye sürüklenemez (eski projelerde taşan blok bozulmasın diye onun sonu da kabul).
+            maxEnd: Math.max(project.duration, b.start + b.duration),
             effectId: b.preset,
             selected: selectedBlockIds.includes(b.id),
           })),
         })),
       ),
-    [trackLanes, selectedBlockIds, selectedTrackId],
+    [trackLanes, selectedBlockIds, selectedTrackId, project.duration],
   )
 
   // Timeline kendi saatini çalıştırıyor; zamanı oradan önizlemeye aktarıyoruz.
@@ -97,6 +101,25 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
       listener.off('ended', onStop)
     }
   }, [timelineRef, setTime, setPlaying])
+
+  // Zaman başka bir yerden değişirse (dışa aktarma bitişi, süre kısaltma, kısayollar) timeline'daki
+  // oynatma kafası da oraya gitsin. Timeline'ın kendi değişiklikleri aynı değeri geri yazdığı için döngü olmaz.
+  useEffect(() => {
+    const sync = (time: number) => {
+      const tl = timelineRef.current
+      if (tl && !tl.isPlaying && Math.abs(tl.getTime() - time) > 1e-4) tl.setTime(time)
+    }
+    sync(usePlaybackStore.getState().time)
+    return usePlaybackStore.subscribe((s, prev) => {
+      if (s.time !== prev.time) sync(s.time)
+    })
+  }, [timelineRef])
+
+  // Proje kısaltılınca oynatma kafası videonun dışında kalmasın.
+  useEffect(() => {
+    const playback = usePlaybackStore.getState()
+    if (playback.time > project.duration) playback.setTime(project.duration)
+  }, [project.duration])
 
   // Ctrl + fare tekerleği ile yakınlaştır. React'in onWheel'i pasif olduğu için elle bağlanıyor.
   useEffect(() => {
@@ -135,6 +158,7 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
           </button>
         ))}
       </div>
+      <div className="timeline-wrap">
       <Timeline
         ref={timelineRef}
         editorData={editorData}
@@ -142,14 +166,15 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
         scale={1}
         scaleSplitCount={10}
         scaleWidth={scaleWidth}
-        startLeft={16}
+        startLeft={START_LEFT}
         rowHeight={ROW_HEIGHT}
         minScaleCount={Math.ceil(project.duration) + 1}
         gridSnap
         dragLine
         autoScroll
-        onScroll={({ scrollTop }) => {
+        onScroll={({ scrollTop, scrollLeft: left }) => {
           if (namesRef.current) namesRef.current.scrollTop = scrollTop
+          setScrollLeft(left)
         }}
         style={{ width: '100%', height: '100%' }}
         onChange={(rows) => {
@@ -174,6 +199,11 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
           )
         }}
       />
+      {/* Videonun bitişi: sonrası gölgeli, çıktıya girmez. */}
+      <div className="timeline-end" style={{ left: START_LEFT + project.duration * scaleWidth - scrollLeft }} aria-hidden="true">
+        <span>{t('timeline.end')}</span>
+      </div>
+      </div>
     </div>
   )
 }

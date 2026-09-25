@@ -1,4 +1,7 @@
 // Proje formatı: editör, motor, şablonlar ve (ileride) MCP hepsi bu yapıyı okuyup yazar.
+// Formatı değiştirirken PROJECT_VERSION'ı artır ve migrate.ts'e bir adım ekle.
+
+export const PROJECT_VERSION = 1
 
 export type Vec3 = [number, number, number]
 
@@ -23,6 +26,15 @@ export interface Layer {
   text?: string
   /** metin hizası; boşsa ortalı */
   align?: 'left' | 'center' | 'right'
+  /** yazı tipi kimliği (render/fonts.ts); boşsa Inter */
+  fontFamily?: string
+  fontWeight?: 400 | 700
+  /** metin kutusu genişliği (sahne birimi); bu genişlikte satır atlar */
+  textWidth?: number
+  /** harf aralığı, yazı boyutuna oranla (ör. 0.05) */
+  letterSpacing?: number
+  /** satır yüksekliği, yazı boyutuna oranla */
+  lineHeight?: number
   /** görsel katmanı ya da telefon ekranı için resim (data URL veya adres) */
   image?: string
   color: string
@@ -44,6 +56,8 @@ export interface CameraTrack {
 }
 
 export interface Project {
+  /** format sürümü; eski projeler açılırken migrate.ts ile güncellenir */
+  version: number
   id: string
   name: string
   /** saniye */

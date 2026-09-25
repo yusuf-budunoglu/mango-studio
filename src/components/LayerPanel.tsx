@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
+import { DEFAULT_FONT, FONTS } from '../render/fonts'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'shape']
@@ -46,6 +47,30 @@ function LayerFields({ layer }: { layer: Layer }) {
           <label htmlFor="layer-text">{t('layer.text')}</label>
           <textarea id="layer-text" rows={2} value={layer.text ?? ''} onChange={(e) => update({ text: e.target.value })} />
           <NumberField id="layer-font" label={t('layer.fontSize')} value={layer.fontSize ?? 0.4} step={0.05} onChange={(v) => update({ fontSize: Math.max(0.05, v) })} />
+          <div className="row">
+            <div>
+              <label htmlFor="layer-font-family">{t('layer.font')}</label>
+              <select id="layer-font-family" value={layer.fontFamily ?? DEFAULT_FONT} onChange={(e) => update({ fontFamily: e.target.value })}>
+                {FONTS.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="layer-font-weight">{t('layer.weight')}</label>
+              <select id="layer-font-weight" value={layer.fontWeight ?? 400} onChange={(e) => update({ fontWeight: Number(e.target.value) as 400 | 700 })}>
+                <option value={400}>{t('layer.weightRegular')}</option>
+                <option value={700}>{t('layer.weightBold')}</option>
+              </select>
+            </div>
+          </div>
+          <div className="row">
+            <NumberField id="layer-text-width" label={t('layer.textWidth')} value={layer.textWidth ?? 5} step={0.25} onChange={(v) => update({ textWidth: Math.max(0.5, v) })} />
+            <NumberField id="layer-line-height" label={t('layer.lineHeight')} value={layer.lineHeight ?? 1.2} step={0.05} onChange={(v) => update({ lineHeight: Math.max(0.5, v) })} />
+          </div>
+          <NumberField id="layer-letter-spacing" label={t('layer.letterSpacing')} value={layer.letterSpacing ?? 0} step={0.01} onChange={(v) => update({ letterSpacing: Math.min(1, Math.max(-0.2, v)) })} />
           <label htmlFor="layer-align">{t('layer.align')}</label>
           <select id="layer-align" value={layer.align ?? 'center'} onChange={(e) => update({ align: e.target.value as Layer['align'] })}>
             <option value="left">{t('layer.alignLeft')}</option>

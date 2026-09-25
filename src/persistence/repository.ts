@@ -1,5 +1,6 @@
 import { del, get, set } from 'idb-keyval'
 import { newId } from '../engine/ids'
+import { migrateProject, NewerProjectVersionError } from '../engine/migrate'
 import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
 import type { Project } from '../engine/types'
@@ -31,7 +32,11 @@ export function createRepository(kv: KeyValue) {
 
   return {
     list,
-    load: (id: string) => kv.get<Project>(projectKey(id)),
+    /** Kayıtlı projeyi güncel formata getirerek yükler. */
+    async load(id: string) {
+      const raw = await kv.get<object>(projectKey(id))
+      return raw ? migrateProject(raw) : undefined
+    },
     async save(project: Project, thumbnail?: string) {
       await kv.set(projectKey(project.id), project)
       const index = await list()
@@ -92,5 +97,10 @@ export function parseProjectFile(json: string): Project {
     if (!PRESETS[block.preset]) fail('preset', { preset: block.preset })
     if (!isNum(block.start) || !isNum(block.duration)) fail('timing')
   }
-  return { ...p, id: newId('p') }
+  try {
+    return { ...migrateProject(p), id: newId('p') }
+  } catch (err) {
+    if (err instanceof NewerProjectVersionError) fail('newer')
+    throw err
+  }
 }

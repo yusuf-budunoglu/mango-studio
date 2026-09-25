@@ -176,6 +176,12 @@ button.danger { color: var(--danger); }
 
 /* Timeline yakınlaştırma */
 .timeline-panel { position: relative; }
+.timeline-wrap { position: relative; min-width: 0; height: 100%; overflow: hidden; }
+.timeline-end {
+  position: absolute; top: 0; bottom: 0; right: -100vw; pointer-events: none; z-index: 1;
+  border-left: 2px solid rgba(229, 115, 115, 0.8); background: rgba(0, 0, 0, 0.45);
+}
+.timeline-end span { position: absolute; top: 8px; left: 6px; font-size: 11px; color: #e57373; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .zoom-controls { position: absolute; left: 8px; top: 6px; z-index: 2; display: flex; gap: 4px; }
 .zoom-controls button { width: 28px; height: 24px; padding: 0; line-height: 1; }
 

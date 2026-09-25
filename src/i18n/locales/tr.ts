@@ -25,6 +25,7 @@ const tr: Translation = {
   editor: {
     loading: 'Proje açılıyor…',
     missing: 'Bu proje bulunamadı. Silinmiş ya da başka bir tarayıcıda kaydedilmiş olabilir.',
+    newer: 'Bu proje motion-studio’nun daha yeni bir sürümüyle kaydedilmiş. Açmak için uygulamayı güncelleyin.',
     rewind: 'Başa sar (Home)',
     playPause: 'Oynat / durdur (boşluk)',
     timeOf: '/ {{duration}} sn',
@@ -52,6 +53,13 @@ const tr: Translation = {
     empty: 'Soldaki listeden bir katman seçin.',
     name: 'Ad',
     text: 'Metin',
+    font: 'Yazı tipi',
+    weight: 'Kalınlık',
+    weightRegular: 'Normal',
+    weightBold: 'Kalın',
+    textWidth: 'Kutu genişliği',
+    letterSpacing: 'Harf aralığı',
+    lineHeight: 'Satır yüksekliği',
     fontSize: 'Yazı boyutu',
     align: 'Hiza',
     alignLeft: 'Sola',
@@ -110,6 +118,7 @@ const tr: Translation = {
   timeline: {
     zoomIn: 'Yakınlaş (Ctrl + tekerlek)',
     zoomOut: 'Uzaklaş (Ctrl + tekerlek)',
+    end: 'Bitiş',
   },
   categories: {
     in: 'giriş',
@@ -160,6 +169,7 @@ const tr: Translation = {
       layers: 'katman listesi yok',
       layer: '"{{name}}" katmanı bozuk',
       preset: 'bilinmeyen animasyon: {{preset}}',
+      newer: 'uygulamanın daha yeni bir sürümüyle kaydedilmiş',
       timing: 'blok zamanı bozuk',
     },
   },

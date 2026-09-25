@@ -1,11 +1,12 @@
 import { RoundedBox, Text } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type PerspectiveCamera, type Texture } from 'three'
 import { displayText, evaluate } from '../engine/evaluate'
 import type { Layer, LayerState, Project } from '../engine/types'
 import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
+import { fontUrl } from '../render/fonts'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 // troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
@@ -84,12 +85,15 @@ function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: 
     <group ref={group}>
       <Text
         ref={text}
+        font={fontUrl(layer.fontFamily, layer.fontWeight)}
         fontSize={layer.fontSize ?? 0.4}
         color={layer.color}
         anchorX={layer.align ?? 'center'}
         textAlign={layer.align ?? 'center'}
         anchorY="middle"
-        maxWidth={5}
+        maxWidth={layer.textWidth ?? 5}
+        letterSpacing={layer.letterSpacing ?? 0}
+        lineHeight={layer.lineHeight ?? 1.2}
       >
         {layer.text ?? ''}
       </Text>
@@ -248,7 +252,13 @@ function Scene({ project }: { project: Project }) {
       <directionalLight position={[3, 4, 5]} intensity={2} />
       <pointLight position={[-4, -2, 3]} intensity={30} color="#6c5ce7" />
       {project.layers.map((layer) => {
-        if (layer.kind === 'text') return <TextLayer key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
+        if (layer.kind === 'text')
+          return (
+            // Font yüklenirken sadece bu katman beklesin, tüm sahne değil.
+            <Suspense key={layer.id} fallback={null}>
+              <TextLayer layer={layer} register={register} numberLocale={project.numberLocale} />
+            </Suspense>
+          )
         if (layer.kind === 'phone') return <PhoneLayer key={layer.id} layer={layer} register={register} />
         if (layer.kind === 'image') return <ImageLayer key={layer.id} layer={layer} register={register} />
         return <ShapeLayer key={layer.id} layer={layer} register={register} />

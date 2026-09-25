@@ -56,6 +56,16 @@ describe('blok işlemleri', () => {
   })
 })
 
+describe('videonun sınırları', () => {
+  it('bitişe yakın eklenen blok videonun içinde kalır', () => {
+    const duration = store().project.duration
+    store().addBlock(titleLayer().id, 'float', duration + 5)
+    const added = findBlock(store().project, store().selectedBlockIds[0])!.block
+    expect(added.start).toBeLessThan(duration)
+    expect(added.start + added.duration).toBeLessThanOrEqual(duration + 1e-9)
+  })
+})
+
 describe('geri alma', () => {
   it('hızlı yazılan harfleri tek adımda geri alır, ayrı değişiklikleri ayrı adımda', () => {
     const id = titleLayer().id

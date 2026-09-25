@@ -1,6 +1,6 @@
 import { newId } from '../engine/ids'
 import i18n, { currentNumberLocale } from '../i18n'
-import type { Block, CameraTrack, Layer, Project } from '../engine/types'
+import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
 // Tüm şablonlar sıfırdan, sadece metin/şekil/telefon katmanlarıyla yapıldı; dış asset yok.
 // Metinler ve katman adları, proje oluşturulduğu andaki arayüz dilinde üretilir.
@@ -34,7 +34,7 @@ function camera(blocks: BlockSpec[], position: CameraTrack['position'] = [0, 0, 
 }
 
 function project(name: string, duration: number, background: string, layers: Layer[], cam: CameraTrack): Project {
-  return { id: newId('p'), name, duration, fps: 30, width: 1920, height: 1080, background, numberLocale: currentNumberLocale(), layers, camera: cam }
+  return { version: PROJECT_VERSION, id: newId('p'), name, duration, fps: 30, width: 1920, height: 1080, background, numberLocale: currentNumberLocale(), layers, camera: cam }
 }
 
 export interface Template {

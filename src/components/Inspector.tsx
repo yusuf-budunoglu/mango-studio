@@ -101,15 +101,22 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
                 />
               </div>
             </div>
-            {Object.entries(block.params ?? {}).map(([key, value]) => (
-              <div key={key}>
-                <label htmlFor={`param-${key}`}>{paramLabel(key)}</label>
+            {(preset.params ?? []).map((spec) => (
+              <div key={spec.key}>
+                <label htmlFor={`param-${spec.key}`}>{paramLabel(spec.key)}</label>
                 <input
-                  id={`param-${key}`}
+                  id={`param-${spec.key}`}
                   type="number"
-                  step={0.1}
-                  value={value}
-                  onChange={(e) => updateBlock(block.id, { params: { ...block.params, [key]: Number(e.target.value) } })}
+                  step={spec.step}
+                  min={spec.min}
+                  max={spec.max}
+                  value={block.params?.[spec.key] ?? spec.default}
+                  onChange={(e) => {
+                    const raw = Number(e.target.value)
+                    if (!Number.isFinite(raw)) return
+                    const value = Math.min(spec.max ?? Infinity, Math.max(spec.min ?? -Infinity, raw))
+                    updateBlock(block.id, { params: { ...block.params, [spec.key]: value } })
+                  }}
                 />
               </div>
             ))}

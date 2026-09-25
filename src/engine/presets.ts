@@ -5,11 +5,22 @@ import type { CameraState, LayerState } from './types'
  * p = ham ilerleme. Blok başlamadan önce e=0, bittikten sonra e=1 ile çağrılır;
  * böylece giriş animasyonları başlamadan önce katmanı gizli tutar.
  */
+/** Bloğun ayarlanabilir bir sayısı. Adı çeviri dosyasında: `params.<key>`. */
+export interface ParamSpec {
+  key: string
+  default: number
+  min?: number
+  max?: number
+  step: number
+}
+
 interface PresetBase {
   /** adı ve kategori adı çeviri dosyalarında: `presets.<id>`, `categories.<category>` */
   category: 'in' | 'out' | 'emphasis' | 'text' | 'camera'
   defaultEasing: string
   defaultDuration: number
+  /** paneldeki ayarlar; `apply` bunların varsayılanlarla birleşmiş halini alır */
+  params?: ParamSpec[]
 }
 
 export interface LayerPreset extends PresetBase {
@@ -25,6 +36,7 @@ export interface CameraPreset extends PresetBase {
 export type Preset = LayerPreset | CameraPreset
 
 const DEG = Math.PI / 180
+const distance = (d: number): ParamSpec => ({ key: 'distance', default: d, min: -20, max: 20, step: 0.1 })
 
 export const PRESETS: Record<string, Preset> = {
   'fade-in': {
@@ -33,15 +45,18 @@ export const PRESETS: Record<string, Preset> = {
   },
   'slide-up': {
     target: 'layer', category: 'in', defaultEasing: 'spring-gentle', defaultDuration: 0.9,
-    apply: (s, e, _p, { distance = 1.2 }) => { s.y -= (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
+    params: [distance(1.2)],
+    apply: (s, e, _p, { distance }) => { s.y -= (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
   },
   'slide-down': {
     target: 'layer', category: 'in', defaultEasing: 'spring-gentle', defaultDuration: 0.9,
-    apply: (s, e, _p, { distance = 1.2 }) => { s.y += (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
+    params: [distance(1.2)],
+    apply: (s, e, _p, { distance }) => { s.y += (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
   },
   'slide-left': {
     target: 'layer', category: 'in', defaultEasing: 'ease-out-expo', defaultDuration: 0.9,
-    apply: (s, e, _p, { distance = 2 }) => { s.x += (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
+    params: [distance(2)],
+    apply: (s, e, _p, { distance }) => { s.x += (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
   },
   'scale-in': {
     target: 'layer', category: 'in', defaultEasing: 'ease-out-expo', defaultDuration: 0.8,
@@ -53,7 +68,8 @@ export const PRESETS: Record<string, Preset> = {
   },
   'rotate-in': {
     target: 'layer', category: 'in', defaultEasing: 'ease-out-expo', defaultDuration: 1.2,
-    apply: (s, e, _p, { angle = -70 }) => { s.rotY += (1 - e) * angle * DEG; s.opacity *= Math.min(1, e * 2) },
+    params: [{ key: 'angle', default: -70, min: -360, max: 360, step: 5 }],
+    apply: (s, e, _p, { angle }) => { s.rotY += (1 - e) * angle * DEG; s.opacity *= Math.min(1, e * 2) },
   },
   'fade-out': {
     target: 'layer', category: 'out', defaultEasing: 'ease-in', defaultDuration: 0.5,
@@ -65,7 +81,8 @@ export const PRESETS: Record<string, Preset> = {
   },
   float: {
     target: 'layer', category: 'emphasis', defaultEasing: 'linear', defaultDuration: 3,
-    apply: (s, _e, p, { amount = 0.12, cycles = 1 }) => { s.y += Math.sin(p * Math.PI * 2 * cycles) * amount },
+    params: [{ key: 'amount', default: 0.12, min: 0, max: 3, step: 0.02 }, { key: 'cycles', default: 1, min: 0.5, max: 20, step: 0.5 }],
+    apply: (s, _e, p, { amount, cycles }) => { s.y += Math.sin(p * Math.PI * 2 * cycles) * amount },
   },
   spin: {
     target: 'layer', category: 'emphasis', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
@@ -77,22 +94,26 @@ export const PRESETS: Record<string, Preset> = {
   },
   'count-up': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.5,
-    apply: (s, e, _p, { from = 0, to = 100, decimals = 0 }) => {
+    params: [{ key: 'from', default: 0, step: 1 }, { key: 'to', default: 100, step: 1 }, { key: 'decimals', default: 0, min: 0, max: 4, step: 1 }],
+    apply: (s, e, _p, { from, to, decimals }) => {
       const f = 10 ** decimals
       s.numberValue = Math.round((from + (to - from) * e) * f) / f
     },
   },
   'camera-push': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 4,
-    apply: (s, e, _p, { distance = 2 }) => { s.z -= e * distance },
+    params: [distance(2)],
+    apply: (s, e, _p, { distance }) => { s.z -= e * distance },
   },
   'camera-pull': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 4,
-    apply: (s, e, _p, { distance = 2 }) => { s.z += e * distance },
+    params: [distance(2)],
+    apply: (s, e, _p, { distance }) => { s.z += e * distance },
   },
   'camera-orbit': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 4,
-    apply: (s, e, _p, { angle = 25 }) => {
+    params: [{ key: 'angle', default: 25, min: -180, max: 180, step: 5 }],
+    apply: (s, e, _p, { angle }) => {
       const a = e * angle * DEG
       const r = Math.hypot(s.x - s.targetX, s.z)
       s.x = s.targetX + Math.sin(a) * r
@@ -101,8 +122,16 @@ export const PRESETS: Record<string, Preset> = {
   },
   'camera-pan': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,
-    apply: (s, e, _p, { distance = 1.5 }) => { s.x += e * distance; s.targetX += e * distance },
+    params: [distance(1.5)],
+    apply: (s, e, _p, { distance }) => { s.x += e * distance; s.targetX += e * distance },
   },
+}
+
+/** Bloğun kayıtlı ayarlarını preset'in varsayılanlarıyla birleştirir. */
+export function resolveParams(preset: Preset, params: Record<string, number> | undefined): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const spec of preset.params ?? []) out[spec.key] = params?.[spec.key] ?? spec.default
+  return { ...out, ...params }
 }
 
 export function presetsFor(target: 'layer' | 'camera') {
