@@ -25,6 +25,9 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     opacity: layer.opacity,
     textReveal: 1,
     numberValue: null,
+    wordReveal: 1,
+    wipe: 1,
+    letterSpacing: 0,
   }
   for (const block of sortedBlocks(layer.blocks)) {
     const preset = PRESETS[block.preset]
@@ -66,7 +69,12 @@ export function evaluate(project: Project, time: number): FrameState {
 
 /** Typewriter ve count-up'ı uygulayıp ekranda gösterilecek metni döndürür. */
 export function displayText(layer: Layer, state: LayerState, numberLocale = 'en-US'): string {
-  const base = state.numberValue !== null ? state.numberValue.toLocaleString(numberLocale) : (layer.text ?? '')
+  let base = state.numberValue !== null ? state.numberValue.toLocaleString(numberLocale) : (layer.text ?? '')
+  if (state.wordReveal < 1) {
+    // Kelimeleri (arasındaki boşluklarla) say; ilk n tanesini göster.
+    const words = base.match(/\S+\s*/g) ?? []
+    base = words.slice(0, Math.round(words.length * state.wordReveal)).join('').trimEnd()
+  }
   if (state.textReveal >= 1) return base
   return base.slice(0, Math.round(base.length * state.textReveal))
 }

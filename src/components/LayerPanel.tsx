@@ -3,25 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { readAudioDuration } from '../audio/engine'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
 import { assetRef, assets } from '../persistence/assets'
+import { AssetPicker } from './AssetPicker'
 import { DEFAULT_FONT, FONTS } from '../render/fonts'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
-const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'shape']
-
-/** Yüklenen görseli en fazla 2048 px'e küçültüp dosya deposuna koyar, referansını döndürür. */
-async function storeImage(file: File, maxSize = 2048): Promise<string> {
-  const bitmap = await createImageBitmap(file)
-  const ratio = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bitmap.width * ratio)
-  canvas.height = Math.round(bitmap.height * ratio)
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  bitmap.close()
-  const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), type, 0.9))
-  const meta = await assets.put(blob, { name: file.name, kind: 'image' })
-  return assetRef(meta.id)
-}
+const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'laptop', 'tablet', 'shape', 'svg', 'video']
+const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet']
 
 function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; label: string; value: number; step?: number; onChange: (v: number) => void }) {
   return (
@@ -86,30 +73,57 @@ function LayerFields({ layer }: { layer: Layer }) {
         </>
       )}
 
-      {(layer.kind === 'image' || layer.kind === 'phone') && (
+      {(layer.kind === 'image' || DEVICE_KINDS.includes(layer.kind)) && (
+        <AssetPicker
+          id="layer-image"
+          label={layer.kind === 'image' ? t('layer.image') : t('layer.screenshot')}
+          kind="image"
+          value={layer.image}
+          onChange={(image) => update({ image })}
+        />
+      )}
+
+      {layer.kind === 'svg' && (
         <>
-          <label htmlFor="layer-image">{layer.kind === 'phone' ? t('layer.screenshot') : t('layer.image')}</label>
-          <input
-            id="layer-image"
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (file) update({ image: await storeImage(file) })
-              e.target.value = ''
-            }}
-          />
-          {layer.image && (
-            <button type="button" onClick={() => update({ image: undefined })}>
-              {t('layer.removeImage')}
-            </button>
-          )}
+          <AssetPicker id="layer-svg" label={t('layer.svgFile')} kind="svg" value={layer.media} onChange={(media) => update({ media })} />
+          <label className="fx-toggle" htmlFor="layer-tint">
+            <input id="layer-tint" type="checkbox" checked={!!layer.tint} onChange={(e) => update({ tint: e.target.checked })} /> {t('layer.tint')}
+          </label>
+          <NumberField id="layer-extrude" label={t('layer.extrude')} value={layer.extrude ?? 0} step={0.05} onChange={(v) => update({ extrude: Math.min(2, Math.max(0, v)) })} />
         </>
       )}
 
-      {layer.kind !== 'image' && (
+      {layer.kind === 'video' && (
         <>
-          <label htmlFor="layer-color">{layer.kind === 'phone' ? t('layer.screenColor') : t('layer.color')}</label>
+          <AssetPicker id="layer-video" label={t('layer.videoFile')} kind="video" value={layer.media} onChange={(media) => update({ media })} />
+          <div className="row">
+            <NumberField id="layer-media-start" label={t('layer.videoStart')} value={layer.mediaStart ?? 0} onChange={(v) => update({ mediaStart: Math.max(0, v) })} />
+            <NumberField id="layer-media-offset" label={t('layer.videoOffset')} value={layer.mediaOffset ?? 0} onChange={(v) => update({ mediaOffset: Math.max(0, v) })} />
+          </div>
+          <p className="hint">{t('layer.videoHint')}</p>
+        </>
+      )}
+
+      {layer.kind === 'shape' && (
+        <>
+          <label htmlFor="layer-shape">{t('layer.shapeType')}</label>
+          <select id="layer-shape" value={layer.shape ?? 'cube'} onChange={(e) => update({ shape: e.target.value as Layer['shape'] })}>
+            {(['cube', 'rect', 'rounded', 'circle'] as const).map((shape) => (
+              <option key={shape} value={shape}>
+                {t(`shapes.${shape}`)}
+              </option>
+            ))}
+          </select>
+          <div className="row">
+            <NumberField id="layer-shape-w" label={t('layer.width')} value={layer.shapeWidth ?? 1} onChange={(v) => update({ shapeWidth: Math.max(0.05, v) })} />
+            <NumberField id="layer-shape-h" label={t('layer.height')} value={layer.shapeHeight ?? 1} onChange={(v) => update({ shapeHeight: Math.max(0.05, v) })} />
+          </div>
+        </>
+      )}
+
+      {layer.kind !== 'image' && layer.kind !== 'video' && (layer.kind !== 'svg' || layer.tint) && (
+        <>
+          <label htmlFor="layer-color">{DEVICE_KINDS.includes(layer.kind) ? t('layer.screenColor') : t('layer.color')}</label>
           <input id="layer-color" type="color" value={layer.color} onChange={(e) => update({ color: e.target.value })} />
         </>
       )}

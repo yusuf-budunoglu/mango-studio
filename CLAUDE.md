@@ -15,6 +15,8 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - `src/engine/easing.ts` — hız eğrileri (`motion` paketinden).
 - `src/store/projectStore.ts` — Zustand + zundo. Proje değişiklikleri sadece store aksiyonlarıyla yapılır (geri alma buna bağlı). Oynatma zamanı ayrı store'da, geri almaya girmez.
 - `src/components/Stage.tsx` — React Three Fiber önizleme. Her karede `evaluate` çalışır, React yeniden çizilmez.
+- Katman bileşenleri `src/components/layers/`: `LayerNode` türe göre seçer; ortak kayıt `useLayerNode` (dönüşüm + opaklık + tıklayınca seçim). Türler: text, phone/tablet/laptop (`DeviceLayer`), image, shape (cube/rect/rounded/circle), svg (`SVGLoader`, isteğe bağlı kalınlık), video.
+- Video katmanı: önizlemede `<video>` timeline'a eşlenir; dışa aktarmada `prepareFrameHooks` ile Mediabunny `CanvasSink` o anın karesini tam çözer (oynatıcı kare-doğru değildir). Videonun sesi kullanılmaz.
 - Önizlemede düzenleme (`Stage.tsx` → `LayerGizmo`): tıklayınca seçim, drei `TransformControls` ile taşı/döndür/ölçekle (W/E/R). Bırakınca `manualTransformPatch` (`src/engine/manualTransform.ts`) animasyon etkisini koruyarak katmanın temel değerlerini günceller. Sürükleme sürerken `manualDrag.layerId` o katmanın motor tarafından ezilmesini engeller. Yardımcılar (`editor-helpers` grubu) video çıktısında kaldırılır, küçük resimde o kare için gizlenir; asla sürükleme sırasında React ile kaldırma.
 - Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
 - `src/components/LayerPanel.tsx` — katman ekleme/düzenleme; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).

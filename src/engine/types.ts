@@ -8,7 +8,9 @@ export const PROJECT_VERSION = 1
 
 export type Vec3 = [number, number, number]
 
-export type LayerKind = 'text' | 'phone' | 'shape' | 'image'
+export type LayerKind = 'text' | 'phone' | 'laptop' | 'tablet' | 'shape' | 'image' | 'svg' | 'video'
+
+export type ShapeType = 'cube' | 'rect' | 'rounded' | 'circle'
 
 export interface Block {
   id: string
@@ -38,8 +40,22 @@ export interface Layer {
   letterSpacing?: number
   /** satır yüksekliği, yazı boyutuna oranla */
   lineHeight?: number
-  /** görsel katmanı ya da telefon ekranı için resim (data URL veya adres) */
+  /** görsel katmanı ya da cihaz ekranı için resim (asset:<id>, data URL veya adres) */
   image?: string
+  /** SVG logo ya da video katmanının dosyası (asset:<id>) */
+  media?: string
+  /** video: videonun başladığı proje anı (sn) */
+  mediaStart?: number
+  /** video: kaynakta nereden başladığı (sn) */
+  mediaOffset?: number
+  /** SVG: orijinal renkler yerine katman rengiyle boya */
+  tint?: boolean
+  /** SVG: 3D kalınlık (0 = düz) */
+  extrude?: number
+  /** şekil katmanının türü ve boyutu (sahne birimi) */
+  shape?: ShapeType
+  shapeWidth?: number
+  shapeHeight?: number
   color: string
   fontSize?: number
   position: Vec3
@@ -93,6 +109,9 @@ export interface Project {
   width: number
   height: number
   background: string
+  /** arka plan: düz renk ya da iki renkli degrade (`background` → `background2`) */
+  backgroundStyle?: 'solid' | 'linear' | 'radial'
+  background2?: string
   /** videodaki sayıların biçimi (count-up), ör. 'en-US' → 1,000 · 'tr-TR' → 1.000; boşsa en-US */
   numberLocale?: string
   layers: Layer[]
@@ -117,6 +136,12 @@ export interface LayerState {
   textReveal: number
   /** count-up bloğu varsa gösterilecek sayı */
   numberValue: number | null
+  /** 0..1: kelime kelime belirme (word-reveal) */
+  wordReveal: number
+  /** 0..1: metnin soldan sağa görünen kısmı (wipe-in) */
+  wipe: number
+  /** harf aralığına eklenen (tracking-in) */
+  letterSpacing: number
 }
 
 export interface CameraState {

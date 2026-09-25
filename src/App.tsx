@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { parseHash } from './router'
+import { Assets } from './screens/Assets'
 import { ComingSoon } from './screens/ComingSoon'
 import { Editor } from './screens/Editor'
 import { Home } from './screens/Home'
@@ -28,6 +29,8 @@ export default function App() {
       return <Videos />
     case 'templates':
       return <Templates />
+    case 'assets':
+      return <Assets />
     case 'soon':
       return <ComingSoon feature={route.feature} />
     default:

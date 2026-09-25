@@ -1,12 +1,12 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Box, Eye, EyeOff, GripVertical, Image, Lock, LockOpen, Music, Smartphone, Type, Video, type LucideIcon } from 'lucide-react'
+import { Box, Clapperboard, Eye, EyeOff, GripVertical, Image, Laptop, Lock, LockOpen, Music, PenTool, Smartphone, Tablet, Type, Video, type LucideIcon } from 'lucide-react'
 import { useState, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CameraTrack, Layer, LayerKind } from '../engine/types'
 import { useProjectStore } from '../store/projectStore'
 
-const KIND_ICON: Record<LayerKind, LucideIcon> = { text: Type, phone: Smartphone, image: Image, shape: Box }
+const KIND_ICON: Record<LayerKind, LucideIcon> = { text: Type, phone: Smartphone, laptop: Laptop, tablet: Tablet, image: Image, shape: Box, svg: PenTool, video: Clapperboard }
 
 /** Ses parçalarının timeline satırı (katman değil; sıralanmaz). */
 export interface AudioTrackRow {

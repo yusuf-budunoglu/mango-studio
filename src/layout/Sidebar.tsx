@@ -32,7 +32,7 @@ const MAIN: NavItem[] = [
   { labelKey: 'nav.home', icon: House, route: { screen: 'home' } },
   { labelKey: 'nav.videos', icon: Clapperboard, route: { screen: 'videos' } },
   { labelKey: 'nav.templates', icon: LayoutTemplate, route: { screen: 'templates' } },
-  { labelKey: 'nav.assets', icon: FolderOpen, route: { screen: 'soon', feature: 'assets' }, soon: true },
+  { labelKey: 'nav.assets', icon: FolderOpen, route: { screen: 'assets' } },
 ]
 
 const PINNED: NavItem[] = [

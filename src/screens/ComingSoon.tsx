@@ -4,7 +4,6 @@ import { AppShell } from '../layout/AppShell'
 import { routeToHash, type ComingSoonFeature } from '../router'
 
 const FEATURE_LABEL: Record<ComingSoonFeature, string> = {
-  assets: 'nav.assets',
   music: 'nav.music',
   voiceover: 'nav.voiceover',
   'sound-effects': 'nav.soundEffects',

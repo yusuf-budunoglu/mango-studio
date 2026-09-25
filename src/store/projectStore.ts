@@ -10,7 +10,7 @@ import { DEFAULT_TEMPLATE } from '../project/templates'
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
 
-type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'numberLocale' | 'width' | 'height'>>
+type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'background2' | 'backgroundStyle' | 'numberLocale' | 'width' | 'height'>>
 
 interface ClipboardEntry {
   trackId: TrackId
@@ -64,10 +64,18 @@ function layerDefaults(kind: LayerKind): Omit<Layer, 'id' | 'blocks'> {
       return { ...base, name: t('text'), kind, text: t('newText'), color: '#ffffff', fontSize: 0.4, position: [0, 0, 0.5] }
     case 'phone':
       return { ...base, name: t('phone'), kind, color: '#4fc3cf', rotation: [0, -15, 0] }
+    case 'laptop':
+      return { ...base, name: t('laptop'), kind, color: '#6c5ce7', rotation: [8, -18, 0], scale: 0.9 }
+    case 'tablet':
+      return { ...base, name: t('tablet'), kind, color: '#00b894', rotation: [0, -15, 0] }
     case 'shape':
-      return { ...base, name: t('shape'), kind, color: '#ffb86c' }
+      return { ...base, name: t('shape'), kind, color: '#ffb86c', shape: 'rounded', shapeWidth: 2, shapeHeight: 1.2 }
     case 'image':
       return { ...base, name: t('image'), kind, color: '#ffffff' }
+    case 'svg':
+      return { ...base, name: t('svg'), kind, color: '#ffffff', extrude: 0 }
+    case 'video':
+      return { ...base, name: t('video'), kind, color: '#ffffff', mediaStart: 0, mediaOffset: 0 }
   }
 }
 

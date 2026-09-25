@@ -57,6 +57,21 @@ describe('evaluate', () => {
     expect(displayText(counter, evaluateLayer(counter, 0.5))).toBe('100')
   })
 
+  it('kelime kelime belirme, soldan açılma ve harf aralığı', () => {
+    const words = layer([{ id: 'b', preset: 'word-reveal', start: 0, duration: 1, easing: 'linear' }], { text: 'bir iki üç dört' })
+    expect(displayText(words, evaluateLayer(words, 0))).toBe('')
+    expect(displayText(words, evaluateLayer(words, 0.5))).toBe('bir iki')
+    expect(displayText(words, evaluateLayer(words, 1))).toBe('bir iki üç dört')
+
+    const wipe = layer([{ id: 'b', preset: 'wipe-in', start: 0, duration: 1, easing: 'linear' }])
+    expect(evaluateLayer(wipe, 0.25).wipe).toBeCloseTo(0.25)
+    expect(evaluateLayer(wipe, 2).wipe).toBe(1)
+
+    const tracking = layer([{ id: 'b', preset: 'tracking-in', start: 0, duration: 1, easing: 'linear' }])
+    expect(evaluateLayer(tracking, 0).letterSpacing).toBeCloseTo(0.4)
+    expect(evaluateLayer(tracking, 1).letterSpacing).toBeCloseTo(0)
+  })
+
   it('kamera push-in kamerayı öne taşır', () => {
     const start = evaluate(sampleProject, 0).camera.z
     const end = evaluate(sampleProject, 8).camera.z

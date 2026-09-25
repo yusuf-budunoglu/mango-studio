@@ -92,6 +92,19 @@ export const PRESETS: Record<string, Preset> = {
     target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
     apply: (s, e) => { s.textReveal = Math.min(s.textReveal, e) },
   },
+  'word-reveal': {
+    target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
+    apply: (s, e) => { s.wordReveal = Math.min(s.wordReveal, e) },
+  },
+  'wipe-in': {
+    target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 0.9,
+    apply: (s, e) => { s.wipe = Math.min(s.wipe, e) },
+  },
+  'tracking-in': {
+    target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.2,
+    params: [{ key: 'amount', default: 0.4, min: 0, max: 2, step: 0.05 }],
+    apply: (s, e, _p, { amount }) => { s.letterSpacing += (1 - e) * amount; s.opacity *= Math.min(1, e * 1.5) },
+  },
   'count-up': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.5,
     params: [{ key: 'from', default: 0, step: 1 }, { key: 'to', default: 100, step: 1 }, { key: 'decimals', default: 0, min: 0, max: 4, step: 1 }],

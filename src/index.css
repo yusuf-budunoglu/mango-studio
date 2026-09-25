@@ -105,7 +105,7 @@ button.danger { color: var(--danger); }
 .inspector input[type='color'] { height: 34px; padding: 2px; }
 .inspector input[type='file'] { padding: 4px; font-size: 12px; }
 .inspector textarea { resize: vertical; }
-.add-layer { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.add-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 .add-layer button { padding: 5px 8px; font-size: 13px; }
 .export { position: relative; display: flex; align-items: center; gap: 8px; }
 .export > button { display: inline-flex; align-items: center; gap: 6px; }
@@ -271,3 +271,8 @@ button.danger { color: var(--danger); }
 .slider label { display: flex; justify-content: space-between; }
 .slider label span { font-family: Consolas, monospace; }
 .slider input[type='range'], #audio-volume { padding: 0 !important; border: 0 !important; background: transparent !important; accent-color: var(--accent); }
+
+/* Dosya seçici */
+.asset-picker { display: grid; gap: 4px; }
+.asset-upload { justify-self: start; font-size: 12px !important; color: var(--accent) !important; cursor: pointer; }
+.asset-upload:hover { text-decoration: underline; }

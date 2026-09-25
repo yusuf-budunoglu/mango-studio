@@ -1,228 +1,18 @@
-import { Line, RoundedBox, Text, TransformControls } from '@react-three/drei'
-import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { Line, TransformControls } from '@react-three/drei'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
 import type { DepthOfFieldEffect } from 'postprocessing'
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { SRGBColorSpace, TextureLoader, Vector3, type Group, type Material, type Mesh, type Object3D, type PerspectiveCamera, type Texture } from 'three'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CanvasTexture, Color, SRGBColorSpace, Vector3, type Object3D, type PerspectiveCamera } from 'three'
 import { resolveEffects, type ProjectEffects } from '../engine/effects'
-import { displayText, evaluate } from '../engine/evaluate'
+import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
-import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
-import { resolveAssetUrl } from '../persistence/assets'
-import { fontUrl } from '../render/fonts'
+import { exportBridge, renderTimeOverride } from '../export/bridge'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
+import { LayerNode } from './layers/LayerNode'
+import { applyLayerOrder, type Applier, type Register } from './layers/shared'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
-
-// troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
-interface TroikaText extends Mesh {
-  text: string
-  fillOpacity: number
-  sync: (callback?: () => void) => void
-}
-
-type Applier = (state: LayerState) => void
-type Register = (id: string, fn: Applier) => void
-
-/**
- * Katman sırası ve görünürlüğü: listede üstteki katman aynı derinlikte önde çizilir
- * (renderOrder), gizli katman hiç çizilmez. Troika metni sonradan eklediği için her karede uygulanır.
- */
-function applyLayerOrder(group: Object3D, order: number, hidden: boolean) {
-  if (hidden) group.visible = false
-  group.traverse((o) => {
-    o.renderOrder = order
-  })
-}
-
-function applyTransform(group: Group, s: LayerState, layerId: string) {
-  group.visible = s.opacity > 0.001 && s.scale > 0.001
-  // Elle sürüklenen katmanın konumunu sürükleme bitene kadar tutamaç belirler.
-  if (manualDrag.layerId === layerId) return
-  group.position.set(s.x, s.y, s.z)
-  group.rotation.set(s.rotX, s.rotY, s.rotZ)
-  group.scale.setScalar(Math.max(0.0001, s.scale))
-}
-
-/**
- * Önizlemede tıklayınca katmanı seçer. Görünmeyen katman tıklamayı arkasındakine bırakır;
- * kilitli katman önizlemeden seçilmez (listeden seçilebilir).
- */
-function selectOnClick(layer: Layer) {
-  return (e: ThreeEvent<MouseEvent>) => {
-    if (!e.eventObject.visible || layer.locked) return
-    e.stopPropagation()
-    useProjectStore.getState().selectTrack(layer.id)
-  }
-}
-
-/** Grubun tüm malzemelerinin opaklığını, her malzemenin kendi temel opaklığıyla çarparak ayarlar. */
-function applyOpacity(group: Group, opacity: number) {
-  group.traverse((obj) => {
-    const material = (obj as Mesh).material as Material | undefined
-    if (!material) return
-    const base = (material.userData.baseOpacity ??= material.opacity) as number
-    material.transparent = true
-    material.opacity = base * opacity
-  })
-}
-
-function useImageTexture(url: string | undefined) {
-  const [loaded, setLoaded] = useState<{ url: string; texture: Texture; aspect: number } | null>(null)
-  useEffect(() => {
-    if (!url) return
-    let alive = true
-    // url bir data/http adresi ya da dosya deposu referansı (asset:<id>) olabilir.
-    void resolveAssetUrl(url).then((src) => {
-      if (!alive || !src) return
-      new TextureLoader().load(src, (texture) => {
-        texture.colorSpace = SRGBColorSpace
-        const img = texture.image as { width: number; height: number }
-        if (alive) setLoaded({ url, texture, aspect: img.width / img.height })
-        else texture.dispose()
-      })
-    })
-    return () => {
-      alive = false
-    }
-  }, [url])
-  useEffect(() => () => loaded?.texture.dispose(), [loaded])
-  return url && loaded?.url === url ? loaded : null
-}
-
-function TextLayer({ layer, register, numberLocale }: { layer: Layer; register: Register; numberLocale?: string }) {
-  const group = useRef<Group>(null)
-  const text = useRef<TroikaText>(null)
-
-  useLayoutEffect(() => {
-    register(layer.id, (s) => {
-      if (!group.current || !text.current) return
-      applyTransform(group.current, s, layer.id)
-      const str = displayText(layer, s, numberLocale)
-      text.current.fillOpacity = s.opacity
-      if (text.current.text !== str) {
-        text.current.text = str
-        // Metin bir worker'da hazırlanır; video çıktısı kareyi yakalamadan önce bunu bekler.
-        // troika sadece metin değiştiğinde geri çağırır; yine de takılmasın diye süre sınırı var.
-        const mesh = text.current
-        const done = new Promise<void>((resolve) => {
-          mesh.sync(resolve)
-          setTimeout(resolve, 2000)
-        })
-        pendingTextSyncs.add(done)
-        void done.then(() => pendingTextSyncs.delete(done))
-      }
-    })
-  })
-
-  return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
-      <Text
-        ref={text}
-        font={fontUrl(layer.fontFamily, layer.fontWeight)}
-        fontSize={layer.fontSize ?? 0.4}
-        color={layer.color}
-        anchorX={layer.align ?? 'center'}
-        textAlign={layer.align ?? 'center'}
-        anchorY="middle"
-        maxWidth={layer.textWidth ?? 5}
-        letterSpacing={layer.letterSpacing ?? 0}
-        lineHeight={layer.lineHeight ?? 1.2}
-      >
-        {layer.text ?? ''}
-      </Text>
-    </group>
-  )
-}
-
-function PhoneLayer({ layer, register }: { layer: Layer; register: Register }) {
-  const group = useRef<Group>(null)
-  const screen = useImageTexture(layer.image)
-
-  useLayoutEffect(() => {
-    register(layer.id, (s) => {
-      if (!group.current) return
-      applyTransform(group.current, s, layer.id)
-      applyOpacity(group.current, s.opacity)
-    })
-  })
-
-  return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
-      <RoundedBox args={[1.7, 3.4, 0.16]} radius={0.16} smoothness={6}>
-        <meshStandardMaterial color="#15171c" metalness={0.7} roughness={0.25} />
-      </RoundedBox>
-      <mesh position={[0, 0, 0.082]}>
-        <planeGeometry args={[1.52, 3.2]} />
-        {screen ? (
-          <meshBasicMaterial key={screen.url} map={screen.texture} toneMapped={false} />
-        ) : (
-          <meshBasicMaterial color={layer.color} toneMapped={false} />
-        )}
-      </mesh>
-      {!screen && (
-        <>
-          {[0.9, 0.55, 0.2].map((y, i) => (
-            <mesh key={y} position={[0, y, 0.085]}>
-              <planeGeometry args={[1.2 - i * 0.25, 0.16]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={0.85} />
-            </mesh>
-          ))}
-          <mesh position={[0, -0.8, 0.085]}>
-            <planeGeometry args={[1.2, 0.9]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.25} />
-          </mesh>
-        </>
-      )}
-    </group>
-  )
-}
-
-function ImageLayer({ layer, register }: { layer: Layer; register: Register }) {
-  const group = useRef<Group>(null)
-  const image = useImageTexture(layer.image)
-  const width = 3
-  const height = image ? width / image.aspect : width * 0.6
-
-  useLayoutEffect(() => {
-    register(layer.id, (s) => {
-      if (!group.current) return
-      applyTransform(group.current, s, layer.id)
-      applyOpacity(group.current, s.opacity)
-    })
-  })
-
-  return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
-      <mesh>
-        <planeGeometry args={[width, height]} />
-        {image ? (
-          <meshBasicMaterial key={image.url} map={image.texture} toneMapped={false} />
-        ) : (
-          <meshBasicMaterial color="#2a303a" />
-        )}
-      </mesh>
-    </group>
-  )
-}
-
-function ShapeLayer({ layer, register }: { layer: Layer; register: Register }) {
-  const group = useRef<Group>(null)
-  useLayoutEffect(() => {
-    register(layer.id, (s) => {
-      if (!group.current) return
-      applyTransform(group.current, s, layer.id)
-      applyOpacity(group.current, s.opacity)
-    })
-  })
-  return (
-    <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
-      <RoundedBox args={[1, 1, 0.2]} radius={0.1}>
-        <meshStandardMaterial color={layer.color} />
-      </RoundedBox>
-    </group>
-  )
-}
 
 const SNAP_THRESHOLD = 0.12
 /** Tutamaç ve kılavuzların toplandığı grup; tek karelik yakalamalarda gizlenir. */
@@ -336,6 +126,33 @@ function SceneEffects({ effects, dofRef }: { effects: ProjectEffects; dofRef: Re
 
 const focusTarget = new Vector3()
 
+/** Arka plan: düz renk ya da iki renkli (doğrusal / merkezden) degrade; ekran boyunca sabit. */
+function Background({ project }: { project: Project }) {
+  const { background, background2, backgroundStyle = 'solid' } = project
+  const texture = useMemo(() => {
+    if (backgroundStyle === 'solid' || !background2) return null
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 512
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    const gradient =
+      backgroundStyle === 'radial'
+        ? ctx.createRadialGradient(256, 256, 0, 256, 256, 362)
+        : ctx.createLinearGradient(0, 0, 0, 512)
+    gradient.addColorStop(0, backgroundStyle === 'radial' ? background2 : background)
+    gradient.addColorStop(1, backgroundStyle === 'radial' ? background : background2)
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, 512, 512)
+    const t = new CanvasTexture(canvas)
+    t.colorSpace = SRGBColorSpace
+    return t
+  }, [background, background2, backgroundStyle])
+
+  const color = useMemo(() => new Color(background), [background])
+  useEffect(() => () => texture?.dispose(), [texture])
+  return <primitive attach="background" object={texture ?? color} />
+}
+
 /** Video çıktısının sahneyi kare kare, istenen çözünürlükte çizmesini sağlar. */
 function ExportBridge() {
   const gl = useThree((s) => s.gl)
@@ -418,22 +235,13 @@ function Scene({ project }: { project: Project }) {
 
   return (
     <>
-      <color attach="background" args={[project.background]} />
+      <Background project={project} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[3, 4, 5]} intensity={2} />
       <pointLight position={[-4, -2, 3]} intensity={30} color="#6c5ce7" />
-      {project.layers.map((layer) => {
-        if (layer.kind === 'text')
-          return (
-            // Font yüklenirken sadece bu katman beklesin, tüm sahne değil.
-            <Suspense key={layer.id} fallback={null}>
-              <TextLayer layer={layer} register={register} numberLocale={project.numberLocale} />
-            </Suspense>
-          )
-        if (layer.kind === 'phone') return <PhoneLayer key={layer.id} layer={layer} register={register} />
-        if (layer.kind === 'image') return <ImageLayer key={layer.id} layer={layer} register={register} />
-        return <ShapeLayer key={layer.id} layer={layer} register={register} />
-      })}
+      {project.layers.map((layer) => (
+        <LayerNode key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
+      ))}
       <SceneEffects effects={resolveEffects(project.effects)} dofRef={dofRef} />
       <LayerGizmo project={project} />
       <ExportBridge />

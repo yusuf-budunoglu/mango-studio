@@ -37,6 +37,22 @@ export function ProjectSettings() {
           <input id="project-bg" type="color" value={project.background} onChange={(e) => updateProject({ background: e.target.value })} />
         </div>
       </div>
+      <div className="row">
+        <div>
+          <label htmlFor="project-bg-style">{t('project.backgroundStyle')}</label>
+          <select id="project-bg-style" value={project.backgroundStyle ?? 'solid'} onChange={(e) => updateProject({ backgroundStyle: e.target.value as 'solid' | 'linear' | 'radial', background2: project.background2 ?? '#1f2a44' })}>
+            <option value="solid">{t('project.bgSolid')}</option>
+            <option value="linear">{t('project.bgLinear')}</option>
+            <option value="radial">{t('project.bgRadial')}</option>
+          </select>
+        </div>
+        {(project.backgroundStyle ?? 'solid') !== 'solid' && (
+          <div>
+            <label htmlFor="project-bg2">{t('project.background2')}</label>
+            <input id="project-bg2" type="color" value={project.background2 ?? '#1f2a44'} onChange={(e) => updateProject({ background2: e.target.value })} />
+          </div>
+        )}
+      </div>
       <label htmlFor="project-format">{t('project.format')}</label>
       <select
         id="project-format"
