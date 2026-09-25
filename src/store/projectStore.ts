@@ -1,26 +1,39 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
+import { newId } from '../engine/ids'
 import { PRESETS } from '../engine/presets'
 import type { Block, Layer, LayerKind, Project } from '../engine/types'
-import { sampleProject } from '../project/sampleProject'
-
-let idCounter = 0
-const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(idCounter++).toString(36)}`
+import { DEFAULT_TEMPLATE } from '../project/templates'
 
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
 
+type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background'>>
+
+interface ClipboardEntry {
+  trackId: TrackId
+  block: Block
+}
+
 interface ProjectStore {
   project: Project
-  selectedBlockId: string | null
-  selectBlock: (id: string | null) => void
+  /** Seçili bloklar; ilk eleman özellik panelinde gösterilen "birincil" seçimdir. */
+  selectedBlockIds: string[]
+  selectBlock: (id: string | null, additive?: boolean) => void
   updateBlock: (blockId: string, patch: Partial<Omit<Block, 'id'>>) => void
   setBlockTimes: (times: Record<string, { start: number; end: number }>) => void
   addBlock: (trackId: TrackId, preset: string, start: number) => void
-  removeBlock: (blockId: string) => void
+  removeBlocks: (blockIds: string[]) => void
+  nudgeBlocks: (blockIds: string[], delta: number) => void
+  copyBlocks: (blockIds: string[]) => number
+  pasteBlocks: (at: number) => void
+  duplicateBlocks: (blockIds: string[]) => void
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
   addLayer: (kind: LayerKind, time: number) => string
   removeLayer: (layerId: string) => void
+  updateProject: (patch: ProjectSettings) => void
+  /** Başka bir projeyi açar; geri alma geçmişi sıfırlanır. */
+  loadProject: (project: Project) => void
 }
 
 const LAYER_DEFAULTS: Record<LayerKind, Omit<Layer, 'id' | 'blocks'>> = {
@@ -29,6 +42,11 @@ const LAYER_DEFAULTS: Record<LayerKind, Omit<Layer, 'id' | 'blocks'>> = {
   shape: { name: 'Şekil', kind: 'shape', color: '#ffb86c', position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1 },
   image: { name: 'Görsel', kind: 'image', color: '#ffffff', position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1 },
 }
+
+// Kopyalanan bloklar geri alma geçmişinin dışında, bellekte tutulur.
+let clipboard: ClipboardEntry[] = []
+
+const round = (t: number) => Math.round(t * 1000) / 1000
 
 function mapBlocks(project: Project, fn: (blocks: Block[], trackId: TrackId) => Block[]): Project {
   return {
@@ -46,12 +64,56 @@ export function findBlock(project: Project, blockId: string) {
   return null
 }
 
+/** Blokları asıl satırlarına, `offset` kadar kaydırıp yeni id'lerle ekler. */
+function insertCopies(project: Project, entries: ClipboardEntry[], offset: number) {
+  const created: string[] = []
+  const next = mapBlocks(project, (blocks, trackId) => {
+    const copies = entries
+      .filter((e) => e.trackId === trackId)
+      .map((e) => {
+        const id = newId('b')
+        created.push(id)
+        return { ...e.block, id, start: round(Math.max(0, e.block.start + offset)) }
+      })
+    return copies.length ? [...blocks, ...copies] : blocks
+  })
+  return { project: next, created }
+}
+
+function entriesFor(project: Project, blockIds: string[]): ClipboardEntry[] {
+  return blockIds.flatMap((id) => {
+    const found = findBlock(project, id)
+    return found ? [{ trackId: found.track.id, block: found.block }] : []
+  })
+}
+
+/**
+ * Hızlı art arda gelen değişiklikleri (yazı yazmak, ok tuşuyla kaydırmak) tek bir
+ * geri alma adımında birleştirir: bir dizinin ilk değişikliği kaydedilir, 600 ms
+ * içindeki devamı yok sayılır.
+ */
+function coalesce<Args extends unknown[]>(fn: (...args: Args) => void, windowMs = 600) {
+  let last = 0
+  return (...args: Args) => {
+    const now = Date.now()
+    if (now - last > windowMs) fn(...args)
+    last = now
+  }
+}
+
 export const useProjectStore = create<ProjectStore>()(
   temporal(
-    (set) => ({
-      project: sampleProject,
-      selectedBlockId: null,
-      selectBlock: (id) => set({ selectedBlockId: id }),
+    (set, get) => ({
+      project: DEFAULT_TEMPLATE.build(),
+      selectedBlockIds: [],
+      selectBlock: (id, additive = false) =>
+        set((s) => {
+          if (id === null) return { selectedBlockIds: [] }
+          if (!additive) return { selectedBlockIds: [id] }
+          return s.selectedBlockIds.includes(id)
+            ? { selectedBlockIds: s.selectedBlockIds.filter((x) => x !== id) }
+            : { selectedBlockIds: [id, ...s.selectedBlockIds] }
+        }),
       updateBlock: (blockId, patch) =>
         set((s) => ({
           project: mapBlocks(s.project, (blocks) => blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b))),
@@ -62,8 +124,8 @@ export const useProjectStore = create<ProjectStore>()(
             blocks.map((b) => {
               const t = times[b.id]
               if (!t) return b
-              const start = Math.max(0, t.start)
-              const duration = Math.max(0.05, t.end - t.start)
+              const start = round(Math.max(0, t.start))
+              const duration = round(Math.max(0.05, t.end - t.start))
               return start === b.start && duration === b.duration ? b : { ...b, start, duration }
             }),
           ),
@@ -71,17 +133,54 @@ export const useProjectStore = create<ProjectStore>()(
       addBlock: (trackId, presetName, start) => {
         const preset = PRESETS[presetName]
         if (!preset) return
-        const block: Block = { id: newId('b'), preset: presetName, start, duration: preset.defaultDuration }
+        const block: Block = { id: newId('b'), preset: presetName, start: round(start), duration: preset.defaultDuration }
         set((s) => ({
           project: mapBlocks(s.project, (blocks, id) => (id === trackId ? [...blocks, block] : blocks)),
-          selectedBlockId: block.id,
+          selectedBlockIds: [block.id],
         }))
       },
-      removeBlock: (blockId) =>
+      removeBlocks: (blockIds) => {
+        if (!blockIds.length) return
         set((s) => ({
-          project: mapBlocks(s.project, (blocks) => blocks.filter((b) => b.id !== blockId)),
-          selectedBlockId: s.selectedBlockId === blockId ? null : s.selectedBlockId,
-        })),
+          project: mapBlocks(s.project, (blocks) => blocks.filter((b) => !blockIds.includes(b.id))),
+          selectedBlockIds: s.selectedBlockIds.filter((id) => !blockIds.includes(id)),
+        }))
+      },
+      nudgeBlocks: (blockIds, delta) => {
+        const entries = entriesFor(get().project, blockIds)
+        if (!entries.length) return
+        // Grubun en erken bloğu 0'ın altına inmesin.
+        const d = Math.max(delta, -Math.min(...entries.map((e) => e.block.start)))
+        if (d === 0) return
+        set((s) => ({
+          project: mapBlocks(s.project, (blocks) =>
+            blocks.map((b) => (blockIds.includes(b.id) ? { ...b, start: round(b.start + d) } : b)),
+          ),
+        }))
+      },
+      copyBlocks: (blockIds) => {
+        clipboard = entriesFor(get().project, blockIds)
+        return clipboard.length
+      },
+      pasteBlocks: (at) => {
+        if (!clipboard.length) return
+        const earliest = Math.min(...clipboard.map((e) => e.block.start))
+        // Kaynak katman silinmiş olabilir; sadece var olan satırlara yapıştırılır.
+        set((s) => {
+          const { project, created } = insertCopies(s.project, clipboard, at - earliest)
+          return { project, selectedBlockIds: created }
+        })
+      },
+      duplicateBlocks: (blockIds) => {
+        const entries = entriesFor(get().project, blockIds)
+        if (!entries.length) return
+        const start = Math.min(...entries.map((e) => e.block.start))
+        const end = Math.max(...entries.map((e) => e.block.start + e.block.duration))
+        set((s) => {
+          const { project, created } = insertCopies(s.project, entries, end - start)
+          return { project, selectedBlockIds: created }
+        })
+      },
       updateLayer: (layerId, patch) =>
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) },
@@ -90,7 +189,7 @@ export const useProjectStore = create<ProjectStore>()(
         const layer: Layer = {
           ...LAYER_DEFAULTS[kind],
           id: newId('l'),
-          blocks: [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: time, duration: 0.8 }],
+          blocks: [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: round(time), duration: 0.8 }],
         }
         set((s) => ({ project: { ...s.project, layers: [...s.project.layers, layer] } }))
         return layer.id
@@ -98,14 +197,31 @@ export const useProjectStore = create<ProjectStore>()(
       removeLayer: (layerId) =>
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.filter((l) => l.id !== layerId) },
-          selectedBlockId: null,
+          selectedBlockIds: [],
         })),
+      updateProject: (patch) =>
+        set((s) => ({
+          project: {
+            ...s.project,
+            ...patch,
+            ...(patch.duration !== undefined && { duration: Math.min(120, Math.max(1, patch.duration)) }),
+          },
+        })),
+      loadProject: (project) => {
+        // Yükleme bir düzenleme sayılmasın: kaydı durdur, yükle, geçmişi temizle.
+        const history = useProjectStore.temporal.getState()
+        history.pause()
+        set({ project, selectedBlockIds: [] })
+        history.resume()
+        history.clear()
+      },
     }),
-    // Sadece proje geri alınır; seçim değişiklikleri geçmişe yazılmaz.
     {
+      // Sadece proje geri alınır; seçim değişiklikleri geçmişe yazılmaz.
       partialize: (s) => ({ project: s.project }),
       equality: (a, b) => a.project === b.project,
       limit: 100,
+      handleSet: (handleSet) => coalesce(handleSet),
     },
   ),
 )

@@ -9,5 +9,11 @@ export interface ExportBridge {
 
 export const exportBridge: { current: ExportBridge | null } = { current: null }
 
+/**
+ * Doluysa sahne oynatma zamanı yerine bu anı çizer. Küçük resim gibi arka plan çizimleri
+ * kullanıcının oynatma kafasını oynatmadan bunu kullanır.
+ */
+export const renderTimeOverride: { current: number | null } = { current: null }
+
 /** Henüz hazırlanmamış metinler; kare yakalanmadan önce beklenir. */
 export const pendingTextSyncs = new Set<Promise<void>>()

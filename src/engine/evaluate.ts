@@ -65,7 +65,7 @@ export function evaluate(project: Project, time: number): FrameState {
 
 /** Typewriter ve count-up'ı uygulayıp ekranda gösterilecek metni döndürür. */
 export function displayText(layer: Layer, state: LayerState): string {
-  const base = state.numberValue !== null ? String(state.numberValue) : (layer.text ?? '')
+  const base = state.numberValue !== null ? state.numberValue.toLocaleString('tr-TR') : (layer.text ?? '')
   if (state.textReveal >= 1) return base
   return base.slice(0, Math.round(base.length * state.textReveal))
 }

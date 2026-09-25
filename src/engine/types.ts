@@ -21,6 +21,8 @@ export interface Layer {
   name: string
   kind: LayerKind
   text?: string
+  /** metin hizası; boşsa ortalı */
+  align?: 'left' | 'center' | 'right'
   /** görsel katmanı ya da telefon ekranı için resim (data URL veya adres) */
   image?: string
   color: string

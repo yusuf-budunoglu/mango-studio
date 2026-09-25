@@ -77,7 +77,10 @@ export const PRESETS: Record<string, Preset> = {
   },
   'count-up': {
     target: 'layer', label: 'Sayaç', category: 'metin', defaultEasing: 'ease-out-expo', defaultDuration: 1.5,
-    apply: (s, e, _p, { from = 0, to = 100 }) => { s.numberValue = Math.round(from + (to - from) * e) },
+    apply: (s, e, _p, { from = 0, to = 100, decimals = 0 }) => {
+      const f = 10 ** decimals
+      s.numberValue = Math.round((from + (to - from) * e) * f) / f
+    },
   },
   'camera-push': {
     target: 'camera', label: 'Yaklaş (push-in)', category: 'kamera', defaultEasing: 'ease-in-out', defaultDuration: 4,

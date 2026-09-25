@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type PerspectiveCamera, type Texture } from 'three'
 import { displayText, evaluate } from '../engine/evaluate'
 import type { Layer, LayerState, Project } from '../engine/types'
-import { exportBridge, pendingTextSyncs } from '../export/bridge'
+import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 // troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
@@ -86,7 +86,8 @@ function TextLayer({ layer, register }: { layer: Layer; register: Register }) {
         ref={text}
         fontSize={layer.fontSize ?? 0.4}
         color={layer.color}
-        anchorX={layer.position[0] < -0.5 ? 'left' : 'center'}
+        anchorX={layer.align ?? 'center'}
+        textAlign={layer.align ?? 'center'}
         anchorY="middle"
         maxWidth={5}
       >
@@ -229,7 +230,7 @@ function Scene({ project }: { project: Project }) {
   // React yeniden çizilmez; sadece three.js nesneleri güncellenir.
   useFrame((state) => {
     const camera = state.camera as PerspectiveCamera
-    const frame = evaluate(project, usePlaybackStore.getState().time)
+    const frame = evaluate(project, renderTimeOverride.current ?? usePlaybackStore.getState().time)
     for (const layer of project.layers) appliers.current.get(layer.id)?.(frame.layers[layer.id])
     const c = frame.camera
     camera.position.set(c.x, c.y, c.z)

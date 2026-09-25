@@ -49,6 +49,12 @@ function LayerFields({ layer }: { layer: Layer }) {
           <label htmlFor="layer-text">Metin</label>
           <textarea id="layer-text" rows={2} value={layer.text ?? ''} onChange={(e) => update({ text: e.target.value })} />
           <NumberField id="layer-font" label="Yazı boyutu" value={layer.fontSize ?? 0.4} step={0.05} onChange={(v) => update({ fontSize: Math.max(0.05, v) })} />
+          <label htmlFor="layer-align">Hiza</label>
+          <select id="layer-align" value={layer.align ?? 'center'} onChange={(e) => update({ align: e.target.value as Layer['align'] })}>
+            <option value="left">Sola</option>
+            <option value="center">Ortaya</option>
+            <option value="right">Sağa</option>
+          </select>
         </>
       )}
 

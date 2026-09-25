@@ -3,12 +3,13 @@ import { EASINGS } from '../engine/easing'
 import { PRESETS, presetsFor } from '../engine/presets'
 import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 import { LayerPanel } from './LayerPanel'
+import { ProjectSettings } from './ProjectSettings'
 
 export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId: string; onSelectTrack: (id: string) => void }) {
   const project = useProjectStore((s) => s.project)
-  const selectedBlockId = useProjectStore((s) => s.selectedBlockId)
+  const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
   const updateBlock = useProjectStore((s) => s.updateBlock)
-  const removeBlock = useProjectStore((s) => s.removeBlock)
+  const removeBlocks = useProjectStore((s) => s.removeBlocks)
   const addBlock = useProjectStore((s) => s.addBlock)
 
   const track = selectedTrackId === 'camera' ? project.camera : project.layers.find((l) => l.id === selectedTrackId)
@@ -17,7 +18,7 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
   const [presetToAdd, setPresetToAdd] = useState('')
   const chosenPreset = available.some(([id]) => id === presetToAdd) ? presetToAdd : available[0]?.[0]
 
-  const found = selectedBlockId ? findBlock(project, selectedBlockId) : null
+  const found = selectedBlockIds.length ? findBlock(project, selectedBlockIds[0]) : null
   const block = found?.block
   const preset = block ? PRESETS[block.preset] : undefined
 
@@ -50,8 +51,13 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
 
       <section>
         <h2>Seçili blok</h2>
+        {selectedBlockIds.length > 1 && (
+          <p className="hint">
+            <b>{selectedBlockIds.length} blok seçili.</b> Ok tuşlarıyla kaydırın, Ctrl+C / Ctrl+D ile kopyalayın ya da çoğaltın.
+          </p>
+        )}
         {!block || !preset ? (
-          <p className="hint">Timeline'da bir bloğa tıklayın.</p>
+          <p className="hint">Timeline'da bir bloğa tıklayın. Shift ile birden fazla seçebilirsiniz.</p>
         ) : (
           <>
             <p className="block-title">
@@ -106,12 +112,14 @@ export function Inspector({ selectedTrackId, onSelectTrack }: { selectedTrackId:
                 />
               </div>
             ))}
-            <button type="button" className="danger" onClick={() => removeBlock(block.id)}>
-              Bloğu sil
+            <button type="button" className="danger" onClick={() => removeBlocks(selectedBlockIds)}>
+              {selectedBlockIds.length > 1 ? `${selectedBlockIds.length} bloğu sil` : 'Bloğu sil'}
             </button>
           </>
         )}
       </section>
+
+      <ProjectSettings />
     </aside>
   )
 }

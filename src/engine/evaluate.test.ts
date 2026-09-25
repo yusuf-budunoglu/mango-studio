@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sampleProject } from '../project/sampleProject'
+import { DEFAULT_TEMPLATE } from '../project/templates'
 import { EASINGS } from './easing'
 import { displayText, evaluate, evaluateLayer } from './evaluate'
 import type { Layer } from './types'
@@ -17,6 +17,8 @@ const layer = (blocks: Layer['blocks'], extra: Partial<Layer> = {}): Layer => ({
   blocks,
   ...extra,
 })
+
+const sampleProject = DEFAULT_TEMPLATE.build()
 
 describe('evaluate', () => {
   it('aynı zaman için her seferinde aynı sonucu verir', () => {

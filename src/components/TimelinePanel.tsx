@@ -1,7 +1,7 @@
 import { Timeline } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEditor, TimelineState } from '@xzdarcy/react-timeline-editor'
 import '@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css'
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { EASINGS } from '../engine/easing'
 import { PRESETS } from '../engine/presets'
 import type { Block } from '../engine/types'
@@ -10,6 +10,8 @@ import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectSt
 type TimelineRow = TimelineEditor['editorData'][number]
 
 const ROW_HEIGHT = 34
+const ZOOM_MIN = 40
+const ZOOM_MAX = 480
 const LANE_SEP = '::'
 const trackIdOf = (rowId: string) => rowId.split(LANE_SEP)[0]
 
@@ -39,13 +41,17 @@ interface Props {
 
 export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: Props) {
   const project = useProjectStore((s) => s.project)
-  const selectedBlockId = useProjectStore((s) => s.selectedBlockId)
+  const selectedBlockIds = useProjectStore((s) => s.selectedBlockIds)
   const selectBlock = useProjectStore((s) => s.selectBlock)
   const setBlockTimes = useProjectStore((s) => s.setBlockTimes)
   const setTime = usePlaybackStore((s) => s.setTime)
   const setPlaying = usePlaybackStore((s) => s.setPlaying)
 
   const namesRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  // Timeline yakınlaştırma: 1 saniyenin kaç piksel olduğu.
+  const [scaleWidth, setScaleWidth] = useState(120)
+  const zoom = (factor: number) => setScaleWidth((w) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(w * factor))))
   const tracks = useMemo(() => [...project.layers, project.camera], [project])
   const trackLanes = useMemo(() => tracks.map((track) => ({ track, lanes: splitIntoLanes(track.blocks) })), [tracks])
 
@@ -62,11 +68,11 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
             start: b.start,
             end: b.start + b.duration,
             effectId: b.preset,
-            selected: b.id === selectedBlockId,
+            selected: selectedBlockIds.includes(b.id),
           })),
         })),
       ),
-    [trackLanes, selectedBlockId, selectedTrackId],
+    [trackLanes, selectedBlockIds, selectedTrackId],
   )
 
   // Timeline kendi saatini çalıştırıyor; zamanı oradan önizlemeye aktarıyoruz.
@@ -90,8 +96,29 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
     }
   }, [timelineRef, setTime, setPlaying])
 
+  // Ctrl + fare tekerleği ile yakınlaştır. React'in onWheel'i pasif olduğu için elle bağlanıyor.
+  useEffect(() => {
+    const el = panelRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   return (
-    <div className="timeline-panel">
+    <div className="timeline-panel" ref={panelRef}>
+      <div className="zoom-controls">
+        <button type="button" onClick={() => zoom(1 / 1.25)} title="Uzaklaş (Ctrl + tekerlek)" aria-label="Uzaklaş">
+          −
+        </button>
+        <button type="button" onClick={() => zoom(1.25)} title="Yakınlaş (Ctrl + tekerlek)" aria-label="Yakınlaş">
+          +
+        </button>
+      </div>
       <div className="track-names" ref={namesRef}>
         {trackLanes.map(({ track: t, lanes }) => (
           <button
@@ -112,7 +139,7 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
         effects={EFFECTS}
         scale={1}
         scaleSplitCount={10}
-        scaleWidth={120}
+        scaleWidth={scaleWidth}
         startLeft={16}
         rowHeight={ROW_HEIGHT}
         minScaleCount={Math.ceil(project.duration) + 1}
@@ -128,8 +155,8 @@ export function TimelinePanel({ timelineRef, selectedTrackId, onSelectTrack }: P
           for (const row of rows) for (const a of row.actions) times[a.id] = { start: a.start, end: a.end }
           setBlockTimes(times)
         }}
-        onClickActionOnly={(_e, { action, row }) => {
-          selectBlock(action.id)
+        onClickActionOnly={(e, { action, row }) => {
+          selectBlock(action.id, e.shiftKey || e.ctrlKey || e.metaKey)
           onSelectTrack(trackIdOf(row.id))
         }}
         onClickRow={(_e, { row }) => onSelectTrack(trackIdOf(row.id))}
