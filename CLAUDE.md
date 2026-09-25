@@ -54,6 +54,11 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - `move` (özel hareket): katmanı hedefe götürür ve orada bırakır; art arda bloklar anahtar kare gibi yol çizer.
 - Geçişler (`fade-black`, `fade-white`, `flash`) kamera satırında; `Stage.tsx`'teki tam ekran örtüyü sürer. Örtü en yüksek `renderOrder`'lı bir grupta: three.js önce grup sırasına bakar.
 - Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts). Panelde `CurveEditor` tutamaçları.
+- `move` X/Y/Z dönüşü de alır (`rotX`, `rotY`, `rotate`). Sinematik çekimlerde tek uzun `move` + yavaşlayan özel eğri kullan; kısa giriş + ayrı süzülme bloğu hızda kırılma yapar.
+- `soft-reveal`: harfler soldan sağa yumuşak kenarla belirir. `TextLayer`'daki temel malzemenin `onBeforeCompile`'ı (troika bunu kendi shader'ından önce çalıştırır) harfin yerel x'ine göre opaklık verir.
+- `focus-pull` `blur` ayarı: o bloktan sonra alan derinliği bulanıklığının çarpanı (0 = net). Troika metni derinlik yazmadığı için alan derinliği metni de bulanıklaştırır; metinli geniş planlarda `blur: 0`.
+- Alan derinliği açılıp kapanınca `EffectComposer` `key` ile yeniden kurulur (yoksa çizim donuyor).
+- `Project.accentLight`: sol alttaki vurgu ışığının rengi (boşsa mor).
 
 ## 3D cihaz modelleri
 - `public/models/{phone,tablet,laptop}.glb`, `node scripts/process-models.mjs` ile `models-src/*.glb`'den (git'e girmez, Sketchfab indirmeleri) üretilir: logo/marka yazıları, klavye kılıfı/kalem ve duvar kağıtları çıkarılır; parça adları genelleştirilir; ekran +z'ye döndürülür, ölçü procedural maketlerle aynı; meshopt sıkıştırma.

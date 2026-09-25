@@ -20,6 +20,11 @@ describe('efektler', () => {
     expect(evaluateCamera(project, 0).focusZ).toBe(-4)
     expect(evaluateCamera(project, 0.5).focusZ).toBeCloseTo(-2)
     expect(evaluateCamera(project, 1).focusZ).toBe(0)
+    // bulanıklık varsayılan 1; blokla değiştirilebilir ve sonrasında öyle kalır
+    expect(evaluateCamera(project, 0.5).focusBlur).toBe(1)
+    project.camera.blocks.push({ id: 'g', preset: 'focus-pull', start: 2, duration: 0, params: { from: 0, to: 0, blur: 0 } })
+    expect(evaluateCamera(project, 1.5).focusBlur).toBe(1)
+    expect(evaluateCamera(project, 3).focusBlur).toBe(0)
   })
 })
 

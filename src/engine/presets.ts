@@ -100,13 +100,17 @@ export const PRESETS: Record<string, Preset> = {
       { key: 'dy', default: 0, min: -20, max: 20, step: 0.1 },
       { key: 'dz', default: 0, min: -20, max: 20, step: 0.1 },
       { key: 'rotate', default: 0, min: -720, max: 720, step: 5 },
+      { key: 'rotX', default: 0, min: -720, max: 720, step: 5 },
+      { key: 'rotY', default: 0, min: -720, max: 720, step: 5 },
       { key: 'scaleBy', default: 1, min: 0.05, max: 10, step: 0.05 },
     ],
-    apply: (s, e, _p, { dx, dy, dz, rotate, scaleBy }) => {
+    apply: (s, e, _p, { dx, dy, dz, rotate, rotX, rotY, scaleBy }) => {
       s.x += dx * e
       s.y += dy * e
       s.z += dz * e
       s.rotZ += rotate * DEG * e
+      s.rotX += rotX * DEG * e
+      s.rotY += rotY * DEG * e
       s.scale *= 1 + (scaleBy - 1) * e
     },
   },
@@ -117,6 +121,12 @@ export const PRESETS: Record<string, Preset> = {
   'wipe-in': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 0.9,
     apply: (s, e) => { s.wipe = Math.min(s.wipe, e) },
+  },
+  'soft-reveal': {
+    // Harfler soldan sağa, yumuşak bir kenarla belirir (sert kırpan wipe-in'in yumuşak hali).
+    target: 'layer', category: 'text', defaultEasing: 'ease-out', defaultDuration: 0.6,
+    params: [{ key: 'softness', default: 0.3, min: 0.02, max: 1, step: 0.02 }],
+    apply: (s, e, _p, { softness }) => { s.softReveal = Math.min(s.softReveal, e); s.revealSoftness = softness },
   },
   'tracking-in': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.2,
@@ -153,8 +163,17 @@ export const PRESETS: Record<string, Preset> = {
   },
   'focus-pull': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
-    params: [{ key: 'from', default: -3, min: -20, max: 10, step: 0.25 }, { key: 'to', default: 0, min: -20, max: 10, step: 0.25 }],
-    apply: (s, e, _p, { from, to }) => { s.focusZ = from + (to - from) * e },
+    params: [
+      { key: 'from', default: -3, min: -20, max: 10, step: 0.25 },
+      { key: 'to', default: 0, min: -20, max: 10, step: 0.25 },
+      { key: 'blur', default: 1, min: 0, max: 3, step: 0.1 },
+    ],
+    // blur: bu bloktan itibaren bulanıklık miktarı (0 = geniş planlarda her şey net)
+    apply: (s, e, p, { from, to, blur }) => {
+      s.focusZ = from + (to - from) * e
+      // bulanıklık blok başlayınca geçerli olur (öncesinde e=0 ile de çağrılıyoruz)
+      if (p > 0) s.focusBlur = blur
+    },
   },
   'fade-black': {
     // Geçiş: ortasında ekran tamamen kararır; iki sahnenin arasına koyulur.

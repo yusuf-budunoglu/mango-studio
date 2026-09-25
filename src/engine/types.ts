@@ -121,6 +121,8 @@ export interface Project {
   /** arka plan: düz renk ya da iki renkli degrade (`background` → `background2`) */
   backgroundStyle?: 'solid' | 'linear' | 'radial'
   background2?: string
+  /** sol alttan gelen vurgu ışığının rengi (boşsa mor #6c5ce7) */
+  accentLight?: string
   /** videodaki sayıların biçimi (count-up), ör. 'en-US' → 1,000 · 'tr-TR' → 1.000; boşsa en-US */
   numberLocale?: string
   layers: Layer[]
@@ -149,6 +151,10 @@ export interface LayerState {
   wordReveal: number
   /** 0..1: metnin soldan sağa görünen kısmı (wipe-in) */
   wipe: number
+  /** 0..1: harfler soldan sağa yumuşak kenarla belirir (soft-reveal) */
+  softReveal: number
+  /** soft-reveal kenarının genişliği, metin genişliğine oranla */
+  revealSoftness: number
   /** harf aralığına eklenen (tracking-in) */
   letterSpacing: number
 }
@@ -163,6 +169,8 @@ export interface CameraState {
   targetY: number
   /** alan derinliği açıkken netlik düzleminin z konumu */
   focusZ: number
+  /** alan derinliği bulanıklığının çarpanı (0 = tamamen net) */
+  focusBlur: number
   /** geçiş örtüsü: 0 = görünmez, 1 = ekran tamamen kaplı */
   overlayOpacity: number
   /** örtü rengi: 0 = siyah, 1 = beyaz */

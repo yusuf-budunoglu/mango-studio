@@ -27,6 +27,8 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     numberValue: null,
     wordReveal: 1,
     wipe: 1,
+    softReveal: 1,
+    revealSoftness: 0.3,
     letterSpacing: 0,
   }
   for (const block of sortedBlocks(layer.blocks)) {
@@ -49,6 +51,7 @@ export function evaluateCamera(project: Project, time: number): CameraState {
     targetX: 0,
     targetY: 0,
     focusZ: 0,
+    focusBlur: 1,
     overlayOpacity: 0,
     overlayWhite: 0,
   }

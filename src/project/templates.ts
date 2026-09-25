@@ -122,6 +122,72 @@ export const TEMPLATES: Template[] = [
         camera([b('camera-pull', 0.4, 4.6, { params: { distance: 1.5 } })], [0, 0, 7]),
       ),
   },
+  {
+    id: 'fintech',
+    accent: '#72e83f',
+    build: () => {
+      // Sinematik ürün tanıtımı: siyah fon, sert kesmelerle ayrılan yakın çekimler, alan derinliği.
+      // Her çekim ayrı bir telefon katmanı; kesme = süresi 0 olan fade-in / fade-out.
+      // Her çekimde tek uzun hareket: hızlı girer, çekim boyunca yavaşlayarak süzülmeye devam eder
+      // (iki ayrı blok hızda kırılma yapıyor). Katmanın konumu çekimin başındaki poz.
+      const screen = `${import.meta.env.BASE_URL}templates/screens/fintech.png`
+      const cut = (from: number, to: number) => [b('fade-in', from, 0), b('fade-out', to, 0)]
+      const glide = (start: number, duration: number, params: Record<string, number>) =>
+        b('move', start, duration, { params: { dx: 0, ...params }, easing: 'custom', bezier: [0.12, 0.72, 0.3, 1] })
+      const whip = (start: number, duration: number, params: Record<string, number>) => b('move', start, duration, { params: { dx: 0, ...params }, easing: 'ease-in' })
+      const focus = (at: number, z: number, blur = 1) => b('focus-pull', at, 0, { params: { from: z, to: z, blur } })
+      const phone = (n: number, spec: Omit<LayerSpec, 'name' | 'kind' | 'color'>) =>
+        layer({ name: `${t('layerNames.phone')} ${n}`, kind: 'phone', color: '#72e83f', image: screen, deviceFinish: 'space', ...spec })
+      const text = { kind: 'text' as const, color: '#ffffff', fontFamily: 'space-grotesk', fontSize: 0.7, textWidth: 10 }
+      return {
+        ...project(
+          t('templates.fintech.name'),
+          19,
+          '#000000',
+          [
+            // 1) Alt kenar yakın çekim: yukarıdan iner, çekim boyunca yavaşlayarak aşağı süzülür.
+            phone(1, {
+              position: [0.15, 5.4, 2],
+              rotation: [-28, 0, -21],
+              scale: 2.6,
+              blocks: [...cut(0, 3), glide(0, 3, { dx: 0.35, dy: -2.85, rotate: -3 })],
+            }),
+            // 2) Üst kenar yakın çekim: sağ alttan girer, sola süzülür; sonda hızlanıp sola çıkar.
+            phone(2, {
+              position: [1.3, -3.77, 3.8],
+              rotation: [25, -10, 22],
+              scale: 1.7,
+              blocks: [...cut(3, 7.9), glide(3, 4, { dx: -2.3, dy: 1.9, rotate: -2 }), whip(7, 0.9, { dx: -4.5 })],
+            }),
+            // 3) Kasa kenarı: alttan yan dönmüş halde yükselir, kapı gibi açılarak ekrana döner.
+            phone(3, {
+              position: [1.5, -5.5, 3.9],
+              rotation: [0, 88, -35],
+              scale: 2.3,
+              blocks: [...cut(8, 10.95), glide(8, 2.95, { dx: -1.9, dy: 3.5, rotY: -45, rotate: 40, dz: 0.2 })],
+            }),
+            // 4) Geniş plan: telefon yukarıdan düşer; metin harf harf yumuşakça belirir.
+            phone(4, {
+              position: [2.75, 5, -0.5],
+              rotation: [30, -40, 6],
+              scale: 1.45,
+              blocks: [...cut(11, 13.95), glide(11, 2.6, { dy: -5.1, dz: 0.5, rotX: -26, rotY: 18, rotate: -6 }), whip(13.55, 0.4, { dz: 1 })],
+            }),
+            layer({ ...text, name: `${t('layerNames.title')} 1`, align: 'left', text: t('templates.fintech.line1'), position: [-4.5, 0.42, 0], blocks: [...cut(11.3, 13.95), b('soft-reveal', 11.3, 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
+            layer({ ...text, name: `${t('layerNames.title')} 2`, align: 'left', text: t('templates.fintech.line2'), position: [-4.5, -0.42, 0], blocks: [...cut(11.9, 13.95), b('soft-reveal', 11.9, 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
+            // 5) Logo: halka sabit, içindeki kare dönerek elmas olarak yerine oturur.
+            layer({ name: t('layerNames.logo'), kind: 'shape', shape: 'circle', color: '#ffffff', position: [0, 0, 0], scale: 1.4, blocks: [...cut(14, 16.2)] }),
+            layer({ name: `${t('layerNames.logo')} ◆`, kind: 'shape', shape: 'rounded', color: '#000000', position: [0, 0, 0.01], rotation: [0, 0, 180], scale: 0.8, blocks: [...cut(14, 16.2), b('move', 14, 1, { params: { dx: 0, rotate: -135 }, easing: 'ease-out-expo' })] }),
+            // 6) Kapanış: sert kesmeyle gelir
+            layer({ ...text, name: t('layerNames.closing'), text: t('templates.fintech.closing'), fontSize: 0.62, position: [0, 0, 0], blocks: [b('fade-in', 16.25, 0)] }),
+          ],
+          camera([focus(0, 4.6), focus(3, 4.5, 0.6), focus(8, 4.3, 0.4), focus(11, 0, 0)]),
+        ),
+        accentLight: '#9aa4b5',
+        effects: { dof: { enabled: true, bokeh: 4, range: 2 }, bloom: { enabled: false }, vignette: { enabled: true, darkness: 0.35 } },
+      }
+    },
+  },
 ]
 
 export const DEFAULT_TEMPLATE = TEMPLATES[0]

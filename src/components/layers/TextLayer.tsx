@@ -1,6 +1,6 @@
 import { Text } from '@react-three/drei'
-import { useLayoutEffect, useRef } from 'react'
-import type { Group, Mesh } from 'three'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { MeshBasicMaterial, type Group, type Mesh } from 'three'
 import { displayText } from '../../engine/evaluate'
 import { pendingTextSyncs } from '../../export/bridge'
 import { fontUrl } from '../../render/fonts'
@@ -27,9 +27,32 @@ function syncText(mesh: TroikaText) {
   void done.then(() => pendingTextSyncs.delete(done))
 }
 
+/**
+ * soft-reveal için temel malzeme: troika bunun onBeforeCompile'ını kendi shader'ından önce
+ * çalıştırır. Harfin yerel x'i ile görünürlük kenarı arasındaki mesafe opaklığı belirler.
+ */
+function useRevealMaterial() {
+  const uniforms = useMemo(() => ({ uRevealEdge: { value: 1e6 }, uRevealSoft: { value: 1e-3 } }), [])
+  const material = useMemo(() => {
+    const m = new MeshBasicMaterial({ transparent: true })
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, uniforms)
+      shader.vertexShader = `varying float vRevealX;\n${shader.vertexShader}`.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRevealX = transformed.x;')
+      shader.fragmentShader = `uniform float uRevealEdge;\nuniform float uRevealSoft;\nvarying float vRevealX;\n${shader.fragmentShader}`.replace(
+        '#include <dithering_fragment>',
+        '#include <dithering_fragment>\ngl_FragColor.a *= clamp((uRevealEdge - vRevealX) / uRevealSoft, 0.0, 1.0);',
+      )
+    }
+    return m
+  }, [uniforms])
+  useEffect(() => () => material.dispose(), [material])
+  return { material, uniforms }
+}
+
 export function TextLayer({ layer, register, numberLocale }: LayerProps) {
   const group = useRef<Group>(null)
   const text = useRef<TroikaText>(null)
+  const reveal = useRevealMaterial()
 
   useLayoutEffect(() => {
     register(layer.id, (s) => {
@@ -58,6 +81,15 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
       } else if (mesh.clipRect) {
         mesh.clipRect = null
       }
+      // soft-reveal: kenar soldan sağa, yumuşaklık kadar genişlikte bir geçişle ilerler
+      if (s.softReveal < 1 && bounds) {
+        const [minX, , maxX] = bounds
+        const soft = Math.max(1e-3, (maxX - minX) * s.revealSoftness)
+        reveal.uniforms.uRevealEdge.value = minX + (maxX - minX + soft) * s.softReveal
+        reveal.uniforms.uRevealSoft.value = soft
+      } else {
+        reveal.uniforms.uRevealEdge.value = 1e6
+      }
     })
   })
 
@@ -65,6 +97,7 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
     <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
       <Text
         ref={text}
+        material={reveal.material}
         font={fontUrl(layer.fontFamily, layer.fontWeight)}
         fontSize={layer.fontSize ?? 0.4}
         color={layer.color}

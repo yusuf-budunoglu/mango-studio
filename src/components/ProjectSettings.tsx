@@ -52,6 +52,10 @@ export function ProjectSettings() {
             <input id="project-bg2" type="color" value={project.background2 ?? '#1f2a44'} onChange={(e) => updateProject({ background2: e.target.value })} />
           </div>
         )}
+        <div>
+          <label htmlFor="project-light">{t('project.accentLight')}</label>
+          <input id="project-light" type="color" value={project.accentLight ?? '#6c5ce7'} onChange={(e) => updateProject({ accentLight: e.target.value })} />
+        </div>
       </div>
       <label htmlFor="project-format">{t('project.format')}</label>
       <select

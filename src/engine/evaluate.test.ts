@@ -66,6 +66,11 @@ describe('evaluate', () => {
     const wipe = layer([{ id: 'b', preset: 'wipe-in', start: 0, duration: 1, easing: 'linear' }])
     expect(evaluateLayer(wipe, 0.25).wipe).toBeCloseTo(0.25)
     expect(evaluateLayer(wipe, 2).wipe).toBe(1)
+    const soft = layer([{ id: 'b', preset: 'soft-reveal', start: 0, duration: 1, easing: 'linear', params: { softness: 0.5 } }])
+    expect(evaluateLayer(soft, -1).softReveal).toBe(0)
+    expect(evaluateLayer(soft, 0.5).softReveal).toBeCloseTo(0.5)
+    expect(evaluateLayer(soft, 0.5).revealSoftness).toBe(0.5)
+    expect(evaluateLayer(soft, 2).softReveal).toBe(1)
 
     const tracking = layer([{ id: 'b', preset: 'tracking-in', start: 0, duration: 1, easing: 'linear' }])
     expect(evaluateLayer(tracking, 0).letterSpacing).toBeCloseTo(0.4)

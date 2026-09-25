@@ -1,3 +1,4 @@
+import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo } from 'react'
 import {
   Box3,
@@ -10,6 +11,7 @@ import {
   type Group,
   type InstancedMesh,
   type Mesh,
+  type MeshPhysicalMaterial,
   type MeshStandardMaterial,
   type Texture,
 } from 'three'
@@ -326,9 +328,17 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
       const material = (mesh.material as MeshStandardMaterial).clone()
       mesh.material = material
       materials.push(material)
+      // Cam parçalarındaki "transmission" ayrı bir çizim geçişi ister ve kenarlarda renkli parlama
+      // yapıyor; düz yarı saydam cam yeterli.
+      if ('transmission' in material && (material as MeshPhysicalMaterial).transmission > 0) (material as MeshPhysicalMaterial).transmission = 0
       const slot = /finish.?(frame|back)/.exec(material.name)?.[1] as 'frame' | 'back' | undefined
       if (slot) {
         if (material.roughness > 0.95) material.roughness = 0.45
+        // kasa: parlak metal (stüdyo ışığında kenar yansımaları)
+        if (slot === 'frame') {
+          material.metalness = 1
+          material.roughness = Math.min(material.roughness, 0.28)
+        }
         finishes.push({ slot, material })
       }
     })
@@ -364,11 +374,19 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
   }, [parts, finish])
 
   const placeholder = usePlaceholderScreen(layer.color, SCREEN_ASPECT[kind])
+  const maxAnisotropy = useThree((st) => st.gl.capabilities.getMaxAnisotropy())
   useEffect(() => {
+    const map = screen ?? placeholder
+    // Yakın çekimlerde ekran eğik görünür; anizotropik süzme yazıları net tutar.
+    if (map.anisotropy !== maxAnisotropy) {
+      // eslint-disable-next-line react-hooks/immutability -- three.js dokusu, React durumu değil
+      map.anisotropy = maxAnisotropy
+      map.needsUpdate = true
+    }
     // eslint-disable-next-line react-hooks/immutability -- three.js malzemesi, React durumu değil
-    parts.screenMaterial.map = screen ?? placeholder
+    parts.screenMaterial.map = map
     parts.screenMaterial.needsUpdate = true
-  }, [parts, screen, placeholder])
+  }, [parts, screen, placeholder, maxAnisotropy])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/immutability -- three.js düğümü, React durumu değil

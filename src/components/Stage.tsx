@@ -113,8 +113,10 @@ function LayerGizmo({ project }: { project: Project }) {
 function SceneEffects({ effects, dofRef }: { effects: ProjectEffects; dofRef: React.RefObject<DepthOfFieldEffect | null> }) {
   const { bloom, vignette, dof, grain, color } = effects
   const hasColor = color.saturation !== 0 || color.contrast !== 0 || color.brightness !== 0
+  // Alan derinliği derinlik dokusu ister; açılıp kapanınca zincir baştan kurulmazsa çizim donuyor
+  // (glBlitFramebuffer derinlik biçimi hatası). key ile yeniden kurdur.
   return (
-    <EffectComposer>
+    <EffectComposer key={dof.enabled ? 'dof' : 'flat'}>
       <>{dof.enabled && <DepthOfField ref={dofRef} target={[0, 0, 0]} focusRange={dof.range} bokehScale={dof.bokeh} />}</>
       <>{bloom.enabled && <Bloom intensity={bloom.intensity} luminanceThreshold={bloom.threshold} mipmapBlur />}</>
       <>{hasColor && <HueSaturation saturation={color.saturation} />}</>
@@ -220,6 +222,7 @@ function ExportBridge() {
 
 function Scene({ project }: { project: Project }) {
   const dofRef = useRef<DepthOfFieldEffect | null>(null)
+  const dofBokeh = resolveEffects(project.effects).dof.bokeh
   const overlayRef = useRef<Mesh>(null)
   const appliers = useRef(new Map<string, Applier>())
   const groups = useRef(new Map<string, Object3D>())
@@ -242,7 +245,10 @@ function Scene({ project }: { project: Project }) {
     })
     const c = frame.camera
     // Alan derinliği: netlik düzlemi kamera satırındaki odak animasyonunu izler.
-    if (dofRef.current) dofRef.current.target = focusTarget.set(c.targetX, c.targetY, c.focusZ)
+    if (dofRef.current) {
+      dofRef.current.target = focusTarget.set(c.targetX, c.targetY, c.focusZ)
+      dofRef.current.bokehScale = dofBokeh * c.focusBlur
+    }
     camera.position.set(c.x, c.y, c.z)
     camera.lookAt(c.targetX, c.targetY, 0)
     if (camera.fov !== c.fov) {
@@ -273,7 +279,7 @@ function Scene({ project }: { project: Project }) {
       <StudioEnvironment />
       <ambientLight intensity={0.5} />
       <directionalLight position={[3, 4, 5]} intensity={2} />
-      <pointLight position={[-4, -2, 3]} intensity={30} color="#6c5ce7" />
+      <pointLight position={[-4, -2, 3]} intensity={30} color={project.accentLight ?? '#6c5ce7'} />
       {project.layers.map((layer) => (
         <LayerNode key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
       ))}
