@@ -7,6 +7,7 @@ import { displayText, evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
 import { exportBridge, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
+import { resolveAssetUrl } from '../persistence/assets'
 import { fontUrl } from '../render/fonts'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
@@ -69,11 +70,15 @@ function useImageTexture(url: string | undefined) {
   useEffect(() => {
     if (!url) return
     let alive = true
-    new TextureLoader().load(url, (texture) => {
-      texture.colorSpace = SRGBColorSpace
-      const img = texture.image as { width: number; height: number }
-      if (alive) setLoaded({ url, texture, aspect: img.width / img.height })
-      else texture.dispose()
+    // url bir data/http adresi ya da dosya deposu referansı (asset:<id>) olabilir.
+    void resolveAssetUrl(url).then((src) => {
+      if (!alive || !src) return
+      new TextureLoader().load(src, (texture) => {
+        texture.colorSpace = SRGBColorSpace
+        const img = texture.image as { width: number; height: number }
+        if (alive) setLoaded({ url, texture, aspect: img.width / img.height })
+        else texture.dispose()
+      })
     })
     return () => {
       alive = false

@@ -107,7 +107,23 @@ button.danger { color: var(--danger); }
 .inspector textarea { resize: vertical; }
 .add-layer { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .add-layer button { padding: 5px 8px; font-size: 13px; }
-.export { display: flex; align-items: center; gap: 8px; }
+.export { position: relative; display: flex; align-items: center; gap: 8px; }
+.export > button { display: inline-flex; align-items: center; gap: 6px; }
+.export-popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; width: 280px;
+  display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: #151a21; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.export-popover h3 { margin: 0 0 4px; font-size: 14px; }
+.export-popover label { font-size: 12px; color: var(--muted); }
+.export-popover select { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.export-popover .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.export-progress { height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.export-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.2s ease; }
+.block--audio { position: relative; background: #2b4a63; }
+.block--audio .block-name { position: relative; z-index: 1; }
+.waveform { position: absolute; inset: 2px 0; width: 100%; height: calc(100% - 4px); pointer-events: none; }
+.waveform polygon { fill: rgba(170, 215, 255, 0.45); }
 .export-error { color: var(--danger); font-size: 12px; max-width: 260px; }
 .inspector .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }

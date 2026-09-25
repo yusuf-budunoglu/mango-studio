@@ -5,11 +5,12 @@ import { MoveHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PRESETS } from '../engine/presets'
-import type { Block, Layer } from '../engine/types'
+import type { Layer } from '../engine/types'
 import { easingLabel, presetLabel } from '../i18n/labels'
-import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { findAudio, findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 import { ContextMenu, type MenuItem } from './ContextMenu'
-import { TrackList } from './TrackList'
+import { TrackList, type AudioTrackRow } from './TrackList'
+import { Waveform } from './Waveform'
 
 type TimelineRow = TimelineEditor['editorData'][number]
 
@@ -21,8 +22,8 @@ const LANE_SEP = '::'
 const trackIdOf = (rowId: string) => rowId.split(LANE_SEP)[0]
 
 /** Çakışmayan blokları aynı şeride koyar, çakışanlar için yeni şerit açar. */
-function splitIntoLanes(blocks: Block[]): Block[][] {
-  const lanes: Block[][] = []
+function splitIntoLanes<T extends { start: number; duration: number }>(blocks: T[]): T[][] {
+  const lanes: T[][] = []
   const laneEnds: number[] = []
   for (const b of [...blocks].sort((x, y) => x.start - y.start)) {
     let lane = laneEnds.findIndex((end) => end <= b.start + 1e-6)
@@ -36,7 +37,8 @@ function splitIntoLanes(blocks: Block[]): Block[][] {
   return lanes.length ? lanes : [[]]
 }
 
-const EFFECTS = Object.fromEntries(Object.keys(PRESETS).map((id) => [id, { id }]))
+const AUDIO_EFFECT = 'audio'
+const EFFECTS = Object.fromEntries([...Object.keys(PRESETS), AUDIO_EFFECT].map((id) => [id, { id }]))
 
 interface Props {
   timelineRef: RefObject<TimelineState | null>
@@ -71,6 +73,8 @@ export function TimelinePanel({ timelineRef }: Props) {
 
   const tracks = useMemo(() => [...project.layers, project.camera], [project])
   const trackLanes = useMemo(() => tracks.map((track) => ({ track, lanes: splitIntoLanes(track.blocks) })), [tracks])
+  const audioLanes = useMemo(() => splitIntoLanes(project.audio ?? []), [project.audio])
+  const audioTrack: AudioTrackRow = { id: 'audio', name: t('tracks.audio') }
 
   // Proje verisi → timeline'ın beklediği satır/aksiyon formatı. Her blok bir aksiyon;
   // bir katmanın çakışan blokları alt alta ayrı satırlara (şeritlere) dağıtılır.
@@ -99,6 +103,27 @@ export function TimelinePanel({ timelineRef }: Props) {
       }),
     [trackLanes, selectedBlockIds, selectedTrackId, project.duration],
   )
+
+  // Ses parçaları ayrı satırlarda; kaynak dosyanın dışına kırpılamaz, videonun sonunu geçemez.
+  const audioData: TimelineRow[] = useMemo(
+    () =>
+      audioLanes.map((clips, lane) => ({
+        id: `audio${LANE_SEP}${lane}`,
+        selected: selectedTrackId === 'audio',
+        actions: clips.map((c) => ({
+          id: c.id,
+          start: c.start,
+          end: c.start + c.duration,
+          minStart: Math.max(0, c.start - c.offset),
+          maxEnd: Math.max(c.start + c.duration, Math.min(project.duration, c.start + (c.sourceDuration - c.offset))),
+          effectId: AUDIO_EFFECT,
+          selected: selectedBlockIds.includes(c.id),
+        })),
+      })),
+    [audioLanes, selectedBlockIds, selectedTrackId, project.duration],
+  )
+  // Aynı dizi referansı kalmalı: timeline motoru verisi her değiştiğinde oynatmayı durdurur.
+  const allRows = useMemo(() => (audioData.length ? [...editorData, ...audioData] : editorData), [editorData, audioData])
 
   // Timeline kendi saatini çalıştırıyor; zamanı oradan önizlemeye aktarıyoruz.
   useEffect(() => {
@@ -181,13 +206,26 @@ export function TimelinePanel({ timelineRef }: Props) {
     // Seçimin dışındaki bloğa sağ tıklanınca sadece o blok seçilir.
     if (!store.selectedBlockIds.includes(blockId)) store.selectBlock(blockId)
     const ids = useProjectStore.getState().selectedBlockIds
-    const found = findBlock(project, blockId)
-    if (!found) return
     const time = usePlaybackStore.getState().time
     const canSplit = ids.some((id) => {
-      const b = findBlock(project, id)?.block
+      const b = findBlock(project, id)?.block ?? findAudio(project, id)
       return !!b && time > b.start + 0.01 && time < b.start + b.duration - 0.01
     })
+    const found = findBlock(project, blockId)
+    if (!found) {
+      if (!findAudio(project, blockId)) return
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: [
+          { label: t('blockMenu.duplicate'), hint: 'Ctrl+D', onSelect: () => store.duplicateBlocks(ids) },
+          { label: t('blockMenu.split'), hint: 'S', disabled: !canSplit, onSelect: () => store.splitBlocks(ids, time) },
+          { kind: 'separator' },
+          { label: t('block.delete', { count: ids.length }), hint: 'Del', danger: true, onSelect: () => store.removeBlocks(ids) },
+        ],
+      })
+      return
+    }
     const isCamera = PRESETS[found.block.preset]?.target === 'camera'
     const targets = isCamera ? [] : project.layers.filter((l) => l.id !== found.track.id)
     setMenu({
@@ -223,7 +261,10 @@ export function TimelinePanel({ timelineRef }: Props) {
         </button>
       </div>
       <TrackList
-        rows={trackLanes.map(({ track, lanes }) => ({ track, lanes: lanes.length }))}
+        rows={[
+          ...trackLanes.map(({ track, lanes }) => ({ track, lanes: lanes.length })),
+          ...(project.audio?.length ? [{ track: audioTrack, lanes: audioLanes.length }] : []),
+        ]}
         rowHeight={ROW_HEIGHT}
         containerRef={namesRef}
         onContextMenu={layerMenu}
@@ -234,7 +275,7 @@ export function TimelinePanel({ timelineRef }: Props) {
       <div className="timeline-wrap" ref={wrapRef}>
         <Timeline
           ref={timelineRef}
-          editorData={editorData}
+          editorData={allRows}
           effects={EFFECTS}
           scale={1}
           scaleSplitCount={10}
@@ -254,6 +295,7 @@ export function TimelinePanel({ timelineRef }: Props) {
             const times: Record<string, { start: number; end: number }> = {}
             for (const row of rows) for (const a of row.actions) times[a.id] = { start: a.start, end: a.end }
             setBlockTimes(times)
+            if (project.audio?.length) useProjectStore.getState().setAudioTimes(times)
           }}
           onClickActionOnly={(e, { action, row }) => {
             selectBlock(action.id, e.shiftKey || e.ctrlKey || e.metaKey)
@@ -262,6 +304,16 @@ export function TimelinePanel({ timelineRef }: Props) {
           onClickRow={(_e, { row }) => selectTrack(trackIdOf(row.id))}
           onContextMenuAction={(e, { action }) => blockMenu(action.id, e)}
           getActionRender={(action) => {
+            if (action.effectId === AUDIO_EFFECT) {
+              const clip = findAudio(project, action.id)
+              if (!clip) return null
+              return (
+                <div className={`block block--audio ${action.selected ? 'is-selected' : ''}`}>
+                  <Waveform asset={clip.asset} offset={clip.offset} duration={clip.duration} sourceDuration={clip.sourceDuration} />
+                  <span className="block-name">{clip.name}</span>
+                </div>
+              )
+            }
             const found = findBlock(project, action.id)
             const preset = PRESETS[action.effectId]
             const easing = found?.block.easing ?? preset?.defaultEasing

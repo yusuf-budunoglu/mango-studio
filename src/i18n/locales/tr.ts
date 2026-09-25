@@ -39,7 +39,15 @@ const tr: Translation = {
     timeOf: '/ {{duration}} sn',
   },
   exportVideo: {
-    button: 'MP4 indir',
+    button: 'Dışa aktar',
+    title: 'Videoyu dışa aktar',
+    resolution: 'Çözünürlük',
+    fps: 'Kare hızı',
+    format: 'Format',
+    start: 'Dışa aktar ve indir',
+    summary: '{{width}}×{{height}} · {{seconds}} sn · {{audio}}',
+    withAudio: 'sesli',
+    noAudio: 'sessiz',
     progress: 'Dışa aktarılıyor… %{{percent}}',
     notReady: 'Önizleme henüz hazır değil.',
     unsupported: 'Bu tarayıcı video kodlamayı desteklemiyor. Chrome veya Edge deneyin.',
@@ -57,7 +65,7 @@ const tr: Translation = {
   },
   layer: {
     title: 'Katman',
-    add: { text: '+ Metin', image: '+ Görsel', phone: '+ Telefon', shape: '+ Şekil' },
+    add: { text: '+ Metin', image: '+ Görsel', phone: '+ Telefon', shape: '+ Şekil', audio: '+ Ses' },
     empty: 'Soldaki listeden bir katman seçin.',
     name: 'Ad',
     text: 'Metin',
@@ -130,6 +138,7 @@ const tr: Translation = {
     fit: 'Genişliğe sığdır',
   },
   tracks: {
+    audio: 'Ses',
     reorder: 'Sıralamak için sürükleyin. Üstteki katman öndedir.',
     show: 'Katmanı göster',
     hide: 'Katmanı gizle',
@@ -139,6 +148,14 @@ const tr: Translation = {
     duplicate: 'Çoğalt',
     moveUp: 'Yukarı taşı',
     moveDown: 'Aşağı taşı',
+  },
+  audio: {
+    title: 'Ses parçası',
+    volume: 'Ses seviyesi',
+    fadeIn: 'Açılış (sn)',
+    fadeOut: 'Kapanış (sn)',
+    meta: '{{start}} sn’de başlar · {{source}} sn’lik dosyanın {{duration}} sn’si çalar',
+    delete: 'Parçayı sil',
   },
   blockMenu: {
     duplicate: 'Çoğalt',

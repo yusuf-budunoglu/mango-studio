@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { EASINGS } from '../engine/easing'
 import { PRESETS, presetsFor } from '../engine/presets'
 import { categoryLabel, easingLabel, paramLabel, presetLabel } from '../i18n/labels'
-import { findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { findAudio, findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { AudioPanel } from './AudioPanel'
 import { LayerPanel } from './LayerPanel'
 import { ProjectSettings } from './ProjectSettings'
 
@@ -22,6 +23,7 @@ export function Inspector() {
   const [presetToAdd, setPresetToAdd] = useState('')
   const chosenPreset = available.some(([id]) => id === presetToAdd) ? presetToAdd : available[0]?.[0]
 
+  const audioClip = selectedBlockIds.length ? findAudio(project, selectedBlockIds[0]) : undefined
   const found = selectedBlockIds.length ? findBlock(project, selectedBlockIds[0]) : null
   const block = found?.block
   const preset = block ? PRESETS[block.preset] : undefined
@@ -30,6 +32,9 @@ export function Inspector() {
     <aside className="inspector">
       <LayerPanel />
 
+      {audioClip && <AudioPanel key={audioClip.id} clip={audioClip} />}
+
+      {selectedTrackId !== 'audio' && (
       <section>
         <h2>{t('block.addTitle')}</h2>
         <p className="hint">{t('block.addHint', { track: track?.name ?? '—' })}</p>
@@ -50,7 +55,9 @@ export function Inspector() {
           {t('block.add')}
         </button>
       </section>
+      )}
 
+      {!audioClip && (
       <section>
         <h2>{t('block.selectedTitle')}</h2>
         {selectedBlockIds.length > 1 && (
@@ -127,6 +134,7 @@ export function Inspector() {
           </>
         )}
       </section>
+      )}
 
       <ProjectSettings />
     </aside>

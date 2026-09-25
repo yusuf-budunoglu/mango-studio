@@ -3,7 +3,7 @@ import { temporal } from 'zundo'
 import { newId } from '../engine/ids'
 import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
-import type { Block, Layer, LayerKind, Project } from '../engine/types'
+import type { AudioClip, Block, Layer, LayerKind, Project } from '../engine/types'
 import { DEFAULT_TEMPLATE } from '../project/templates'
 
 /** Katman id'si ya da 'camera'. */
@@ -40,8 +40,13 @@ interface ProjectStore {
   duplicateLayer: (layerId: string) => void
   /** Bloğu başka bir satıra taşır; hedef, bloğun türüne uymuyorsa (kamera/katman) bir şey yapmaz. */
   moveBlockToTrack: (blockId: string, trackId: TrackId) => void
-  /** Oynatma kafasının üstündeki blokları ikiye böler. */
+  /** Oynatma kafasının üstündeki blokları ve ses parçalarını ikiye böler. */
   splitBlocks: (blockIds: string[], at: number) => void
+  /** Ses parçası ekler: dosyanın tamamı, videoya sığdığı kadar. Id'sini döndürür. */
+  addAudioClip: (asset: string, name: string, sourceDuration: number, at: number) => string
+  updateAudioClip: (clipId: string, patch: Partial<Omit<AudioClip, 'id'>>) => void
+  /** Timeline'da taşınan/kırpılan ses parçaları: soldan kırpma kaynağın başlangıcını da kaydırır. */
+  setAudioTimes: (times: Record<string, { start: number; end: number }>) => void
   updateProject: (patch: ProjectSettings) => void
   /** Başka bir projeyi açar; geri alma geçmişi sıfırlanır. */
   loadProject: (project: Project) => void
@@ -74,6 +79,12 @@ function mapBlocks(project: Project, fn: (blocks: Block[], trackId: TrackId) => 
     camera: { ...project.camera, blocks: fn(project.camera.blocks, 'camera') },
     layers: project.layers.map((l) => ({ ...l, blocks: fn(l.blocks, l.id) })),
   }
+}
+
+export const findAudio = (project: Project, clipId: string) => project.audio?.find((c) => c.id === clipId)
+
+function mapAudio(project: Project, fn: (clips: AudioClip[]) => AudioClip[]): Project {
+  return project.audio?.length ? { ...project, audio: fn(project.audio) } : project
 }
 
 export function findBlock(project: Project, blockId: string) {
@@ -167,21 +178,25 @@ export const useProjectStore = create<ProjectStore>()(
       removeBlocks: (blockIds) => {
         if (!blockIds.length) return
         set((s) => ({
-          project: mapBlocks(s.project, (blocks) => blocks.filter((b) => !blockIds.includes(b.id))),
+          project: mapAudio(
+            mapBlocks(s.project, (blocks) => blocks.filter((b) => !blockIds.includes(b.id))),
+            (clips) => clips.filter((c) => !blockIds.includes(c.id)),
+          ),
           selectedBlockIds: s.selectedBlockIds.filter((id) => !blockIds.includes(id)),
         }))
       },
       nudgeBlocks: (blockIds, delta) => {
-        const entries = entriesFor(get().project, blockIds)
-        if (!entries.length) return
-        // Grubun en erken bloğu 0'ın altına inmesin.
-        const d = Math.max(delta, -Math.min(...entries.map((e) => e.block.start)))
+        const project = get().project
+        const starts = [
+          ...entriesFor(project, blockIds).map((e) => e.block.start),
+          ...(project.audio ?? []).filter((c) => blockIds.includes(c.id)).map((c) => c.start),
+        ]
+        if (!starts.length) return
+        // Grubun en erken parçası 0'ın altına inmesin.
+        const d = Math.max(delta, -Math.min(...starts))
         if (d === 0) return
-        set((s) => ({
-          project: mapBlocks(s.project, (blocks) =>
-            blocks.map((b) => (blockIds.includes(b.id) ? { ...b, start: round(b.start + d) } : b)),
-          ),
-        }))
+        const shift = <T extends { id: string; start: number }>(item: T): T => (blockIds.includes(item.id) ? { ...item, start: round(item.start + d) } : item)
+        set((s) => ({ project: mapAudio(mapBlocks(s.project, (blocks) => blocks.map(shift)), (clips) => clips.map(shift)) }))
       },
       copyBlocks: (blockIds) => {
         clipboard = entriesFor(get().project, blockIds)
@@ -198,12 +213,18 @@ export const useProjectStore = create<ProjectStore>()(
       },
       duplicateBlocks: (blockIds) => {
         const entries = entriesFor(get().project, blockIds)
-        if (!entries.length) return
-        const start = Math.min(...entries.map((e) => e.block.start))
-        const end = Math.max(...entries.map((e) => e.block.start + e.block.duration))
+        const clips = (get().project.audio ?? []).filter((c) => blockIds.includes(c.id))
+        const spans = [...entries.map((e) => e.block), ...clips]
+        if (!spans.length) return
+        const start = Math.min(...spans.map((b) => b.start))
+        const end = Math.max(...spans.map((b) => b.start + b.duration))
         set((s) => {
           const { project, created } = insertCopies(s.project, entries, end - start)
-          return { project, selectedBlockIds: created }
+          const audioCopies = clips.map((c) => ({ ...c, id: newId('au'), start: round(c.start + end - start) }))
+          return {
+            project: audioCopies.length ? { ...project, audio: [...(project.audio ?? []), ...audioCopies] } : project,
+            selectedBlockIds: [...created, ...audioCopies.map((c) => c.id)],
+          }
         })
       },
       updateLayer: (layerId, patch) =>
@@ -279,8 +300,60 @@ export const useProjectStore = create<ProjectStore>()(
               return [{ ...b, duration: round(t - b.start) }, second]
             }),
           )
-          return created.length ? { project, selectedBlockIds: created } : {}
+          // Ses parçası bölünürken ikinci parça kaynağın kaldığı yerden devam eder.
+          const withAudio = mapAudio(project, (clips) =>
+            clips.flatMap((c) => {
+              if (!blockIds.includes(c.id) || t <= c.start + 0.01 || t >= c.start + c.duration - 0.01) return [c]
+              const cut = round(t - c.start)
+              const second = { ...c, id: newId('au'), start: t, offset: round(c.offset + cut), duration: round(c.duration - cut), fadeIn: 0 }
+              created.push(second.id)
+              return [{ ...c, duration: cut, fadeOut: 0 }, second]
+            }),
+          )
+          return created.length ? { project: withAudio, selectedBlockIds: created } : {}
         }),
+      addAudioClip: (asset, name, sourceDuration, at) => {
+        const total = get().project.duration
+        const start = round(Math.min(Math.max(0, at), Math.max(0, total - 0.1)))
+        const clip: AudioClip = {
+          id: newId('au'),
+          name,
+          asset,
+          start,
+          offset: 0,
+          duration: round(Math.max(0.1, Math.min(sourceDuration, total - start))),
+          sourceDuration,
+          volume: 1,
+          fadeIn: 0,
+          fadeOut: 0.5,
+        }
+        set((s) => ({
+          project: { ...s.project, audio: [...(s.project.audio ?? []), clip] },
+          selectedBlockIds: [clip.id],
+          selectedTrackId: 'audio',
+        }))
+        return clip.id
+      },
+      updateAudioClip: (clipId, patch) =>
+        set((s) => ({ project: mapAudio(s.project, (clips) => clips.map((c) => (c.id === clipId ? { ...c, ...patch } : c))) })),
+      setAudioTimes: (times) =>
+        set((s) => ({
+          project: mapAudio(s.project, (clips) =>
+            clips.map((c) => {
+              const next = times[c.id]
+              if (!next) return c
+              const start = round(Math.max(0, next.start))
+              const end = round(next.end)
+              const oldEnd = round(c.start + c.duration)
+              if (start === c.start && end === oldEnd) return c
+              // Sadece sol kenar değiştiyse kırpmadır: kaynakta da o kadar ileri/geri git.
+              const trimmedLeft = end === oldEnd && start !== c.start
+              const offset = trimmedLeft ? round(Math.max(0, c.offset + (start - c.start))) : c.offset
+              const duration = round(Math.max(0.05, Math.min(end - start, c.sourceDuration - offset)))
+              return { ...c, start, offset, duration }
+            }),
+          ),
+        })),
       updateProject: (patch) =>
         set((s) => ({
           project: {

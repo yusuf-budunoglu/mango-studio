@@ -9,7 +9,9 @@ import { Inspector } from '../components/Inspector'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { Stage } from '../components/Stage'
 import { TimelinePanel } from '../components/TimelinePanel'
+import { attachAudioPreview } from '../audio/engine'
 import { NewerProjectVersionError } from '../engine/migrate'
+import { projectToFile } from '../persistence/projectFile'
 import { repository } from '../persistence/repository'
 import { downloadText, renderThumbnail, safeFileName } from '../persistence/thumbnail'
 import { useEditorStore, type TransformMode } from '../store/editorStore'
@@ -162,6 +164,9 @@ export function Editor({ projectId }: { projectId: string }) {
     timelineRef.current?.setTime(t)
   }
 
+  // Timeline oynarken ses parçalarını çal.
+  useEffect(() => (state === 'ready' ? attachAudioPreview() : undefined), [state])
+
   // Klavye kısayolları. Metin kutularındayken devre dışı.
   useEffect(() => {
     if (state !== 'ready') return
@@ -254,7 +259,7 @@ export function Editor({ projectId }: { projectId: string }) {
           </button>
           <button
             type="button"
-            onClick={() => downloadText(`${safeFileName(project.name)}.motion.json`, JSON.stringify(project, null, 2))}
+            onClick={() => void projectToFile(project).then((text) => downloadText(`${safeFileName(project.name)}.motion.json`, text))}
             title={t('topbar.saveToFileTitle')}
           >
             {t('topbar.saveToFile')}

@@ -1,12 +1,15 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { readAudioDuration } from '../audio/engine'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
+import { assetRef, assets } from '../persistence/assets'
 import { DEFAULT_FONT, FONTS } from '../render/fonts'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'shape']
 
-/** Yüklenen görseli en fazla 2048 px'e küçültüp data URL'e çevirir; proje dosyası şişmesin. */
-async function readImage(file: File, maxSize = 2048): Promise<string> {
+/** Yüklenen görseli en fazla 2048 px'e küçültüp dosya deposuna koyar, referansını döndürür. */
+async function storeImage(file: File, maxSize = 2048): Promise<string> {
   const bitmap = await createImageBitmap(file)
   const ratio = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
@@ -14,7 +17,10 @@ async function readImage(file: File, maxSize = 2048): Promise<string> {
   canvas.height = Math.round(bitmap.height * ratio)
   canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
-  return canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9)
+  const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), type, 0.9))
+  const meta = await assets.put(blob, { name: file.name, kind: 'image' })
+  return assetRef(meta.id)
 }
 
 function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; label: string; value: number; step?: number; onChange: (v: number) => void }) {
@@ -89,7 +95,7 @@ function LayerFields({ layer }: { layer: Layer }) {
             accept="image/*"
             onChange={async (e) => {
               const file = e.target.files?.[0]
-              if (file) update({ image: await readImage(file) })
+              if (file) update({ image: await storeImage(file) })
               e.target.value = ''
             }}
           />
@@ -131,6 +137,14 @@ export function LayerPanel() {
   const layer = useProjectStore((s) => s.project.layers.find((l) => l.id === s.selectedTrackId))
   const addLayer = useProjectStore((s) => s.addLayer)
   const { t } = useTranslation()
+  const audioInput = useRef<HTMLInputElement>(null)
+
+  // Ses dosyası: süresini oku, depoya koy, oynatma kafasına parça olarak ekle.
+  const addAudio = async (file: File) => {
+    const duration = await readAudioDuration(file)
+    const meta = await assets.put(file, { name: file.name, kind: 'audio', duration })
+    useProjectStore.getState().addAudioClip(assetRef(meta.id), file.name.replace(/\.[^.]+$/, ''), duration, usePlaybackStore.getState().time)
+  }
 
   return (
     <section>
@@ -141,6 +155,21 @@ export function LayerPanel() {
             {t(`layer.add.${kind}`)}
           </button>
         ))}
+        <button type="button" onClick={() => audioInput.current?.click()}>
+          {t('layer.add.audio')}
+        </button>
+        <input
+          ref={audioInput}
+          id="audio-file"
+          type="file"
+          accept="audio/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) void addAudio(file)
+            e.target.value = ''
+          }}
+        />
       </div>
       {layer ? <LayerFields key={layer.id} layer={layer} /> : <p className="hint">{t('layer.empty')}</p>}
     </section>

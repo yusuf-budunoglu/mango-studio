@@ -38,7 +38,15 @@ const en = {
     timeOf: '/ {{duration}} s',
   },
   exportVideo: {
-    button: 'Download MP4',
+    button: 'Export',
+    title: 'Export video',
+    resolution: 'Resolution',
+    fps: 'Frame rate',
+    format: 'Format',
+    start: 'Export and download',
+    summary: '{{width}}×{{height}} · {{seconds}} s · {{audio}}',
+    withAudio: 'with audio',
+    noAudio: 'no audio',
     progress: 'Exporting… {{percent}}%',
     notReady: "The preview isn't ready yet.",
     unsupported: "This browser can't encode video. Try Chrome or Edge.",
@@ -56,7 +64,7 @@ const en = {
   },
   layer: {
     title: 'Layer',
-    add: { text: '+ Text', image: '+ Image', phone: '+ Phone', shape: '+ Shape' },
+    add: { text: '+ Text', image: '+ Image', phone: '+ Phone', shape: '+ Shape', audio: '+ Audio' },
     empty: 'Select a layer from the list on the left.',
     name: 'Name',
     text: 'Text',
@@ -129,6 +137,7 @@ const en = {
     fit: 'Fit to width',
   },
   tracks: {
+    audio: 'Audio',
     reorder: 'Drag to reorder. Higher layers are in front.',
     show: 'Show layer',
     hide: 'Hide layer',
@@ -138,6 +147,14 @@ const en = {
     duplicate: 'Duplicate',
     moveUp: 'Move up',
     moveDown: 'Move down',
+  },
+  audio: {
+    title: 'Audio clip',
+    volume: 'Volume',
+    fadeIn: 'Fade in (s)',
+    fadeOut: 'Fade out (s)',
+    meta: 'Starts at {{start}} s · plays {{duration}} s of {{source}} s',
+    delete: 'Delete clip',
   },
   blockMenu: {
     duplicate: 'Duplicate',

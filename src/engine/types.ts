@@ -60,6 +60,26 @@ export interface CameraTrack {
   blocks: Block[]
 }
 
+/** Timeline'daki bir ses parçası (müzik, efekt, seslendirme). */
+export interface AudioClip {
+  id: string
+  name: string
+  /** dosya deposu referansı: `asset:<id>` */
+  asset: string
+  /** videodaki başlangıç (sn) */
+  start: number
+  /** kaynak dosyada nereden başladığı (sn); soldan kırpınca artar */
+  offset: number
+  /** videoda ne kadar çaldığı (sn) */
+  duration: number
+  /** kaynak dosyanın toplam süresi (sn); kırpma sınırı */
+  sourceDuration: number
+  /** 0..1 */
+  volume: number
+  fadeIn: number
+  fadeOut: number
+}
+
 export interface Project {
   /** format sürümü; eski projeler açılırken migrate.ts ile güncellenir */
   version: number
@@ -75,6 +95,8 @@ export interface Project {
   numberLocale?: string
   layers: Layer[]
   camera: CameraTrack
+  /** ses parçaları; boşsa sessiz */
+  audio?: AudioClip[]
 }
 
 /** Motorun belirli bir anda bir katman için hesapladığı değerler. */

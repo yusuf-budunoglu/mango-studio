@@ -1,6 +1,6 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Box, Eye, EyeOff, GripVertical, Image, Lock, LockOpen, Smartphone, Type, Video, type LucideIcon } from 'lucide-react'
+import { Box, Eye, EyeOff, GripVertical, Image, Lock, LockOpen, Music, Smartphone, Type, Video, type LucideIcon } from 'lucide-react'
 import { useState, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CameraTrack, Layer, LayerKind } from '../engine/types'
@@ -8,8 +8,14 @@ import { useProjectStore } from '../store/projectStore'
 
 const KIND_ICON: Record<LayerKind, LucideIcon> = { text: Type, phone: Smartphone, image: Image, shape: Box }
 
+/** Ses parçalarının timeline satırı (katman değil; sıralanmaz). */
+export interface AudioTrackRow {
+  id: 'audio'
+  name: string
+}
+
 export interface TrackRow {
-  track: Layer | CameraTrack
+  track: Layer | CameraTrack | AudioTrackRow
   /** timeline'da kaç satır (şerit) kapladığı */
   lanes: number
 }
@@ -112,10 +118,12 @@ function LayerRow({ layer, height, onContextMenu, renaming, onRenameStart, onRen
 export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renamingId, onRenameStart, onRenameEnd }: Props) {
   const { t } = useTranslation()
   const cameraSelected = useProjectStore((s) => s.selectedTrackId === 'camera')
+  const audioSelected = useProjectStore((s) => s.selectedTrackId === 'audio')
   // 4 px hareket etmeden sürükleme başlamasın; tıklama ve çift tıklama bozulmasın.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
-  const layerRows = rows.filter((r): r is TrackRow & { track: Layer } => r.track.id !== 'camera')
+  const layerRows = rows.filter((r): r is TrackRow & { track: Layer } => r.track.id !== 'camera' && r.track.id !== 'audio')
   const cameraRow = rows.find((r) => r.track.id === 'camera')
+  const audioRow = rows.find((r) => r.track.id === 'audio')
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return
@@ -149,6 +157,17 @@ export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renami
           <span className="track-grip" aria-hidden="true" />
           <Video size={13} strokeWidth={1.75} className="track-kind" aria-hidden="true" />
           <span className="track-label">{cameraRow.track.name || t('layer.defaults.camera')}</span>
+        </div>
+      )}
+      {audioRow && (
+        <div
+          className={`track-name track-name--audio ${audioSelected ? 'is-selected' : ''}`}
+          style={{ height: rowHeight * audioRow.lanes }}
+          onClick={() => useProjectStore.getState().selectTrack('audio')}
+        >
+          <span className="track-grip" aria-hidden="true" />
+          <Music size={13} strokeWidth={1.75} className="track-kind" aria-hidden="true" />
+          <span className="track-label">{t('tracks.audio')}</span>
         </div>
       )}
     </div>

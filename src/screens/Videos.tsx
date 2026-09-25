@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { newId } from '../engine/ids'
 import { AppShell } from '../layout/AppShell'
-import { parseProjectFile, repository, type ProjectSummary } from '../persistence/repository'
+import { projectFromFile } from '../persistence/projectFile'
+import { repository, type ProjectSummary } from '../persistence/repository'
 import { navigate, routeToHash } from '../router'
 import { matchesSearch, useUiStore } from '../store/uiStore'
 
@@ -37,7 +38,7 @@ export function Videos() {
   const importFile = async (file: File) => {
     setError(null)
     try {
-      const project = parseProjectFile(await file.text())
+      const project = await projectFromFile(await file.text())
       await repository.save(project)
       navigate({ screen: 'editor', projectId: project.id })
     } catch (err) {

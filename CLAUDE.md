@@ -48,6 +48,12 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Yeni dil: `locales/<kod>.ts` dosyasını `Translation` tipinde yaz (eksik anahtar derleme hatası verir), `src/i18n/index.ts` içinde `LANGUAGES` ve `resources`'a ekle. `i18n.test.ts` anahtar ve değişken eşitliğini kontrol eder.
 - Şablon içeriği ve yeni katman adları oluşturulduğu andaki dilde üretilir; sonradan dil değişince proje içeriği değişmez. Videodaki sayı biçimi projede (`numberLocale`).
 
+## Dosyalar ve ses
+- `src/persistence/assets.ts` — dosya deposu (IndexedDB): proje `asset:<id>` referansı tutar, `resolveAssetUrl` blob URL'ye çevirir. Eski projelerdeki data URL'ler de çalışır.
+- "Dosyaya kaydet" (`projectFile.ts`) kullanılan dosyaları `embeddedAssets` olarak gömer; "Dosyadan aç" geri yükler.
+- Ses: `Project.audio` (AudioClip: start, offset=kaynakta başlangıç, duration, fade). `src/audio/schedule.ts` saf zamanlama (test edilir); `engine.ts` önizleme (Web Audio, timeline oynarken) ve dışa aktarma karışımı (OfflineAudioContext) — ikisi aynı planı kullanır.
+- Timeline motoru `editorData` referansı her değiştiğinde oynatmayı durdurur: satır dizilerini mutlaka `useMemo` ile ver.
+
 ## Test
 - Geliştirme modunda `window.__stores` (project, playback) tarayıcı otomasyon testleri için açık.
 
