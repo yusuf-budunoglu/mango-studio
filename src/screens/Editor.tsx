@@ -175,7 +175,7 @@ export function Editor({ projectId }: { projectId: string }) {
   return (
     <div className="app">
       <header className="topbar">
-        <button type="button" className="back" onClick={() => navigate({ screen: 'home' })} title={t('topbar.backToProjectsTitle')}>
+        <button type="button" className="back" onClick={() => navigate({ screen: 'videos' })} title={t('topbar.backToProjectsTitle')}>
           {t('topbar.backToProjects')}
         </button>
         <div className="brand">

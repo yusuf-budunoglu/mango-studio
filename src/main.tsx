@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './i18n'
 import './index.css'
+import './styles/shell.css'
 import App from './App.tsx'
 import { useProjectStore, usePlaybackStore } from './store/projectStore'
 

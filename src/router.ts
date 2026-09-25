@@ -1,10 +1,40 @@
-export type Route = { screen: 'home' } | { screen: 'editor'; projectId: string }
+export type Page = 'home' | 'videos' | 'templates' | 'assets'
+
+/** Henüz yapılmamış araçlar; menüde "yakında" etiketiyle görünür. */
+export const COMING_SOON = ['assets', 'music', 'voiceover', 'sound-effects'] as const
+export type ComingSoonFeature = (typeof COMING_SOON)[number]
+
+export type Route =
+  | { screen: 'home' }
+  | { screen: 'videos' }
+  | { screen: 'templates' }
+  | { screen: 'soon'; feature: ComingSoonFeature }
+  | { screen: 'editor'; projectId: string }
 
 export function parseHash(hash: string): Route {
-  const match = hash.match(/^#\/p\/([\w-]+)$/)
-  return match ? { screen: 'editor', projectId: match[1] } : { screen: 'home' }
+  const path = hash.replace(/^#/, '')
+  const editor = path.match(/^\/p\/([\w-]+)$/)
+  if (editor) return { screen: 'editor', projectId: editor[1] }
+  if (path === '/videos') return { screen: 'videos' }
+  if (path === '/templates') return { screen: 'templates' }
+  const soon = path.match(/^\/soon\/([\w-]+)$/)
+  if (soon && (COMING_SOON as readonly string[]).includes(soon[1])) return { screen: 'soon', feature: soon[1] as ComingSoonFeature }
+  return { screen: 'home' }
+}
+
+export function routeToHash(route: Route): string {
+  switch (route.screen) {
+    case 'editor':
+      return `#/p/${route.projectId}`
+    case 'soon':
+      return `#/soon/${route.feature}`
+    case 'home':
+      return '#/'
+    default:
+      return `#/${route.screen}`
+  }
 }
 
 export function navigate(route: Route) {
-  window.location.hash = route.screen === 'editor' ? `/p/${route.projectId}` : '/'
+  window.location.hash = routeToHash(route).slice(1)
 }
