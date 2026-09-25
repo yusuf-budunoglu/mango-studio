@@ -8,22 +8,21 @@
 // - Laptop kapağı "lid" düğümüne taşınır (menteşe ekseninde döner; extras.baseAngle = modeldeki açı).
 import { Document, NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { dedup, meshopt, prune, weld } from '@gltf-transform/functions'
+import { dedup, meshopt, prune, textureCompress, weld } from '@gltf-transform/functions'
 import { MeshoptEncoder } from 'meshoptimizer'
 import fs from 'node:fs'
+import sharp from 'sharp'
 
 const MODELS = [
   {
-    src: 'iphone',
+    src: 'iphone15',
     out: 'phone',
-    remove: [],
-    // logo parçası gövdede delik bırakıyor: silmek yerine gövde malzemesiyle doldurulur
-    fill: { case_logo_0: 'back' },
-    screen: 'case_wallpaper_0',
-    up: 'case_lens_0', // arka kamera lensleri üstte
+    remove: ['TakBsdEjEytCAMK', 'IykfmVvLplTsTEW'], // arka yüzdeki logo (iki katman; altında delik yok)
+    screen: 'xXDHkMplTIDAXLN',
+    up: 'YfrJNXgMvGOAfzz', // arka kamera çıkıntısı üstte
     major: 'y',
     size: { axis: 'y', value: 3.5 },
-    finish: { frame: ['ereve'], back: ['ana_renk'] },
+    finish: { frame: ['eShKpuMNVJTRrgg'], back: ['oZRkkORNzkufnGD', 'yhcAXNGcJWCqtIS'] },
     stripTextures: [],
   },
   {
@@ -276,7 +275,7 @@ for (const cfg of MODELS) {
   root.getAsset().extras = {}
   root.getAsset().generator = 'motion-studio'
 
-  await doc.transform(prune(), dedup(), weld(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }))
+  await doc.transform(prune(), dedup(), weld(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), meshopt({ encoder: MeshoptEncoder, level: 'medium' }))
   fs.writeFileSync(`public/models/${cfg.out}.glb`, await io.writeBinary(doc))
   console.log(cfg.out, (fs.statSync(`public/models/${cfg.out}.glb`).size / 1024).toFixed(0), 'KB')
 }

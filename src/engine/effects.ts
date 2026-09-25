@@ -7,6 +7,11 @@ export interface ProjectEffects {
   grain: { enabled: boolean; amount: number }
   /** -1..1 */
   color: { saturation: number; contrast: number; brightness: number }
+  /**
+   * Hareket bulanıklığı (yalnızca video çıktısında): her kare, deklanşör süresince `samples` alt
+   * kare çizilip ortalanır. shutter: kare süresinin ne kadarı açık (0.5 = 180°).
+   */
+  motionBlur: { enabled: boolean; samples: number; shutter: number }
 }
 
 export type EffectsPatch = { [K in keyof ProjectEffects]?: Partial<ProjectEffects[K]> }
@@ -17,6 +22,7 @@ export const DEFAULT_EFFECTS: ProjectEffects = {
   dof: { enabled: false, bokeh: 3, range: 2.5 },
   grain: { enabled: false, amount: 0.12 },
   color: { saturation: 0, contrast: 0, brightness: 0 },
+  motionBlur: { enabled: false, samples: 6, shutter: 0.5 },
 }
 
 export function resolveEffects(patch: EffectsPatch | undefined): ProjectEffects {

@@ -123,6 +123,8 @@ export interface Project {
   background2?: string
   /** sol alttan gelen vurgu ışığının rengi (boşsa mor #6c5ce7) */
   accentLight?: string
+  /** ışık düzeni: yumuşak oda ışığı (varsayılan) ya da ürün çekimi stüdyosu (softbox + kenar ışıkları) */
+  lighting?: 'soft' | 'studio'
   /** videodaki sayıların biçimi (count-up), ör. 'en-US' → 1,000 · 'tr-TR' → 1.000; boşsa en-US */
   numberLocale?: string
   layers: Layer[]

@@ -1,4 +1,4 @@
-import { Environment, Line, TransformControls } from '@react-three/drei'
+import { Environment, Lightformer, Line, TransformControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
 import type { DepthOfFieldEffect } from 'postprocessing'
@@ -145,6 +145,35 @@ function StudioEnvironment() {
   return <Environment map={texture} environmentIntensity={0.55} />
 }
 
+/**
+ * Ürün çekimi stüdyosu: ortam, kodla yerleştirilen softbox/şerit ışıklardan oluşur (CDN yok).
+ * Metal kasa ve camda parlak şerit yansımalar, arkadan gelen kenar ışıkları siluet çizer.
+ */
+function ProductStudio({ accent }: { accent: string }) {
+  return (
+    <>
+      <Environment resolution={256} frames={1} environmentIntensity={1}>
+        {/* tepe softbox'ları */}
+        <Lightformer intensity={2.5} rotation-x={Math.PI / 2} position={[0, 5, -6]} scale={[10, 1.2, 1]} />
+        <Lightformer intensity={2.5} rotation-x={Math.PI / 2} position={[0, 5, -2]} scale={[10, 1.2, 1]} />
+        <Lightformer intensity={1.5} rotation-x={Math.PI / 2} position={[0, 5, 2]} scale={[10, 1.2, 1]} />
+        {/* yan şeritler: kasa kenarında uzun parlama */}
+        <Lightformer intensity={4} rotation-y={Math.PI / 2} position={[-12, 1, 0]} scale={[30, 1.5, 1]} />
+        <Lightformer intensity={3} rotation-y={-Math.PI / 2} position={[12, 1, 0]} scale={[30, 1.5, 1]} />
+        {/* öndeki büyük yumuşak ışık ve halka */}
+        <Lightformer form="rect" intensity={0.8} position={[0, 0, 12]} scale={[12, 6, 1]} />
+        <Lightformer form="ring" intensity={6} scale={3} position={[8, 6, 8]} onUpdate={(self) => self.lookAt(0, 0, 0)} />
+      </Environment>
+      <ambientLight intensity={0.15} />
+      {/* ana ışık ve arkadan iki kenar ışığı */}
+      <directionalLight position={[-3, 5, 6]} intensity={1.6} />
+      <directionalLight position={[-6, 3, -6]} intensity={3} />
+      <directionalLight position={[6, -2, -5]} intensity={2.2} />
+      <pointLight position={[-4, -2, 3]} intensity={18} color={accent} />
+    </>
+  )
+}
+
 /** Arka plan: düz renk ya da iki renkli (doğrusal / merkezden) degrade; ekran boyunca sabit. */
 function Background({ project }: { project: Project }) {
   const { background, background2, backgroundStyle = 'solid' } = project
@@ -276,10 +305,16 @@ function Scene({ project }: { project: Project }) {
   return (
     <>
       <Background project={project} />
-      <StudioEnvironment />
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[3, 4, 5]} intensity={2} />
-      <pointLight position={[-4, -2, 3]} intensity={30} color={project.accentLight ?? '#6c5ce7'} />
+      {project.lighting === 'studio' ? (
+        <ProductStudio accent={project.accentLight ?? '#6c5ce7'} />
+      ) : (
+        <>
+          <StudioEnvironment />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[3, 4, 5]} intensity={2} />
+          <pointLight position={[-4, -2, 3]} intensity={30} color={project.accentLight ?? '#6c5ce7'} />
+        </>
+      )}
       {project.layers.map((layer) => (
         <LayerNode key={layer.id} layer={layer} register={register} numberLocale={project.numberLocale} />
       ))}

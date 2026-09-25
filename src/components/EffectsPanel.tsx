@@ -68,6 +68,17 @@ export function EffectsPanel() {
         <Slider id="fx-vignette-darkness" label={t('effects.darkness')} value={effects.vignette.darkness} min={0} max={1} step={0.01} onChange={(v) => update({ vignette: { darkness: v } })} />
       )}
 
+      <label className="fx-toggle" htmlFor="fx-motionBlur">
+        {toggle('motionBlur')} {t('effects.motionBlur')}
+      </label>
+      {effects.motionBlur.enabled && (
+        <>
+          <Slider id="fx-mb-samples" label={t('effects.samples')} value={effects.motionBlur.samples} min={2} max={16} step={1} onChange={(v) => update({ motionBlur: { samples: v } })} />
+          <Slider id="fx-mb-shutter" label={t('effects.shutter')} value={effects.motionBlur.shutter} min={0.1} max={1} step={0.05} onChange={(v) => update({ motionBlur: { shutter: v } })} />
+          <p className="hint">{t('effects.motionBlurHint')}</p>
+        </>
+      )}
+
       <h3>{t('effects.color')}</h3>
       <Slider id="fx-saturation" label={t('effects.saturation')} value={effects.color.saturation} min={-1} max={1} step={0.01} onChange={(v) => update({ color: { saturation: v } })} />
       <Slider id="fx-contrast" label={t('effects.contrast')} value={effects.color.contrast} min={-1} max={1} step={0.01} onChange={(v) => update({ color: { contrast: v } })} />

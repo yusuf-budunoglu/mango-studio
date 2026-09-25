@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { exportSize } from '../export/exportVideo'
+import { exportSize, subframeTimes, supersampleFactor } from '../export/exportVideo'
 import { TEMPLATES } from '../project/templates'
 import { DEFAULT_EFFECTS, resolveEffects } from './effects'
 import { evaluateCamera } from './evaluate'
@@ -12,6 +12,7 @@ describe('efektler', () => {
     expect(fx.bloom).toEqual({ ...DEFAULT_EFFECTS.bloom, intensity: 2 })
     // Varsayılan nesne değişmemeli.
     expect(DEFAULT_EFFECTS.dof.enabled).toBe(false)
+    expect(resolveEffects({ motionBlur: { enabled: true } }).motionBlur).toEqual({ enabled: true, samples: 6, shutter: 0.5 })
   })
 
   it('odak kaydırma netlik düzlemini hareket ettirir', () => {
@@ -25,6 +26,22 @@ describe('efektler', () => {
     project.camera.blocks.push({ id: 'g', preset: 'focus-pull', start: 2, duration: 0, params: { from: 0, to: 0, blur: 0 } })
     expect(evaluateCamera(project, 1.5).focusBlur).toBe(1)
     expect(evaluateCamera(project, 3).focusBlur).toBe(0)
+  })
+})
+
+describe('dışa aktarma kalitesi', () => {
+  it('kenar yumuşatma katı çizim tarafını 4096 pikselde tutar', () => {
+    expect(supersampleFactor(1280, 720)).toBe(2)
+    expect(supersampleFactor(1920, 1080)).toBe(2)
+    expect(supersampleFactor(3840, 2160)).toBe(1)
+  })
+  it('hareket bulanıklığı alt kareleri kare anından ileriye, deklanşör süresince', () => {
+    expect(subframeTimes(1, 30, 1, 0.5)).toEqual([1])
+    const ts = subframeTimes(1, 30, 4, 0.5)
+    expect(ts).toHaveLength(4)
+    expect(ts[0]).toBe(1)
+    // bir sonraki kareye (1 + 1/30) taşmaz: kesme anlarında iki çekim karışmasın
+    expect(Math.max(...ts)).toBeLessThan(1 + 0.5 / 30)
   })
 })
 

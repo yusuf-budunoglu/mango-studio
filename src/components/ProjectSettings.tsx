@@ -53,6 +53,13 @@ export function ProjectSettings() {
           </div>
         )}
         <div>
+          <label htmlFor="project-lighting">{t('project.lighting')}</label>
+          <select id="project-lighting" value={project.lighting ?? 'soft'} onChange={(e) => updateProject({ lighting: e.target.value as 'soft' | 'studio' })}>
+            <option value="soft">{t('project.lightingSoft')}</option>
+            <option value="studio">{t('project.lightingStudio')}</option>
+          </select>
+        </div>
+        <div>
           <label htmlFor="project-light">{t('project.accentLight')}</label>
           <input id="project-light" type="color" value={project.accentLight ?? '#6c5ce7'} onChange={(e) => updateProject({ accentLight: e.target.value })} />
         </div>

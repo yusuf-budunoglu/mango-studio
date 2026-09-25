@@ -69,6 +69,14 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 
 ## Işık
 - Metal/cam yüzeyler için `StudioEnvironment` (three.js `RoomEnvironment`, PMREM). drei'nin hazır ortamları CDN'den HDR indirdiği için kullanılmaz.
+- `Project.lighting: 'studio'` → `ProductStudio`: drei `Lightformer` softbox/şerit/halka ışıklarından kodla kurulan ortam (CDN yok) + arkadan iki kenar ışığı. Varsayılan `soft` eski oda ışığı.
+- `applyOpacity` malzemeyi yalnızca opaklık < 1 iken saydam yapar; hepsini saydam yapmak derinlik sıralamasını bozuyordu.
+
+## Video çıktısı kalitesi
+- Sahne çıktının 2 katında çizilip 2D kanvasta küçültülür (`supersampleFactor`, çizim tarafı ≤ 4096): efekt zinciri açıkken tarayıcının kenar yumuşatması çalışmıyor.
+- Hareket bulanıklığı `effects.motionBlur` (yalnızca çıktıda): kare anından ileriye deklanşör süresince alt kareler çizilip ortalanır (`subframeTimes`); kesme anlarında iki çekim karışmaz.
+- Alt kareler `renderTimeOverride` ile çizilir; oynatma zamanını (store) her alt karede değiştirmek arayüzü yeniden çizdirip çıktıyı kat kat yavaşlatıyordu.
+- Proje 60 kare/sn ise dışa aktarma penceresi varsayılan olarak 60'ı seçer.
 
 ## Dosyalar ve ses
 - `src/persistence/assets.ts` — dosya deposu (IndexedDB): proje `asset:<id>` referansı tutar, `resolveAssetUrl` blob URL'ye çevirir. Eski projelerdeki data URL'ler de çalışır.

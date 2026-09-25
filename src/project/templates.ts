@@ -181,10 +181,18 @@ export const TEMPLATES: Template[] = [
             // 6) Kapanış: sert kesmeyle gelir
             layer({ ...text, name: t('layerNames.closing'), text: t('templates.fintech.closing'), fontSize: 0.62, position: [0, 0, 0], blocks: [b('fade-in', 16.25, 0)] }),
           ],
-          camera([focus(0, 4.6), focus(3, 4.5, 0.6), focus(8, 4.3, 0.4), focus(11, 0, 0)]),
+          camera([focus(0, 3.6), focus(3, 3.9), focus(8, 4.0, 0.8), focus(11, 0, 0)]),
         ),
+        // referans gibi 60 kare/sn; ürün stüdyosu ışığı; yakın çekimlerde güçlü alan derinliği
+        fps: 60,
+        lighting: 'studio',
         accentLight: '#9aa4b5',
-        effects: { dof: { enabled: true, bokeh: 4, range: 2 }, bloom: { enabled: false }, vignette: { enabled: true, darkness: 0.35 } },
+        effects: {
+          dof: { enabled: true, bokeh: 6, range: 1.4 },
+          bloom: { enabled: true, intensity: 0.35, threshold: 0.9 },
+          vignette: { enabled: true, darkness: 0.35 },
+          motionBlur: { enabled: true, samples: 6, shutter: 0.5 },
+        },
       }
     },
   },

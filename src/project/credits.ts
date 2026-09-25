@@ -16,9 +16,9 @@ export interface Credit {
 export const MODEL_CREDITS: Credit[] = [
   {
     labelKey: 'credits.items.phone',
-    author: 'shig0',
-    authorUrl: 'https://sketchfab.com/shig0',
-    source: 'https://sketchfab.com/3d-models/iphone-16-pro-max-56f0840754654be3a9e4679c84d4ed64',
+    author: 'polyman',
+    authorUrl: 'https://sketchfab.com/Polyman_3D',
+    source: 'https://sketchfab.com/3d-models/apple-iphone-15-pro-max-black-df17520841214c1792fb8a44c6783ee7',
     license: 'CC BY 4.0',
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
     changesKey: 'credits.changes.phone',

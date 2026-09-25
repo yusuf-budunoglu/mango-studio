@@ -41,7 +41,10 @@ export function applyOpacity(group: Group, opacity: number) {
     const material = (obj as Mesh).material as Material | undefined
     if (!material) return
     const base = (material.userData.baseOpacity ??= material.opacity) as number
-    material.transparent = true
+    const baseTransparent = (material.userData.baseTransparent ??= material.transparent) as boolean
+    // Tam görünürken opak malzemeler opak kalsın: hepsini saydam yapmak derinlik sıralamasını
+    // bozuyor (modelin iç parçaları öne taşabiliyor) ve gereksiz yere yavaşlatıyor.
+    material.transparent = baseTransparent || opacity < 0.999
     material.opacity = base * opacity
   })
 }

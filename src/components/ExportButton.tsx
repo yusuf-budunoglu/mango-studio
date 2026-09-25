@@ -22,7 +22,11 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
   const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<ExportOptions>(readOptions)
+  // 60 kare/sn tasarlanmış projeler (ör. sinematik şablonlar) varsayılan olarak 60'ta çıksın.
+  const [options, setOptions] = useState<ExportOptions>(() => {
+    const saved = readOptions()
+    return project.fps === 60 ? { ...saved, fps: 60 } : saved
+  })
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const abort = useRef<AbortController | null>(null)
   const popover = useRef<HTMLDivElement>(null)

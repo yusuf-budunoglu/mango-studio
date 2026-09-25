@@ -10,7 +10,7 @@ import { DEFAULT_TEMPLATE } from '../project/templates'
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
 
-type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'background2' | 'backgroundStyle' | 'accentLight' | 'numberLocale' | 'width' | 'height'>>
+type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'background2' | 'backgroundStyle' | 'accentLight' | 'lighting' | 'numberLocale' | 'width' | 'height'>>
 
 interface ClipboardEntry {
   trackId: TrackId
