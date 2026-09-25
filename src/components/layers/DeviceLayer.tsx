@@ -1,11 +1,25 @@
 import { useEffect, useMemo } from 'react'
-import { Object3D, type BufferGeometry, type InstancedMesh, type Texture } from 'three'
+import {
+  Box3,
+  CanvasTexture,
+  MeshBasicMaterial,
+  Object3D,
+  SRGBColorSpace,
+  Vector3,
+  type BufferGeometry,
+  type Group,
+  type InstancedMesh,
+  type Mesh,
+  type MeshStandardMaterial,
+  type Texture,
+} from 'three'
 import type { DeviceFinish, Layer } from '../../engine/types'
+import { useDeviceModel, type DeviceKind } from './deviceModels'
 import { roundedPlane, roundedSlab } from './geometry'
 import { useImageTexture, useLayerNode, type LayerProps } from './shared'
 
-// Kodla çizilen cihaz maketleri (dış model dosyası yok): telefon, tablet, laptop.
-// Ölçüler sahne birimi; eski projelerle aynı yerleşim için telefon ~1.7×3.5, tablet ~3.6×2.6.
+// Cihaz maketleri: önce hazır 3D model (public/models), yüklenene kadar ya da yüklenemezse
+// kodla çizilen maket. Ölçüler sahne birimi; telefon ~1.7×3.5, tablet ~3.6×2.6, laptop ~3.8 genişlik.
 
 const FINISHES: Record<DeviceFinish, { frame: string; back: string }> = {
   silver: { frame: '#d6d8dc', back: '#e8e9eb' },
@@ -254,13 +268,141 @@ function Laptop({ layer, screen }: { layer: Layer; screen: Texture | null }) {
   )
 }
 
+/** Ekran oranı (genişlik / yükseklik); ekran görüntüsü yokken çizilen temsili arayüz için. */
+const SCREEN_ASPECT: Record<DeviceKind, number> = { phone: 0.46, tablet: 1.333, laptop: 1.54 }
+/** Laptop menteşesinin kodla çizilen maketteki yeri; eski projelerde yerleşim aynı kalsın. */
+const LAPTOP_HINGE = new Vector3(0, -1.225, 0)
+
+/** Ekran görüntüsü yokken: ekran rengi üzerinde temsili arayüz çizgileri. */
+function usePlaceholderScreen(color: string, aspect: number) {
+  const texture = useMemo(() => {
+    const h = 512
+    const w = Math.round(h * aspect)
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, w, h)
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'
+      ;[0.28, 0.17, 0.06].forEach((y, i) => {
+        const bw = w * (0.72 - i * 0.14)
+        ctx.fillRect((w - bw) / 2, h * (0.5 - y) - h * 0.0225, bw, h * 0.045)
+      })
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'
+      ctx.fillRect(w * 0.14, h * (0.5 + 0.22) - h * 0.14, w * 0.72, h * 0.28)
+    }
+    const t = new CanvasTexture(canvas)
+    t.colorSpace = SRGBColorSpace
+    return t
+  }, [color, aspect])
+  useEffect(() => () => texture.dispose(), [texture])
+  return texture
+}
+
+/**
+ * Hazır 3D model: katman başına kopyalanır (malzemeler ayrı, geometri paylaşılır). Ekran parçasına
+ * ekran görüntüsü, gövde malzemelerine seçilen renk uygulanır; laptop kapağı menteşede döner.
+ */
+function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; template: Group; layer: Layer; screen: Texture | null }) {
+  const parts = useMemo(() => {
+    const root = template.clone(true)
+    const screenMaterial = new MeshBasicMaterial({ toneMapped: false })
+    const finishes: { slot: 'frame' | 'back'; material: MeshStandardMaterial }[] = []
+    const materials: MeshStandardMaterial[] = []
+    const screenNode = root.getObjectByName('screen')
+    root.traverse((o) => {
+      const mesh = o as Mesh
+      if (!mesh.isMesh) return
+      // Seçim için yüz binlerce üçgen yerine görünmez kutu kullanılır.
+      mesh.raycast = () => {}
+      let inScreen = false
+      for (let p: Object3D | null = mesh; p; p = p.parent) if (p === screenNode) inScreen = true
+      if (inScreen) {
+        mesh.material = screenMaterial
+        return
+      }
+      const material = (mesh.material as MeshStandardMaterial).clone()
+      mesh.material = material
+      materials.push(material)
+      const slot = /finish.?(frame|back)/.exec(material.name)?.[1] as 'frame' | 'back' | undefined
+      if (slot) {
+        if (material.roughness > 0.95) material.roughness = 0.45
+        finishes.push({ slot, material })
+      }
+    })
+    const lid = root.getObjectByName('lid') ?? null
+    root.updateMatrixWorld(true)
+    // Laptop: menteşe eski maketteki yere; telefon ve tablet zaten ortalı.
+    if (lid) root.position.copy(LAPTOP_HINGE).sub(lid.getWorldPosition(new Vector3()))
+    root.updateMatrixWorld(true)
+    const box = new Box3().setFromObject(root)
+    return {
+      root,
+      lid,
+      baseAngle: (lid?.userData.baseAngle as number | undefined) ?? 109,
+      screenMaterial,
+      finishes,
+      materials,
+      hitSize: box.getSize(new Vector3()).toArray(),
+      hitCenter: box.getCenter(new Vector3()).toArray(),
+    }
+  }, [template])
+
+  useEffect(
+    () => () => {
+      parts.materials.forEach((m) => m.dispose())
+      parts.screenMaterial.dispose()
+    },
+    [parts],
+  )
+
+  const finish = FINISHES[layer.deviceFinish ?? (kind === 'phone' ? 'space' : 'silver')]
+  useEffect(() => {
+    for (const { slot, material } of parts.finishes) material.color.set(finish[slot])
+  }, [parts, finish])
+
+  const placeholder = usePlaceholderScreen(layer.color, SCREEN_ASPECT[kind])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- three.js malzemesi, React durumu değil
+    parts.screenMaterial.map = screen ?? placeholder
+    parts.screenMaterial.needsUpdate = true
+  }, [parts, screen, placeholder])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- three.js düğümü, React durumu değil
+    if (parts.lid) parts.lid.rotation.x = -(((layer.lidAngle ?? 105) - parts.baseAngle) * Math.PI) / 180
+  }, [parts, layer.lidAngle])
+
+  return (
+    <>
+      <primitive object={parts.root} />
+      <mesh position={parts.hitCenter as [number, number, number]}>
+        <boxGeometry args={parts.hitSize as [number, number, number]} />
+        <meshBasicMaterial visible={false} />
+      </mesh>
+    </>
+  )
+}
+
 /** Telefon, tablet ve laptop maketleri: ekran rengi ya da ekran görüntüsü, gövde rengi. */
 export function DeviceLayer({ layer, register }: LayerProps) {
   const node = useLayerNode(layer, register)
   const screen = useImageTexture(layer.image)?.texture ?? null
+  const kind: DeviceKind = layer.kind === 'laptop' || layer.kind === 'tablet' ? layer.kind : 'phone'
+  const model = useDeviceModel(kind)
   return (
     <group {...node}>
-      {layer.kind === 'laptop' ? <Laptop layer={layer} screen={screen} /> : layer.kind === 'tablet' ? <Tablet layer={layer} screen={screen} /> : <Phone layer={layer} screen={screen} />}
+      {model ? (
+        <ModelDevice key={kind} kind={kind} template={model} layer={layer} screen={screen} />
+      ) : kind === 'laptop' ? (
+        <Laptop layer={layer} screen={screen} />
+      ) : kind === 'tablet' ? (
+        <Tablet layer={layer} screen={screen} />
+      ) : (
+        <Phone layer={layer} screen={screen} />
+      )}
     </group>
   )
 }

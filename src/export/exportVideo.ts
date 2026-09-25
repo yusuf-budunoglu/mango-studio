@@ -13,7 +13,7 @@ import { renderAudioMix } from '../audio/engine'
 import type { Project } from '../engine/types'
 import i18n from '../i18n'
 import { usePlaybackStore } from '../store/projectStore'
-import { exportBridge, pendingTextSyncs, prepareFrameHooks } from './bridge'
+import { exportBridge, pendingModelLoads, pendingTextSyncs, prepareFrameHooks } from './bridge'
 
 const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
 
@@ -69,6 +69,8 @@ export async function exportVideo(
   try {
     // Yeni çözünürlüğün (ve efekt katmanlarının yeniden boyutlanmasının) uygulanmasını bekle.
     await wait(100)
+    // Cihaz modelleri henüz yükleniyorsa ilk kareler yedek maketle çizilmesin.
+    if (pendingModelLoads.size) await Promise.all(pendingModelLoads)
 
     output = new Output({ format, target: new BufferTarget() })
     const video = new CanvasSource(bridge.canvas, { codec, bitrate: QUALITY_HIGH })

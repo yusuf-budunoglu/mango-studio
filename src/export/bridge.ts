@@ -23,6 +23,9 @@ export const renderTimeOverride: { current: number | null } = { current: null }
 /** Henüz hazırlanmamış metinler; kare yakalanmadan önce beklenir. */
 export const pendingTextSyncs = new Set<Promise<void>>()
 
+/** Yüklenmekte olan 3D cihaz modelleri; video çıktısı ve küçük resim bunları bekler. */
+export const pendingModelLoads = new Set<Promise<void>>()
+
 /**
  * Dışa aktarmada her kare çizilmeden önce beklenen hazırlıklar (ör. video katmanının o
  * anki karesini çözmesi). Katmanlar kendini ekler ve çıkarır.

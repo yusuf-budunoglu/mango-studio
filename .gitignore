@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Ham 3D modeller (lisans: yalnızca işlenmiş hali public/models altında dağıtılır)
+models-src/

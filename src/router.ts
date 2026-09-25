@@ -9,6 +9,7 @@ export type Route =
   | { screen: 'videos' }
   | { screen: 'templates' }
   | { screen: 'assets' }
+  | { screen: 'credits' }
   | { screen: 'soon'; feature: ComingSoonFeature }
   | { screen: 'editor'; projectId: string }
 
@@ -19,6 +20,7 @@ export function parseHash(hash: string): Route {
   if (path === '/videos') return { screen: 'videos' }
   if (path === '/templates') return { screen: 'templates' }
   if (path === '/assets') return { screen: 'assets' }
+  if (path === '/credits') return { screen: 'credits' }
   const soon = path.match(/^\/soon\/([\w-]+)$/)
   if (soon && (COMING_SOON as readonly string[]).includes(soon[1])) return { screen: 'soon', feature: soon[1] as ComingSoonFeature }
   return { screen: 'home' }

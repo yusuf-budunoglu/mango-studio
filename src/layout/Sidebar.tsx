@@ -115,6 +115,9 @@ export function Sidebar({ current }: { current: Route }) {
           <Crown size={15} strokeWidth={1.75} aria-hidden="true" />
           <span className="nav-label">{t('nav.upgrade')}</span>
         </button>
+        <a className="sidebar-credits nav-label" href={routeToHash({ screen: 'credits' })}>
+          {t('nav.credits')}
+        </a>
       </div>
     </aside>
   )

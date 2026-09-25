@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { parseHash } from './router'
 import { Assets } from './screens/Assets'
 import { ComingSoon } from './screens/ComingSoon'
+import { Credits } from './screens/Credits'
 import { Editor } from './screens/Editor'
 import { Home } from './screens/Home'
 import { Templates } from './screens/Templates'
@@ -31,6 +32,8 @@ export default function App() {
       return <Templates />
     case 'assets':
       return <Assets />
+    case 'credits':
+      return <Credits />
     case 'soon':
       return <ComingSoon feature={route.feature} />
     default:

@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Model inceleme (geliştirici aracı)</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #20242c; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <!-- Sadece geliştirme sırasında: model parçalarını tek tek boyayıp görmek için. Uygulamaya dahil değil. -->
+    <script type="module">
+      import * as THREE from 'three'
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+      import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+      import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+      renderer.setSize(900, 700)
+      document.body.appendChild(renderer.domElement)
+      const scene = new THREE.Scene()
+      scene.background = new THREE.Color('#20242c')
+      scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
+      const camera = new THREE.PerspectiveCamera(35, 900 / 700, 0.01, 100)
+      let model
+
+      window.load = async (url) => {
+        const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(url)
+        model = gltf.scene
+        const box = new THREE.Box3().setFromObject(model)
+        const size = box.getSize(new THREE.Vector3())
+        const center = box.getCenter(new THREE.Vector3())
+        model.position.sub(center)
+        const s = 3 / Math.max(size.x, size.y, size.z)
+        model.scale.setScalar(s)
+        model.position.multiplyScalar(s)
+        scene.add(model)
+        const meshes = []
+        model.traverse((o) => {
+          if (!o.isMesh) return
+          o.geometry.computeBoundingBox()
+          const b = new THREE.Box3().setFromObject(o)
+          const c = b.getCenter(new THREE.Vector3())
+          const sz = b.getSize(new THREE.Vector3())
+          meshes.push({ name: o.name, center: c.toArray().map((v) => +v.toFixed(3)), size: sz.toArray().map((v) => +v.toFixed(3)), material: o.material.name })
+        })
+        return { size: size.toArray().map((v) => +v.toFixed(3)), meshes }
+      }
+
+      /** yön: kameranın modele baktığı eksen, ör. [0,0,1] önden. vurgu: kırmızıya boyanacak parça adları. */
+      window.view = (dir, highlight = [], hide = [], zoom = 1) => {
+        model.traverse((o) => {
+          if (!o.isMesh) return
+          o.userData.orig ??= o.material
+          o.visible = !hide.includes(o.name)
+          o.material = highlight.includes(o.name) ? new THREE.MeshBasicMaterial({ color: '#ff2030' }) : o.userData.orig
+        })
+        const d = new THREE.Vector3(...dir).normalize().multiplyScalar(6 / zoom)
+        camera.position.copy(d)
+        camera.up.set(0, 1, 0)
+        if (Math.abs(dir[1]) > 0.9) camera.up.set(0, 0, -1)
+        camera.lookAt(0, 0, 0)
+        renderer.render(scene, camera)
+      }
+      /** Ekrandaki (piksel) noktada görünen parçaların adları, yakından uzağa. */
+      window.pick = (x, y) => {
+        const ray = new THREE.Raycaster()
+        ray.setFromCamera(new THREE.Vector2((x / 900) * 2 - 1, -(y / 700) * 2 + 1), camera)
+        return ray.intersectObject(model, true).filter((h) => h.object.visible).map((h) => h.object.name + "/" + h.object.material.name + (h.object.material.map ? "+map" : "") + (h.object.material.normalMap ? "+nrm" : "") + (h.object.material.aoMap ? "+ao" : "") + (h.object.material.roughnessMap ? "+mr" : ""))
+      }
+      window.ready = true
+    </script>
+  </body>
+</html>
