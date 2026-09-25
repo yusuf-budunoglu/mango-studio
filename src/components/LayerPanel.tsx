@@ -83,6 +83,24 @@ function LayerFields({ layer }: { layer: Layer }) {
         />
       )}
 
+      {DEVICE_KINDS.includes(layer.kind) && (
+        <div className="row">
+          <div>
+            <label htmlFor="layer-finish">{t('layer.finish')}</label>
+            <select id="layer-finish" value={layer.deviceFinish ?? (layer.kind === 'phone' ? 'space' : 'silver')} onChange={(e) => update({ deviceFinish: e.target.value as Layer['deviceFinish'] })}>
+              {(['silver', 'space', 'titanium', 'blue'] as const).map((f) => (
+                <option key={f} value={f}>
+                  {t(`layer.finishes.${f}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+          {layer.kind === 'laptop' && (
+            <NumberField id="layer-lid" label={t('layer.lidAngle')} value={layer.lidAngle ?? 105} step={5} onChange={(v) => update({ lidAngle: Math.min(180, Math.max(0, v)) })} />
+          )}
+        </div>
+      )}
+
       {layer.kind === 'svg' && (
         <>
           <AssetPicker id="layer-svg" label={t('layer.svgFile')} kind="svg" value={layer.media} onChange={(media) => update({ media })} />

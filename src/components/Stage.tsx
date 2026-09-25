@@ -1,9 +1,10 @@
-import { Line, TransformControls } from '@react-three/drei'
+import { Environment, Line, TransformControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
 import type { DepthOfFieldEffect } from 'postprocessing'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CanvasTexture, Color, DoubleSide, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
+import { CanvasTexture, Color, DoubleSide, PMREMGenerator, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
 import { resolveEffects, type ProjectEffects } from '../engine/effects'
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
@@ -125,6 +126,22 @@ function SceneEffects({ effects, dofRef }: { effects: ProjectEffects; dofRef: Re
 }
 
 const focusTarget = new Vector3()
+
+/**
+ * Metal ve cam yüzeyler için yansıma ortamı. Kodla üretilen bir oda sahnesinden oluşturulur;
+ * internetten HDR dosyası indirmez (drei'nin hazır ortamları CDN'den çeker).
+ */
+function StudioEnvironment() {
+  const gl = useThree((s) => s.gl)
+  const texture = useMemo(() => {
+    const pmrem = new PMREMGenerator(gl)
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    pmrem.dispose()
+    return env
+  }, [gl])
+  useEffect(() => () => texture.dispose(), [texture])
+  return <Environment map={texture} environmentIntensity={0.55} />
+}
 
 /** Arka plan: düz renk ya da iki renkli (doğrusal / merkezden) degrade; ekran boyunca sabit. */
 function Background({ project }: { project: Project }) {
@@ -253,6 +270,7 @@ function Scene({ project }: { project: Project }) {
   return (
     <>
       <Background project={project} />
+      <StudioEnvironment />
       <ambientLight intensity={0.5} />
       <directionalLight position={[3, 4, 5]} intensity={2} />
       <pointLight position={[-4, -2, 3]} intensity={30} color="#6c5ce7" />

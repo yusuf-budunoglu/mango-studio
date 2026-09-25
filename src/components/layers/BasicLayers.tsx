@@ -1,8 +1,9 @@
 import { RoundedBox } from '@react-three/drei'
 import { useEffect, useMemo, useState } from 'react'
-import { Box3, DoubleSide, ExtrudeGeometry, Shape, ShapeGeometry, Vector3, type BufferGeometry } from 'three'
+import { Box3, DoubleSide, ExtrudeGeometry, ShapeGeometry, Vector3, type BufferGeometry } from 'three'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { resolveAssetUrl } from '../../persistence/assets'
+import { roundedRect } from './geometry'
 import { useImageTexture, useLayerNode, type LayerProps } from './shared'
 
 export function ImageLayer({ layer, register }: LayerProps) {
@@ -18,22 +19,6 @@ export function ImageLayer({ layer, register }: LayerProps) {
       </mesh>
     </group>
   )
-}
-
-function roundedRect(w: number, h: number, r: number) {
-  const s = new Shape()
-  const x = -w / 2
-  const y = -h / 2
-  s.moveTo(x + r, y)
-  s.lineTo(x + w - r, y)
-  s.quadraticCurveTo(x + w, y, x + w, y + r)
-  s.lineTo(x + w, y + h - r)
-  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  s.lineTo(x + r, y + h)
-  s.quadraticCurveTo(x, y + h, x, y + h - r)
-  s.lineTo(x, y + r)
-  s.quadraticCurveTo(x, y, x + r, y)
-  return s
 }
 
 /** Şekiller: 3D küp ya da düz dikdörtgen, yuvarlatılmış kutu, daire (elips). */

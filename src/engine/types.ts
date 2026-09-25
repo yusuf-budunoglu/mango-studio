@@ -12,6 +12,9 @@ export type LayerKind = 'text' | 'phone' | 'laptop' | 'tablet' | 'shape' | 'imag
 
 export type ShapeType = 'cube' | 'rect' | 'rounded' | 'circle'
 
+/** Cihaz maketlerinin gövde rengi. */
+export type DeviceFinish = 'silver' | 'space' | 'titanium' | 'blue'
+
 export interface Block {
   id: string
   preset: string
@@ -54,6 +57,10 @@ export interface Layer {
   tint?: boolean
   /** SVG: 3D kalınlık (0 = düz) */
   extrude?: number
+  /** cihaz maketi: gövde rengi */
+  deviceFinish?: DeviceFinish
+  /** laptop: kapak açısı (derece; 90 dik, 105 hafif geriye yatık) */
+  lidAngle?: number
   /** şekil katmanının türü ve boyutu (sahne birimi) */
   shape?: ShapeType
   shapeWidth?: number

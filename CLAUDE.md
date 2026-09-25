@@ -15,7 +15,7 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - `src/engine/easing.ts` — hız eğrileri (`motion` paketinden).
 - `src/store/projectStore.ts` — Zustand + zundo. Proje değişiklikleri sadece store aksiyonlarıyla yapılır (geri alma buna bağlı). Oynatma zamanı ayrı store'da, geri almaya girmez.
 - `src/components/Stage.tsx` — React Three Fiber önizleme. Her karede `evaluate` çalışır, React yeniden çizilmez.
-- Katman bileşenleri `src/components/layers/`: `LayerNode` türe göre seçer; ortak kayıt `useLayerNode` (dönüşüm + opaklık + tıklayınca seçim). Türler: text, phone/tablet/laptop (`DeviceLayer`), image, shape (cube/rect/rounded/circle), svg (`SVGLoader`, isteğe bağlı kalınlık), video.
+- Katman bileşenleri `src/components/layers/`: `LayerNode` türe göre seçer; ortak kayıt `useLayerNode` (dönüşüm + opaklık + tıklayınca seçim). Türler: text, phone/tablet/laptop (`DeviceLayer`: kodla çizilen ayrıntılı 3D maketler — çentik, yan tuşlar, kamera lensleri, klavye; gövde rengi `deviceFinish`, laptop `lidAngle`; marka adı/logosu kullanılmaz), image, shape (cube/rect/rounded/circle), svg (`SVGLoader`, isteğe bağlı kalınlık), video.
 - Video katmanı: önizlemede `<video>` timeline'a eşlenir; dışa aktarmada `prepareFrameHooks` ile Mediabunny `CanvasSink` o anın karesini tam çözer (oynatıcı kare-doğru değildir). Videonun sesi kullanılmaz.
 - Önizlemede düzenleme (`Stage.tsx` → `LayerGizmo`): tıklayınca seçim, drei `TransformControls` ile taşı/döndür/ölçekle (W/E/R). Bırakınca `manualTransformPatch` (`src/engine/manualTransform.ts`) animasyon etkisini koruyarak katmanın temel değerlerini günceller. Sürükleme sürerken `manualDrag.layerId` o katmanın motor tarafından ezilmesini engeller. Yardımcılar (`editor-helpers` grubu) video çıktısında kaldırılır, küçük resimde o kare için gizlenir; asla sürükleme sırasında React ile kaldırma.
 - Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
@@ -54,6 +54,9 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - `move` (özel hareket): katmanı hedefe götürür ve orada bırakır; art arda bloklar anahtar kare gibi yol çizer.
 - Geçişler (`fade-black`, `fade-white`, `flash`) kamera satırında; `Stage.tsx`'teki tam ekran örtüyü sürer. Örtü en yüksek `renderOrder`'lı bir grupta: three.js önce grup sırasına bakar.
 - Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts). Panelde `CurveEditor` tutamaçları.
+
+## Işık
+- Metal/cam yüzeyler için `StudioEnvironment` (three.js `RoomEnvironment`, PMREM). drei'nin hazır ortamları CDN'den HDR indirdiği için kullanılmaz.
 
 ## Dosyalar ve ses
 - `src/persistence/assets.ts` — dosya deposu (IndexedDB): proje `asset:<id>` referansı tutar, `resolveAssetUrl` blob URL'ye çevirir. Eski projelerdeki data URL'ler de çalışır.
