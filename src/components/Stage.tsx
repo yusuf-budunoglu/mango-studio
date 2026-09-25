@@ -1,8 +1,10 @@
 import { Line, RoundedBox, Text, TransformControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing'
+import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
+import type { DepthOfFieldEffect } from 'postprocessing'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type Object3D, type PerspectiveCamera, type Texture } from 'three'
+import { SRGBColorSpace, TextureLoader, Vector3, type Group, type Material, type Mesh, type Object3D, type PerspectiveCamera, type Texture } from 'three'
+import { resolveEffects, type ProjectEffects } from '../engine/effects'
 import { displayText, evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
@@ -313,6 +315,27 @@ function LayerGizmo({ project }: { project: Project }) {
   )
 }
 
+/**
+ * Proje ayarlarından efekt zinciri. EffectComposer çocukları değişince zinciri yeniden kurar;
+ * kapalı efektler hiç eklenmez (performans).
+ */
+function SceneEffects({ effects, dofRef }: { effects: ProjectEffects; dofRef: React.RefObject<DepthOfFieldEffect | null> }) {
+  const { bloom, vignette, dof, grain, color } = effects
+  const hasColor = color.saturation !== 0 || color.contrast !== 0 || color.brightness !== 0
+  return (
+    <EffectComposer>
+      <>{dof.enabled && <DepthOfField ref={dofRef} target={[0, 0, 0]} focusRange={dof.range} bokehScale={dof.bokeh} />}</>
+      <>{bloom.enabled && <Bloom intensity={bloom.intensity} luminanceThreshold={bloom.threshold} mipmapBlur />}</>
+      <>{hasColor && <HueSaturation saturation={color.saturation} />}</>
+      <>{hasColor && <BrightnessContrast brightness={color.brightness} contrast={color.contrast} />}</>
+      <>{grain.enabled && <Noise opacity={grain.amount} premultiply />}</>
+      <>{vignette.enabled && <Vignette darkness={vignette.darkness} offset={0.3} />}</>
+    </EffectComposer>
+  )
+}
+
+const focusTarget = new Vector3()
+
 /** Video çıktısının sahneyi kare kare, istenen çözünürlükte çizmesini sağlar. */
 function ExportBridge() {
   const gl = useThree((s) => s.gl)
@@ -362,6 +385,7 @@ function ExportBridge() {
 }
 
 function Scene({ project }: { project: Project }) {
+  const dofRef = useRef<DepthOfFieldEffect | null>(null)
   const appliers = useRef(new Map<string, Applier>())
   const groups = useRef(new Map<string, Object3D>())
   const scene = useThree((s) => s.scene)
@@ -382,6 +406,8 @@ function Scene({ project }: { project: Project }) {
       if (group) applyLayerOrder(group, project.layers.length - index, !!layer.hidden)
     })
     const c = frame.camera
+    // Alan derinliği: netlik düzlemi kamera satırındaki odak animasyonunu izler.
+    if (dofRef.current) dofRef.current.target = focusTarget.set(c.targetX, c.targetY, c.focusZ)
     camera.position.set(c.x, c.y, c.z)
     camera.lookAt(c.targetX, c.targetY, 0)
     if (camera.fov !== c.fov) {
@@ -408,10 +434,7 @@ function Scene({ project }: { project: Project }) {
         if (layer.kind === 'image') return <ImageLayer key={layer.id} layer={layer} register={register} />
         return <ShapeLayer key={layer.id} layer={layer} register={register} />
       })}
-      <EffectComposer>
-        <Bloom intensity={0.7} luminanceThreshold={0.6} mipmapBlur />
-        <Vignette darkness={0.55} offset={0.3} />
-      </EffectComposer>
+      <SceneEffects effects={resolveEffects(project.effects)} dofRef={dofRef} />
       <LayerGizmo project={project} />
       <ExportBridge />
     </>

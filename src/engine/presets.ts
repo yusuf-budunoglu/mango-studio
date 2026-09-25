@@ -120,6 +120,11 @@ export const PRESETS: Record<string, Preset> = {
       s.z = Math.cos(a) * r
     },
   },
+  'focus-pull': {
+    target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
+    params: [{ key: 'from', default: -3, min: -20, max: 10, step: 0.25 }, { key: 'to', default: 0, min: -20, max: 10, step: 0.25 }],
+    apply: (s, e, _p, { from, to }) => { s.focusZ = from + (to - from) * e },
+  },
   'camera-pan': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,
     params: [distance(1.5)],

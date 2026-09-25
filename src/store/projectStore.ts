@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
+import type { EffectsPatch } from '../engine/effects'
 import { newId } from '../engine/ids'
 import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
@@ -9,7 +10,7 @@ import { DEFAULT_TEMPLATE } from '../project/templates'
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
 
-type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'numberLocale'>>
+type ProjectSettings = Partial<Pick<Project, 'name' | 'duration' | 'background' | 'numberLocale' | 'width' | 'height'>>
 
 interface ClipboardEntry {
   trackId: TrackId
@@ -48,6 +49,8 @@ interface ProjectStore {
   /** Timeline'da taşınan/kırpılan ses parçaları: soldan kırpma kaynağın başlangıcını da kaydırır. */
   setAudioTimes: (times: Record<string, { start: number; end: number }>) => void
   updateProject: (patch: ProjectSettings) => void
+  /** Efekt ayarlarını birleştirerek günceller. */
+  updateEffects: (patch: EffectsPatch) => void
   /** Başka bir projeyi açar; geri alma geçmişi sıfırlanır. */
   loadProject: (project: Project) => void
 }
@@ -362,6 +365,14 @@ export const useProjectStore = create<ProjectStore>()(
             ...(patch.duration !== undefined && { duration: Math.min(120, Math.max(1, patch.duration)) }),
           },
         })),
+      updateEffects: (patch) =>
+        set((s) => {
+          const effects: EffectsPatch = { ...s.project.effects }
+          for (const key of Object.keys(patch) as (keyof EffectsPatch)[]) {
+            effects[key] = { ...s.project.effects?.[key], ...patch[key] } as never
+          }
+          return { project: { ...s.project, effects } }
+        }),
       loadProject: (project) => {
         // Yükleme bir düzenleme sayılmasın: kaydı durdur, yükle, geçmişi temizle.
         const history = useProjectStore.temporal.getState()

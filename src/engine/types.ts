@@ -1,3 +1,5 @@
+import type { EffectsPatch } from './effects'
+
 // Proje formatı: editör, motor, şablonlar ve (ileride) MCP hepsi bu yapıyı okuyup yazar.
 // Formatı değiştirirken PROJECT_VERSION'ı artır ve migrate.ts'e bir adım ekle. Varsayılanı olan
 // isteğe bağlı yeni alanlar (hidden, locked…) eski projeleri bozmadığı için sürüm gerektirmez.
@@ -97,6 +99,8 @@ export interface Project {
   camera: CameraTrack
   /** ses parçaları; boşsa sessiz */
   audio?: AudioClip[]
+  /** görüntü efektleri; boşsa varsayılanlar (bloom + kenar karartma) */
+  effects?: EffectsPatch
 }
 
 /** Motorun belirli bir anda bir katman için hesapladığı değerler. */
@@ -123,6 +127,8 @@ export interface CameraState {
   /** kameranın baktığı nokta */
   targetX: number
   targetY: number
+  /** alan derinliği açıkken netlik düzleminin z konumu */
+  focusZ: number
 }
 
 export interface FrameState {

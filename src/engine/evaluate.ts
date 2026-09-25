@@ -45,6 +45,7 @@ export function evaluateCamera(project: Project, time: number): CameraState {
     fov: cam.fov,
     targetX: 0,
     targetY: 0,
+    focusZ: 0,
   }
   for (const block of sortedBlocks(cam.blocks)) {
     const preset = PRESETS[block.preset]

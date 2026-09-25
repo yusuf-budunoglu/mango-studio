@@ -6,6 +6,7 @@ import { categoryLabel, easingLabel, paramLabel, presetLabel } from '../i18n/lab
 import { findAudio, findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
 import { AudioPanel } from './AudioPanel'
 import { LayerPanel } from './LayerPanel'
+import { EffectsPanel } from './EffectsPanel'
 import { ProjectSettings } from './ProjectSettings'
 
 export function Inspector() {
@@ -137,6 +138,7 @@ export function Inspector() {
       )}
 
       <ProjectSettings />
+      <EffectsPanel />
     </aside>
   )
 }
