@@ -421,6 +421,14 @@ const tr: Translation = {
       description: 'Dönen küpler, yayla patlayan logo ve daktilo slogan.',
       tagline: 'fikirden ürüne',
     },
+    'wallet-promo': {
+      name: 'Cüzdan tanıtımı',
+      description: 'Dikey uygulama tanıtımı: harf harf başlık, özellik etiketleri, yakın çekimler ve yumuşak ışık.',
+      fast: 'Hızlı',
+      secure: 'Güvenli',
+      reliable: 'Güvenilir',
+      closing: 'Hemen dene',
+    },
     'fintech': {
       name: 'Fintech uygulaması',
       description: 'Ödeme uygulamasına sinematik yakın çekimler: sert kesmeler, alan derinliği ve logo kapanışı.',
@@ -520,6 +528,7 @@ const tr: Translation = {
     cubeLeft: 'Küp sol',
     cubeRight: 'Küp sağ',
     tagline: 'Slogan',
+    glow: 'Işık',
   },
 }
 

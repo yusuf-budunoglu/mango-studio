@@ -420,6 +420,14 @@ const en = {
       description: 'Spinning cubes, a logo that pops in on a spring and a typewriter tagline.',
       tagline: 'from idea to product',
     },
+    'wallet-promo': {
+      name: 'Wallet promo',
+      description: 'Vertical app promo: a typed title, feature badges, close-ups and a soft glow.',
+      fast: 'Fast',
+      secure: 'Secure',
+      reliable: 'Reliable',
+      closing: 'Try it today',
+    },
     'fintech': {
       name: 'Fintech app',
       description: 'Cinematic close-ups of a payment app with hard cuts, depth of field and a logo sting.',
@@ -519,6 +527,7 @@ const en = {
     cubeLeft: 'Cube left',
     cubeRight: 'Cube right',
     tagline: 'Tagline',
+    glow: 'Glow',
   },
 }
 

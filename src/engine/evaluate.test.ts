@@ -128,3 +128,21 @@ describe('videonun sonu', () => {
     expect(evaluate({ ...base, layers: [short] }, 5).layers[short.id].opacity).toBe(0)
   })
 })
+
+describe('özel eğri çözücüsü', () => {
+  it('CSS cubic-bezier ile aynı sonucu hassas verir, uçlara çok yakın anlarda sapmaz', async () => {
+    const { preciseCubicBezier } = await import('./easing')
+    // ease (0.25, 0.1, 0.25, 1): x = 0.5 için bilinen değer ≈ 0.8024033877
+    expect(preciseCubicBezier(0.25, 0.1, 0.25, 1)(0.5)).toBeCloseTo(0.8024033877, 8)
+    const fn = preciseCubicBezier(0.32, 0, 0.67, 0)
+    expect(fn(1 - 4e-7)).toBeCloseTo(1, 5)
+    expect(fn(4e-7)).toBeCloseTo(0, 6)
+    // tek yönlü artan
+    let prev = 0
+    for (let i = 1; i <= 100; i++) {
+      const v = fn(i / 100)
+      expect(v).toBeGreaterThanOrEqual(prev - 1e-12)
+      prev = v
+    }
+  })
+})

@@ -44,6 +44,7 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - `setClipTimes`: süre aynıysa taşıma (bloklar klible gider); kırpmada bloklar mutlak yerinde kalır, kenardaki giriş (sol) / çıkış (sağ) animasyonu kenarla gider; video soldan kırpılınca `mediaOffset` artar. `splitClip`: ikinci parça üstte yeni katman, bitmiş giriş animasyonları ona geçmez.
 - Proje süresi değişince videonun sonuna kadar süren klipler yeni sona uyar. Yeni katman oynatma kafasında 5 sn.
 - Fintech şablonu 60 kare/sn'lik bir referans videodan kare kare ölçüldü: kesmeler `f(kare)` ile (181, 473, 658, 838, 977; süre 1157 kare), giriş/çıkış eğrileri ölçülen konumlara uydurulmuş bezier'ler. Değiştirirken kesme karelerini koru; `fitClip` blok başlangıçlarını mikro saniyeye yuvarlar.
+- `wallet-promo` şablonu dikey (1080×1920, 60 kare/sn), 60 fps referanstan kare kare ölçüldü; kesme yok, çekimler telefon kadrajdan çıkınca beyaz fonda değişir. Fon ışığı `public/templates/glow/oval.jpg` (referansın radyal renk profilinden üretildi, kenarı beyaz), ekran `public/templates/screens/wallet.png` (bizim tasarımımız). Şablon kodunda proje boyutu `width/height` ile ezilir.
 - Şablonlar bloklarıyla videoya göre yazılır; `fitClip` klibi katmanın göründüğü aralığa oturtur ve kenardaki 0 sn belirme/kaybolma bloklarını atar. Test (`buildUnfitted`) her şablonun eski haliyle aynı göründüğünü kontrol eder.
 - Video katmanında eski `mediaStart` yok; video klibin başında başlar.
 
@@ -69,7 +70,7 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 ## İleri seviye bloklar
 - `move` (özel hareket): katmanı hedefe götürür ve orada bırakır; art arda bloklar anahtar kare gibi yol çizer.
 - Geçişler (`fade-black`, `fade-white`, `flash`) kamera satırında; `Stage.tsx`'teki tam ekran örtüyü sürer. Örtü en yüksek `renderOrder`'lı bir grupta: three.js önce grup sırasına bakar.
-- Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts). Panelde `CurveEditor` tutamaçları.
+- Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts) kendi hassas çözücümüzü (`preciseCubicBezier`, 1e-10) kullanır — motion'ın `cubicBezier`'i ~1e-3 hata yapıyordu. Panelde `CurveEditor` tutamaçları.
 - `move` X/Y/Z dönüşü de alır (`rotX`, `rotY`, `rotate`). Sinematik çekimlerde tek uzun `move` + yavaşlayan özel eğri kullan; kısa giriş + ayrı süzülme bloğu hızda kırılma yapar.
 - `soft-reveal`: harfler soldan sağa yumuşak kenarla belirir. `TextLayer`'daki temel malzemenin `onBeforeCompile`'ı (troika bunu kendi shader'ından önce çalıştırır) harfin yerel x'ine göre opaklık verir.
 - `focus-pull` netliği yalnızca başladıktan sonra değiştirir; başlamamış bloklar önceki odağı ezmez (hiç blok başlamadıysa ilki başlangıç değerini tutar). Eskiden son odak bloğunun `from`'u tüm videoyu tek düzleme odaklıyor, ekranlar tamamen bulanık çıkıyordu.
@@ -94,7 +95,7 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 ## Işık
 - Metal/cam yüzeyler için `StudioEnvironment` (three.js `RoomEnvironment`, PMREM). drei'nin hazır ortamları CDN'den HDR indirdiği için kullanılmaz.
 - `Project.lighting: 'studio'` → `ProductStudio`: drei `Lightformer` softbox/şerit/halka ışıklarından kodla kurulan ortam (CDN yok) + arkadan iki kenar ışığı. Varsayılan `soft` eski oda ışığı.
-- `applyOpacity` malzemeyi yalnızca opaklık < 1 iken saydam yapar; hepsini saydam yapmak derinlik sıralamasını bozuyordu.
+- `applyOpacity` malzemeyi yalnızca opaklık < 1 iken saydam yapar; hepsini saydam yapmak derinlik sıralamasını bozuyordu. Saydamlık durumu değişince `material.needsUpdate` şart: aksi halde bir kez opak çizilen malzeme saydamlaşmıyor, sönmeler (fade-out) sonda birden kayboluyordu.
 
 ## Video çıktısı kalitesi
 - Sahne çıktının 2 katında çizilip 2D kanvasta küçültülür (`supersampleFactor`, çizim tarafı ≤ 4096): efekt zinciri açıkken tarayıcının kenar yumuşatması çalışmıyor.

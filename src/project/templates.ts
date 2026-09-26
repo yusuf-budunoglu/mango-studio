@@ -292,6 +292,169 @@ export const TEMPLATES: Template[] = [
       }
     },
   },
+  {
+    id: 'wallet-promo',
+    accent: '#f2553f',
+    build: () => {
+      // Dikey (9:16) cüzdan uygulaması tanıtımı. 60 kare/sn'lik bir referans videodan kare kare ölçüldü;
+      // kesme yok: her çekim telefonun kadrajdan çıkıp beyaz fonda bir sonrakinin girmesiyle biter.
+      // Fon beyaz, üzerinde bizim ürettiğimiz yumuşak turuncu ışık görselleri (kenarları beyaz, dikiş izi yok).
+      const base = import.meta.env.BASE_URL
+      const screen = `${base}templates/screens/wallet.png`
+      // referansın kapanış karesinden ölçülen radyal profil (dikey yarıçap yatayın 1.6 katı)
+      const glowOval = `${base}templates/glow/oval.jpg`
+      const f = (frame: number) => frame / 60
+      const brand = 'Pocketa'
+      type Bezier = [number, number, number, number]
+      const move = (start: number, duration: number, params: Record<string, number>, easing: string | Bezier = 'ease-in-out') =>
+        b('move', start, duration, typeof easing === 'string' ? { params: { dx: 0, ...params }, easing } : { params: { dx: 0, ...params }, easing: 'custom', bezier: easing })
+      const cut = (from: number, to: number) => [b('fade-in', from, 0), b('fade-out', to, 0)]
+      const focus = (at: number, z: number, blur = 1) => b('focus-pull', at, 0, { params: { from: z, to: z, blur } })
+      // telefon alttan girer: referansta yolun %33'ü 0.15 sn'de, %74'ü 0.45 sn'de, %91'i 0.75 sn'de
+      const RISE: Bezier = [0.25, 0.05, 0, 0.75]
+      const phone = (n: number, spec: Omit<LayerSpec, 'name' | 'kind' | 'color'>) =>
+        layer({ name: `${t('layerNames.phone')} ${n}`, kind: 'phone', color: '#f2553f', image: screen, deviceFinish: 'space', ...spec })
+      const glow = (n: number, image: string, spec: Omit<LayerSpec, 'name' | 'kind' | 'color' | 'image'>) =>
+        layer({ name: `${t('layerNames.glow')} ${n}`, kind: 'image', color: '#ffffff', image, ...spec })
+      const heading = { kind: 'text' as const, fontFamily: 'open-sans', fontWeight: 700 as const, textWidth: 6 }
+      // Özellik etiketi: beyaz yuvarlak kutu + ikonlu yazı; küçükten zıplayarak gelir, küçülerek kaybolur.
+      const badge = (n: number, label: string, x: number, y: number, width: number, inFrame: number, outFrame: number) => {
+        const blocks = [
+          ...cut(f(inFrame), f(outFrame) + 0.2),
+          b('pop', f(inFrame), 0.4, { easing: 'spring-gentle' }),
+          move(f(inFrame), f(outFrame) - f(inFrame), { dy: 0.08 }, 'linear'),
+          b('scale-out', f(outFrame), 0.2),
+        ]
+        return [
+          layer({ name: t('layerNames.label', { n }), kind: 'text', text: label, color: '#1a1717', fontFamily: 'open-sans', fontWeight: 400, fontSize: 0.25, position: [x, y, 0.82], blocks }),
+          // buzlu cam: açık gri, hafif saydam (referansta 241,234,233)
+          layer({ name: `${t('layerNames.label', { n })} ▭`, kind: 'shape', shape: 'rounded', color: '#f1ebe9', opacity: 0.92, shapeWidth: width, shapeHeight: 0.5, position: [x, y, 0.8], blocks }),
+        ]
+      }
+      return {
+        ...project(
+          t('templates.wallet-promo.name'),
+          f(1145),
+          '#ffffff',
+          [
+            // Etiketler (1. telefonun önünde): Fast solda, Secure sağda, Reliable üstte; ters sırayla kaybolur.
+            ...badge(3, `✓ ${t('templates.wallet-promo.reliable')}`, -0.2, 1.61, 1.56, 253, 314),
+            ...badge(2, `⛊ ${t('templates.wallet-promo.secure')}`, 0.91, 0.72, 1.26, 245, 320),
+            ...badge(1, `⚡ ${t('templates.wallet-promo.fast')}`, -0.71, -0.48, 1.02, 222, 328),
+            // 1) Açılış + özellikler: alttan dönerek yükselir (69–135), durur, geriye yatıp eğilir (190–235),
+            //    yavaşça süzülür, sonra yatarak yukarı fırlar (310–360).
+            phone(1, {
+              position: [0, -5.8, 0],
+              rotation: [0, 65, 0],
+              scale: 1.42,
+              blocks: [
+                ...cut(f(69), f(362)),
+                move(f(69), 1.1, { dy: 5.6, rotY: -65 }, RISE),
+                // eğilme: referansta 210. karede yarıyı geçmiş, ~228'de bitmiş; eğilince geri çekilir (küçülür)
+                move(f(191), 0.65, { rotX: -18, rotate: 18, dx: 0.15, dy: 0.17, scaleBy: 0.74 }, 'ease-out'),
+                move(f(235), f(310) - f(235), { dy: 0.12 }, 'linear'),
+                // çıkış: kübik hızlanma (referansta yolun %3'ü 325'te, %20'si 340'ta, %55'i 352'de)
+                move(f(310), f(360) - f(310), { dy: 5.5, dx: -2.5, rotate: 35, rotX: -40 }, [0.32, 0, 0.67, 0]),
+              ],
+            }),
+            // Başlık: harf harf yazılırken soldan sağa kayıp ortalanır; telefon önünden geçip örter.
+            layer({
+              ...heading,
+              name: t('layerNames.title'),
+              text: brand,
+              color: '#1f1a17',
+              fontSize: 0.5,
+              align: 'left',
+              position: [-1.71, 0, -0.3],
+              blocks: [...cut(0, f(112)), b('typewriter', 0, 0.65), move(f(6), 0.6, { dx: 0.57 }, 'ease-out')],
+            }),
+            // 2) Yakın çekim: dev telefon sağ alttan yükselir, yavaşça yakınlaşır, yukarı kayıp çıkar.
+            phone(2, {
+              position: [1.65, -7.65, 2],
+              rotation: [-25, 15, 32],
+              scale: 2.5,
+              blocks: [
+                ...cut(f(370), f(645)),
+                // hızlı başlayan giriş: referansta yolun %18'i 372'de, %53'ü 384'te, %80'i 396'da
+                move(f(370), 1.2, { dy: 6 }, [0, 0.1, 0.15, 1]),
+                move(f(440), f(565) - f(440), { dy: 0.12, scaleBy: 1.05 }, 'linear'),
+                // çıkış: 565'te yavaşça başlar, kadrajdan çıkana (642) kadar hızlanır (kübik); sola da kayar ki
+                // telefonun altı (alt çubuk) kadrajın ortasından geçsin
+                move(f(565), f(642) - f(565), { dy: 7.5, dx: -2.4, rotate: -6 }, [0.32, 0, 0.67, 0]),
+              ],
+            }),
+            // 3) Yan çekim: arkası dönük telefon (kamera çıkıntısı) alttan yükselirken öne döner, yakınlaşıp çıkar.
+            phone(3, {
+              position: [0.29, -7, 1],
+              rotation: [0, 200, 0],
+              scale: 2.1,
+              deviceFinish: 'silver',
+              blocks: [
+                ...cut(f(648), f(884)),
+                // yükselme çok hızlı başlar (referansta yolun %34'ü 652'de, %66'sı 664'te),
+                // dönüş ise neredeyse doğrusal başlayıp yavaşlar (664'te tam yandan görünür)
+                move(f(648), 1.1, { dy: 5 }, [0.1, 0.7, 0.2, 1]),
+                move(f(648), 0.7, { rotY: -175 }, 'ease-out'),
+                move(f(710), f(825) - f(710), { dy: 0.1, scaleBy: 1.06 }, 'linear'),
+                move(f(825), f(884) - f(825), { dy: 7, scaleBy: 1.4 }, [0.32, 0, 0.67, 0]),
+              ],
+            }),
+            // 4) Kapanış: ortada dikey oval ışık; yazı bulanıktan netleşir (odak kaydırma), 1013. karede
+            //    markaya geçer, sonunda her şey beyaza söner.
+            layer({
+              ...heading,
+              name: t('layerNames.closing'),
+              text: t('templates.wallet-promo.closing'),
+              color: '#ffffff',
+              fontSize: 0.39,
+              position: [0, 0, 0],
+              blocks: [...cut(f(886), f(1013)), b('fade-in', f(886), 0.65, { easing: 'ease-out' })],
+            }),
+            layer({
+              ...heading,
+              name: t('layerNames.logo'),
+              text: brand,
+              color: '#ffffff',
+              fontSize: 0.39,
+              position: [0, 0, 0],
+              blocks: [...cut(f(1013), f(1125)), b('fade-out', f(1076), f(1124) - f(1076), { easing: 'linear' })],
+            }),
+            glow(4, glowOval, {
+              position: [0, 0, -2],
+              scale: 2.6,
+              blocks: [...cut(f(880), f(1125)), b('fade-in', f(880), 0.7, { easing: 'ease-out' }), b('fade-out', f(1076), f(1124) - f(1076), { easing: 'linear' })],
+            }),
+            glow(3, glowOval, { position: [0, 0.8, -2], scale: 1.91, blocks: [...cut(f(668), f(884)), b('fade-in', f(668), 0.5), b('fade-out', f(858), f(884) - f(858))] }),
+            glow(2, glowOval, { position: [0, 0.8, -2], scale: 1.91, blocks: [...cut(f(385), f(645)), b('fade-in', f(385), 0.6), b('fade-out', f(600), f(645) - f(600))] }),
+            // alttan yükselen geniş ışık (açılış ve özellikler çekimi)
+            glow(1, glowOval, {
+              position: [0, -4.6, -2],
+              scale: 3.02,
+              blocks: [...cut(f(2), f(362)), b('scale-in', f(2), 0.8), move(f(2), 0.8, { dy: 0.6 }, 'ease-out'), b('fade-out', f(312), f(356) - f(312), { easing: 'ease-out' })],
+            }),
+          ],
+          camera([
+            focus(0, 0, 0),
+            focus(f(370), 2.6, 0.8),
+            focus(f(648), 2.4, 1.4),
+            // kapanış yazısı bulanıktan netleşir: netlik düzlemi uzaktan yazıya gelir
+            b('focus-pull', f(886), 0.65, { params: { from: -6, to: 0, blur: 1 }, easing: 'ease-out' }),
+          ]),
+        ),
+        width: 1080,
+        height: 1920,
+        fps: 60,
+        lighting: 'studio',
+        effects: {
+          dof: { enabled: true, bokeh: 5, range: 1.4 },
+          // referansta parlama ve vinyet yok: fon temiz beyaz
+          bloom: { enabled: false, intensity: 0.35, threshold: 0.9 },
+          vignette: { enabled: false, darkness: 0.35 },
+          motionBlur: { enabled: true, samples: 6, shutter: 0.5 },
+        },
+      }
+    },
+  },
 ]
 
 export const DEFAULT_TEMPLATE = TEMPLATES[0]

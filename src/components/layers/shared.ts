@@ -44,7 +44,13 @@ export function applyOpacity(group: Group, opacity: number) {
     const baseTransparent = (material.userData.baseTransparent ??= material.transparent) as boolean
     // Tam görünürken opak malzemeler opak kalsın: hepsini saydam yapmak derinlik sıralamasını
     // bozuyor (modelin iç parçaları öne taşabiliyor) ve gereksiz yere yavaşlatıyor.
-    material.transparent = baseTransparent || opacity < 0.999
+    const transparent = baseTransparent || opacity < 0.999
+    // Saydamlık değişince malzeme yeniden derlenmeli: aksi halde bir kez opak çizilmiş malzeme
+    // saydamlaşmıyor, sönme (fade-out) animasyonları tam görünür kalıp sonda birden kayboluyordu.
+    if (material.transparent !== transparent) {
+      material.transparent = transparent
+      material.needsUpdate = true
+    }
     material.opacity = base * opacity
   })
 }
