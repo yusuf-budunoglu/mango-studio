@@ -20,7 +20,7 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Önizlemede düzenleme (`Stage.tsx` → `LayerGizmo`): tıklayınca seçim, drei `TransformControls` ile taşı/döndür/ölçekle (W/E/R). Bırakınca `manualTransformPatch` (`src/engine/manualTransform.ts`) animasyon etkisini koruyarak katmanın temel değerlerini günceller. Sürükleme sürerken `manualDrag.layerId` o katmanın motor tarafından ezilmesini engeller. Yardımcılar (`editor-helpers` grubu) video çıktısında kaldırılır, küçük resimde o kare için gizlenir; asla sürükleme sırasında React ile kaldırma.
 - Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
 - Editör düzeni (CapCut gibi): sol `LibraryPanel` (sekmeler: metin, cihaz, medya, şekil, ses, efekt, geçiş, kamera; tıklanan öğe oynatma kafasına eklenir, yeni katman en üste), orta önizleme, sağ `PropertiesPanel` (seçime göre: blok ayarları / ses parçası / klip → Temel + Animasyon sekmeleri / hiçbiri → Proje + Efektler), altta timeline. Timeline yüksekliği sürüklenerek değişir (`editorStore.timelineHeight`, localStorage).
-- `src/components/LayerPanel.tsx` — `LayerFields`: seçili klibin içerik ve konum ayarları; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
+- `src/components/LayerPanel.tsx` — `LayerFields`: seçili klibin içerik ve konum ayarları; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage). Cihaz ekran görüntüsü `setScreenImage` ile değişir: aynı görseli paylaşan aynı türdeki cihazlar (şablonda her çekim ayrı telefon katmanı) birlikte güncellenir.
 - `src/components/AnimationPanel.tsx` — klibin Animasyon sekmesi: giriş/çıkış tek seçimli (klibin kenarına yapışık, süre kaydırıcısı), vurgu/hareket/metin oynatma kafasına eklenir; altta klipteki tüm bloklar (tıklayınca blok ayarları).
 - `src/editor/commands.ts` — böl / sil / çoğalt: seçili blok varsa bloklara, yoksa seçili klibe. Araç çubuğu, sağ tık menüsü ve kısayollar bunu kullanır.
 - `src/export/` — MP4 çıktısı (Mediabunny + WebCodecs). `bridge.ts` Canvas içindeki sahneyle bağlantı; kareler `advance()` ile tek tek çizilir. Metin (troika) worker'da hazırlandığı için kare yakalamadan önce `pendingTextSyncs` beklenir.
@@ -43,6 +43,7 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Katman bloklarının `start`'ı klibin başına göre; kamera blokları ve ses parçaları videoya göre. Store dışarıya mutlak zaman alır/verir (`trackOffset`); dönüşüm store'da.
 - `setClipTimes`: süre aynıysa taşıma (bloklar klible gider); kırpmada bloklar mutlak yerinde kalır, kenardaki giriş (sol) / çıkış (sağ) animasyonu kenarla gider; video soldan kırpılınca `mediaOffset` artar. `splitClip`: ikinci parça üstte yeni katman, bitmiş giriş animasyonları ona geçmez.
 - Proje süresi değişince videonun sonuna kadar süren klipler yeni sona uyar. Yeni katman oynatma kafasında 5 sn.
+- Fintech şablonu 60 kare/sn'lik bir referans videodan kare kare ölçüldü: kesmeler `f(kare)` ile (181, 473, 658, 838, 977; süre 1157 kare), giriş/çıkış eğrileri ölçülen konumlara uydurulmuş bezier'ler. Değiştirirken kesme karelerini koru; `fitClip` blok başlangıçlarını mikro saniyeye yuvarlar.
 - Şablonlar bloklarıyla videoya göre yazılır; `fitClip` klibi katmanın göründüğü aralığa oturtur ve kenardaki 0 sn belirme/kaybolma bloklarını atar. Test (`buildUnfitted`) her şablonun eski haliyle aynı göründüğünü kontrol eder.
 - Video katmanında eski `mediaStart` yok; video klibin başında başlar.
 
@@ -53,6 +54,10 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 ## Yazı tipleri
 - `src/assets/fonts/*.woff`, `python scripts/build-fonts.py` ile Fontsource (devDependency) paketlerinden üretilir: latin + latin-ext + Noto Sans Symbols 2 tek dosyada, çünkü troika tek font dosyası kabul ediyor ve `.woff2` açamıyor. Lisanslar (OFL) aynı klasörde.
 - Metin çizimi dış sunucuya istek atmamalı; yeni font eklerken betiğe ekle ve Türkçe harfleri kontrol et.
+- Font listesi `src/render/fonts.ts` (`FONTS`, kategori: sans/display/serif/mono). Tek kalınlıklı fontta (Bebas Neue, DM Serif Display, Instrument Serif) kalın için normal dosya kullanılır. Lato Türkçe harfleri içermediği için eklenmedi.
+- Kullanıcı fontu yükleyebilir (.ttf/.otf/.woff; troika .woff2 açamıyor): dosya deposunda `font` türü, katmanda `fontFamily: 'asset:<id>'`. `useTextFontUrl` (`src/render/fontFaces.ts`) blob adresini çözer; çözülene kadar metin çizilmez ve çıktı `pendingTextSyncs` ile bekler. Yüklenen fontta kalınlık seçilemez.
+- `FontPicker`: her font kendi yazı tipiyle (`loadFontFace` → tarayıcı `FontFace`), arama, yükleme, yıldız = yeni metinlerin fontu (`preferredFont`, localStorage; proje formatına girmez, yeni katmana yazılır). Varsayılan Inter.
+- SF Pro (Apple) lisansı uygulamayla dağıtımı yasaklıyor: pakete ekleme, kullanıcı kendisi yükleyebilir.
 
 ## Diller (i18n)
 - `i18next` + `react-i18next`. Ana dil **İngilizce** (`src/i18n/locales/en.ts`), Türkçe `tr.ts`. Seçim localStorage'da tutulur, tarayıcı diline bakılmaz.
@@ -103,7 +108,8 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Timeline motoru `editorData` referansı her değiştiğinde oynatmayı durdurur: satır dizilerini mutlaka `useMemo` ile ver.
 
 ## Test
-- Geliştirme modunda `window.__stores` (project, playback) tarayıcı otomasyon testleri için açık.
+- Geliştirme modunda `window.__stores` (project, playback, editor) ve `window.__templates` (main.tsx), `window.__bridge` (Stage.tsx: sahnenin kullandığı `export/bridge` örneği; HMR sonrası dinamik import başka kopya verebiliyor) tarayıcı otomasyonu için açık. Tek kare: `__bridge.exportBridge.current.begin(1920, 1080)` + `renderTimeOverride.current = t` + `renderFrame()`.
+- Gizli/arka plandaki sekmede R3F kanvası boyut ölçmediği için sahne kurulmaz; `window.dispatchEvent(new Event('resize'))` ya da görünür/başsız (headless) tarayıcı kullan.
 
 ## Kurallar
 - GSAP kullanma (lisansı kodsuz animasyon araçlarını yasaklıyor).

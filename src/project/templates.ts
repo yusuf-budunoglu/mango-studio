@@ -82,7 +82,8 @@ export function fitClip(layer: Layer, total: number): Layer {
   const end = last >= total - step - 1e-9 ? total : Math.min(total, Math.round((closing.length ? Math.min(...closing) : last + step) * 100) / 100)
   const duration = Math.round((end - start) * 100) / 100
   const blocks = layer.blocks
-    .map((b) => ({ ...b, start: Math.round((b.start - start) * 1000) / 1000 }))
+    // kare hassasiyetindeki (1/60 sn) başlangıçlar bozulmasın diye mikro saniyeye yuvarlanır
+    .map((b) => ({ ...b, start: Math.round((b.start - start) * 1e6) / 1e6 }))
     // Klibin kenarındaki anlık (0 sn) belirme/kaybolma blokları sert kesme içindi; artık klip yapıyor.
     .filter((b) => {
       if (b.duration > 0.001) return true
@@ -186,10 +187,15 @@ export const TEMPLATES: Template[] = [
       // Her çekimde tek uzun hareket: hızlı girer, çekim boyunca yavaşlayarak süzülmeye devam eder
       // (iki ayrı blok hızda kırılma yapıyor). Katmanın konumu çekimin başındaki poz.
       const screen = `${import.meta.env.BASE_URL}templates/screens/fintech.png`
+      // Referans 60 kare/sn: kesmeler kare numarasıyla (f(181) = 181. kare).
+      const f = (frame: number) => frame / 60
+      // Çekim girişi: referanstan ölçüldü (yolun %31'i 0.25 sn'de, %62'si 0.5 sn'de, %85'i 1 sn'de).
+      const ENTRY: [number, number, number, number] = [0.2, 0.6, 0.05, 1]
+      // logo halkası ve iç kare birlikte büyür (%65 → %100)
+      const logoGrow = b('move', f(838), 0.7, { params: { dx: 0, scaleBy: 1 / 0.65 }, easing: 'ease-out' })
       const cut = (from: number, to: number) => [b('fade-in', from, 0), b('fade-out', to, 0)]
-      const glide = (start: number, duration: number, params: Record<string, number>) =>
-        b('move', start, duration, { params: { dx: 0, ...params }, easing: 'custom', bezier: [0.03, 0.95, 0.12, 1] })
-      const whip = (start: number, duration: number, params: Record<string, number>) => b('move', start, duration, { params: { dx: 0, ...params }, easing: 'ease-in' })
+      const glide = (start: number, duration: number, params: Record<string, number>, bezier: [number, number, number, number] = [0.03, 0.95, 0.12, 1]) =>
+        b('move', start, duration, { params: { dx: 0, ...params }, easing: 'custom', bezier })
       const focus = (at: number, z: number, blur = 1) => b('focus-pull', at, 0, { params: { from: z, to: z, blur } })
       const phone = (n: number, spec: Omit<LayerSpec, 'name' | 'kind' | 'color'>) =>
         layer({ name: `${t('layerNames.phone')} ${n}`, kind: 'phone', color: '#72e83f', image: screen, deviceFinish: 'space', ...spec })
@@ -197,46 +203,76 @@ export const TEMPLATES: Template[] = [
       return {
         ...project(
           t('templates.fintech.name'),
-          19,
+          f(1157),
           '#000000',
           [
             // 1) Alt kenar yakın çekim: yukarıdan iner, çekim boyunca yavaşlayarak aşağı süzülür.
             phone(1, {
-              position: [0.15, 5.4, 2],
-              rotation: [-28, 0, -21],
-              scale: 2.6,
-              blocks: [...cut(0, 3), glide(0, 3, { dx: 0.35, dy: -2.85, rotate: -3 })],
+              position: [0.15, 6.4, -0.3],
+              rotation: [-52, -15, -26],
+              scale: 3.2,
+              blocks: [...cut(0, f(181)), glide(0, f(181), { dx: 0.35, dy: -4.2, rotate: -3 }, ENTRY)],
             }),
             // 2) Üst kenar yakın çekim: sağ alttan girer, sola süzülür; sonda hızlanıp sola çıkar.
             phone(2, {
-              position: [1.3, -3.77, 3.8],
-              rotation: [25, -10, 22],
-              scale: 1.7,
-              blocks: [...cut(3, 7.9), glide(3, 4, { dx: -2.3, dy: 1.9, rotate: -2 }), whip(7, 0.9, { dx: -4.5 })],
+              position: [3.6, -5.9, 1],
+              rotation: [10, -24, 13],
+              scale: 3.15,
+              blocks: [
+                ...cut(f(181), f(473)),
+                glide(f(181), 1.5, { dx: -2.7, dy: 2.23, rotate: -2 }, ENTRY),
+                // çıkış: hiç durmadan yavaşça sola kayar, son yarım saniyede hızlanıp 473. karede kadrajdan çıkar (referanstan ölçüldü)
+                b('move', 4, f(473) - 4, { params: { dx: -6.3, dy: 0.69 }, easing: 'custom', bezier: [0.45, 0.25, 0.9, 0] }),
+              ],
             }),
             // 3) Kasa kenarı: alttan yan dönmüş halde yükselir, kapı gibi açılarak ekrana döner.
             phone(3, {
-              position: [1.5, -5.5, 3.9],
-              rotation: [0, 88, -35],
+              position: [0.5, -5.13, 3.9],
+              rotation: [0, 88, 45],
               scale: 2.3,
-              blocks: [...cut(8, 10.95), glide(8, 2.95, { dx: -1.9, dy: 3.5, rotY: -45, rotate: 40, dz: 0.2 })],
+              blocks: [...cut(f(473), f(658)), glide(f(473), f(658) - f(473), { dy: 3.5, rotY: -63, rotate: -37, dz: 0.2 }, [0.25, 0.3, 0.15, 1])],
             }),
             // 4) Geniş plan: telefon yukarıdan düşer; metin harf harf yumuşakça belirir.
             phone(4, {
-              position: [2.75, 5, -0.5],
+              position: [2.45, 7.3, -0.5],
               rotation: [30, -40, 6],
               scale: 1.45,
-              blocks: [...cut(11, 13.95), glide(11, 2.6, { dy: -5.1, dz: 0.5, rotX: -26, rotY: 18, rotate: -6 }), whip(13.55, 0.4, { dz: 1 })],
+              blocks: [...cut(f(658), f(838)), glide(f(658), 2.6, { dy: -7.1, dz: 0.5, rotX: -26, rotY: 18, rotate: -6 }, [0.15, 0.9, 0.3, 1])],
             }),
-            layer({ ...text, name: `${t('layerNames.title')} 1`, align: 'left', text: t('templates.fintech.line1'), position: [-4.5, 0.42, 0], blocks: [...cut(11.3, 13.95), b('soft-reveal', 11.3, 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
-            layer({ ...text, name: `${t('layerNames.title')} 2`, align: 'left', text: t('templates.fintech.line2'), position: [-4.5, -0.42, 0], blocks: [...cut(11.9, 13.95), b('soft-reveal', 11.9, 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
-            // 5) Logo: halka sabit, içindeki kare dönerek elmas olarak yerine oturur.
-            layer({ name: t('layerNames.logo'), kind: 'shape', shape: 'circle', color: '#ffffff', position: [0, 0, 0], scale: 1.4, blocks: [...cut(14, 16.2)] }),
-            layer({ name: `${t('layerNames.logo')} ◆`, kind: 'shape', shape: 'rounded', color: '#000000', position: [0, 0, 0.01], rotation: [0, 0, 180], scale: 0.8, blocks: [...cut(14, 16.2), b('move', 14, 1, { params: { dx: 0, rotate: -135 }, easing: 'ease-out-expo' })] }),
-            // 6) Kapanış: sert kesmeyle gelir
-            layer({ ...text, name: t('layerNames.closing'), text: t('templates.fintech.closing'), fontSize: 0.62, position: [0, 0, 0], blocks: [b('fade-in', 16.25, 0)] }),
+            layer({ ...text, name: `${t('layerNames.title')} 1`, align: 'left', text: t('templates.fintech.line1'), position: [-4.5, 0.42, 0], blocks: [...cut(f(682), f(838)), b('soft-reveal', f(682), 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
+            layer({ ...text, name: `${t('layerNames.title')} 2`, align: 'left', text: t('templates.fintech.line2'), position: [-4.5, -0.42, 0], blocks: [...cut(f(718), f(838)), b('soft-reveal', f(718), 0.45, { easing: 'linear', params: { softness: 0.35 } })] }),
+            // 5) Logo: kesmeyle %65 boyutunda gelir, 0.7 sn'de büyür; içindeki elmas 1.1 sn'de dönüp düz kareye oturur.
+            layer({ name: t('layerNames.logo'), kind: 'shape', shape: 'circle', color: '#ffffff', position: [0, 0, 0], scale: 0.91, blocks: [...cut(f(838), f(977)), logoGrow] }),
+            layer({
+              name: `${t('layerNames.logo')} ◆`,
+              kind: 'shape',
+              shape: 'rounded',
+              color: '#000000',
+              position: [0, 0, 0.01],
+              rotation: [0, 0, 45],
+              scale: 0.52,
+              blocks: [...cut(f(838), f(977)), logoGrow, b('move', f(838), 1.1, { params: { dx: 0, rotate: -45 }, easing: 'ease-out' })],
+            }),
+            // 6) Kapanış: sert kesmeyle biraz büyük gelir, 0.25 sn'de yerine oturur
+            layer({
+              ...text,
+              name: t('layerNames.closing'),
+              text: t('templates.fintech.closing'),
+              fontSize: 0.78,
+              position: [0, 0, 0],
+              scale: 1.12,
+              blocks: [b('fade-in', f(977), 0), b('move', f(977), 0.25, { params: { dx: 0, scaleBy: 1 / 1.12 }, easing: 'ease-out' })],
+            }),
           ],
-          camera([focus(0, 3.6), focus(3, 3.9), focus(8, 4.0, 0.8), focus(11, 0, 0)]),
+          camera([
+            focus(0, 3.6),
+            focus(f(181), 1.2),
+            focus(f(473), 4.0, 0.8),
+            focus(f(658), 0, 0),
+            // çekim sonunda kamera hızla içeri girer (metin ve telefon birlikte büyür), sonra logoya kesme
+            b('camera-push', f(826), f(838) - f(826), { params: { distance: 0.7 }, easing: 'ease-in' }),
+            b('camera-pull', f(838), 0, { params: { distance: 0.7 } }),
+          ]),
         ),
         // referans gibi 60 kare/sn; ürün stüdyosu ışığı; yakın çekimlerde güçlü alan derinliği
         fps: 60,
@@ -244,7 +280,8 @@ export const TEMPLATES: Template[] = [
         accentLight: '#9aa4b5',
         effects: {
           dof: { enabled: true, bokeh: 6, range: 1.4 },
-          bloom: { enabled: true, intensity: 0.35, threshold: 0.9 },
+          // referansta parlama (bloom) yok: metin, logo ve telefon kenarları temiz
+          bloom: { enabled: false, intensity: 0.35, threshold: 0.9 },
           vignette: { enabled: true, darkness: 0.35 },
           motionBlur: { enabled: true, samples: 6, shutter: 0.5 },
         },

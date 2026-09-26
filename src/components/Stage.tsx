@@ -9,6 +9,7 @@ import { lensFrame, lensPasses, resolveEffects, type ProjectEffects } from '../e
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
+import * as bridgeModule from '../export/bridge'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
 import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
@@ -248,7 +249,8 @@ function ExportBridge() {
 
   // Otomatik tarayıcı testleri için sahneye erişim (sadece geliştirmede).
   useEffect(() => {
-    if (import.meta.env.DEV) Object.assign(window, { __r3f: { scene, camera, canvas: gl.domElement } })
+    // __bridge: tek kare çizimi (sahnenin kullandığı modül örneği; HMR'de başka kopya olabiliyor)
+    if (import.meta.env.DEV) Object.assign(window, { __r3f: { scene, camera, canvas: gl.domElement }, __bridge: bridgeModule })
   }, [scene, camera, gl])
 
   useEffect(() => {
