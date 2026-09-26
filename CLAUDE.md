@@ -72,6 +72,7 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Özel hız eğrisi: `easing: 'custom'` + `bezier`; `easingFor` (easing.ts). Panelde `CurveEditor` tutamaçları.
 - `move` X/Y/Z dönüşü de alır (`rotX`, `rotY`, `rotate`). Sinematik çekimlerde tek uzun `move` + yavaşlayan özel eğri kullan; kısa giriş + ayrı süzülme bloğu hızda kırılma yapar.
 - `soft-reveal`: harfler soldan sağa yumuşak kenarla belirir. `TextLayer`'daki temel malzemenin `onBeforeCompile`'ı (troika bunu kendi shader'ından önce çalıştırır) harfin yerel x'ine göre opaklık verir.
+- `focus-pull` netliği yalnızca başladıktan sonra değiştirir; başlamamış bloklar önceki odağı ezmez (hiç blok başlamadıysa ilki başlangıç değerini tutar). Eskiden son odak bloğunun `from`'u tüm videoyu tek düzleme odaklıyor, ekranlar tamamen bulanık çıkıyordu.
 - `focus-pull` `blur` ayarı: o bloktan sonra alan derinliği bulanıklığının çarpanı (0 = net). Troika metni derinlik yazmadığı için alan derinliği metni de bulanıklaştırır; metinli geniş planlarda `blur: 0`.
 - Alan derinliği açılıp kapanınca `EffectComposer` `key` ile yeniden kurulur (yoksa çizim donuyor).
 - `Project.accentLight`: sol alttaki vurgu ışığının rengi (boşsa mor).

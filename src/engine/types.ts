@@ -174,6 +174,8 @@ export interface CameraState {
   focusZ: number
   /** alan derinliği bulanıklığının çarpanı (0 = tamamen net) */
   focusBlur: number
+  /** bu karede netlik düzlemini bir odak bloğu belirledi mi (sonraki, henüz başlamamış bloklar ezmesin) */
+  focusSet: boolean
   /** geçiş örtüsü: 0 = görünmez, 1 = ekran tamamen kaplı */
   overlayOpacity: number
   /** örtü rengi: 0 = siyah, 1 = beyaz */

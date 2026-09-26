@@ -63,6 +63,7 @@ export function evaluateCamera(project: Project, time: number): CameraState {
     targetY: 0,
     focusZ: 0,
     focusBlur: 1,
+    focusSet: false,
     overlayOpacity: 0,
     overlayWhite: 0,
     aberration: 0,

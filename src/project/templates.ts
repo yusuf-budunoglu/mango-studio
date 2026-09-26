@@ -75,12 +75,14 @@ export function fitClip(layer: Layer, total: number): Layer {
   }
   if (first < 0) return full
   const opening = layer.blocks.filter((b) => b.start <= first + 1e-6 && first - b.start < 1.5).map((b) => b.start)
-  const start = first <= step ? 0 : Math.round((opening.length ? Math.max(...opening) : first) * 100) / 100
+  // Klip kenarları mikro saniyeye yuvarlanır: 0.01'e yuvarlamak kare hassasiyetindeki kesmeleri (181/60 sn)
+  // bir kare kaydırıyordu.
+  const start = first <= step ? 0 : Math.round((opening.length ? Math.max(...opening) : first) * 1e6) / 1e6
   // Son: katmanı kaybettiren çıkış bloğunun bittiği an (klip sonu hariç tutulur); yoksa görünür
   // son örnekten sonraki ilk an.
   const closing = layer.blocks.map((b) => b.start + b.duration).filter((e) => e >= last - 1e-9 && e <= last + 2 * step)
-  const end = last >= total - step - 1e-9 ? total : Math.min(total, Math.round((closing.length ? Math.min(...closing) : last + step) * 100) / 100)
-  const duration = Math.round((end - start) * 100) / 100
+  const end = last >= total - step - 1e-9 ? total : Math.min(total, Math.round((closing.length ? Math.min(...closing) : last + step) * 1e6) / 1e6)
+  const duration = Math.round((end - start) * 1e6) / 1e6
   const blocks = layer.blocks
     // kare hassasiyetindeki (1/60 sn) başlangıçlar bozulmasın diye mikro saniyeye yuvarlanır
     .map((b) => ({ ...b, start: Math.round((b.start - start) * 1e6) / 1e6 }))
@@ -215,14 +217,16 @@ export const TEMPLATES: Template[] = [
             }),
             // 2) Üst kenar yakın çekim: sağ alttan girer, sola süzülür; sonda hızlanıp sola çıkar.
             phone(2, {
-              position: [3.6, -5.9, 1],
+              position: [4.72, -6.29, 1],
               rotation: [10, -24, 13],
-              scale: 3.15,
+              scale: 3,
               blocks: [
                 ...cut(f(181), f(473)),
-                glide(f(181), 1.5, { dx: -2.7, dy: 2.23, rotate: -2 }, ENTRY),
-                // çıkış: hiç durmadan yavaşça sola kayar, son yarım saniyede hızlanıp 473. karede kadrajdan çıkar (referanstan ölçüldü)
-                b('move', 4, f(473) - 4, { params: { dx: -6.3, dy: 0.69 }, easing: 'custom', bezier: [0.45, 0.25, 0.9, 0] }),
+                // dikey giriş: aşağıdan hızlı gelip yumuşakça oturur
+                glide(f(181), 1, { dy: 1.8, rotate: -2 }, ENTRY),
+                // yatay: çekim boyunca TEK hareket (hızlı → yavaş → hızlı); iki ayrı blokta aradaki hız
+                // sıçraması duraksama gibi görünüyordu. Eğri referanstaki konumlara (her 2 karede bir) uyduruldu.
+                b('move', f(181), f(473) - f(181), { params: { dx: -10.85, dy: 1.6 }, easing: 'custom', bezier: [0.2, 0.8, 0.85, 0.1] }),
               ],
             }),
             // 3) Kasa kenarı: alttan yan dönmüş halde yükselir, kapı gibi açılarak ekrana döner.
@@ -265,9 +269,9 @@ export const TEMPLATES: Template[] = [
             }),
           ],
           camera([
-            focus(0, 3.6),
-            focus(f(181), 1.2),
-            focus(f(473), 4.0, 0.8),
+            focus(0, 3.0),
+            focus(f(181), 2.1),
+            focus(f(473), 4.3, 0.8),
             focus(f(658), 0, 0),
             // çekim sonunda kamera hızla içeri girer (metin ve telefon birlikte büyür), sonra logoya kesme
             b('camera-push', f(826), f(838) - f(826), { params: { distance: 0.7 }, easing: 'ease-in' }),

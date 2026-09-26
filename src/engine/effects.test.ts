@@ -27,6 +27,18 @@ describe('efektler', () => {
     expect(evaluateCamera(project, 1.5).focusBlur).toBe(1)
     expect(evaluateCamera(project, 3).focusBlur).toBe(0)
   })
+
+  it('art arda odak blokları: başlamamış blok önceki çekimin odağını ezmez', () => {
+    const project = TEMPLATES[0].build()
+    const at = (start: number, z: number) => ({ id: `f${start}`, preset: 'focus-pull', start, duration: 0, params: { from: z, to: z } })
+    project.camera.blocks = [at(1, 3.6), at(3, 1.2), at(8, 4), at(11, 0)]
+    // ilk blok başlamadan önce onun değeri tutulur
+    expect(evaluateCamera(project, 0.5).focusZ).toBe(3.6)
+    expect(evaluateCamera(project, 2).focusZ).toBe(3.6)
+    expect(evaluateCamera(project, 5).focusZ).toBe(1.2)
+    expect(evaluateCamera(project, 9).focusZ).toBe(4)
+    expect(evaluateCamera(project, 12).focusZ).toBe(0)
+  })
 })
 
 describe('dışa aktarma kalitesi', () => {

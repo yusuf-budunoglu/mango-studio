@@ -179,8 +179,12 @@ export const PRESETS: Record<string, Preset> = {
       { key: 'blur', default: 1, min: 0, max: 3, step: 0.1 },
     ],
     // blur: bu bloktan itibaren bulanıklık miktarı (0 = geniş planlarda her şey net)
+    // Bloklar başlangıç sırasıyla çağrılır: başlamış bloklar sırayla uygulanır (sonuncusu geçerli).
+    // Henüz başlamamış bir blok netliği değiştirmez; yalnızca hiçbir odak bloğu başlamadıysa ilk blok
+    // başlangıç değerini tutar. (Eskiden sonraki blokların `from`'u her karede önceki çekimin odağını eziyordu.)
     apply: (s, e, p, { from, to, blur }) => {
-      s.focusZ = from + (to - from) * e
+      if (p > 0 || !s.focusSet) s.focusZ = from + (to - from) * e
+      s.focusSet = true
       // bulanıklık blok başlayınca geçerli olur (öncesinde e=0 ile de çağrılıyoruz)
       if (p > 0) s.focusBlur = blur
     },
