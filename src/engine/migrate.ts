@@ -18,6 +18,18 @@ type Step = (project: Record<string, unknown>) => Record<string, unknown>
 const STEPS: Record<number, Step> = {
   // 0 → 1: sürüm alanı eklendi. Yeni metin alanları (font, genişlik…) isteğe bağlı, varsayılanları var.
   0: (p) => ({ ...p, version: 1 }),
+  // 1 → 2: katmanlar klip oldu (start + duration). Katman tüm video boyunca görünür başlar; bloklar
+  // artık klibe göre zamanlanır. Video katmanında klip eski `mediaStart`'tan başlar, bloklar o kadar geri kayar.
+  1: (p) => {
+    const total = typeof p.duration === 'number' ? p.duration : 10
+    const layers = ((p.layers as Record<string, unknown>[] | undefined) ?? []).map((layer) => {
+      const { mediaStart, ...rest } = layer
+      const start = layer.kind === 'video' && typeof mediaStart === 'number' ? Math.min(Math.max(0, mediaStart), Math.max(0, total - 0.1)) : 0
+      const blocks = ((layer.blocks as Record<string, unknown>[] | undefined) ?? []).map((b) => (start ? { ...b, start: (b.start as number) - start } : b))
+      return { ...rest, start, duration: total - start, blocks }
+    })
+    return { ...p, layers, version: 2 }
+  },
 }
 
 /** Kaydedilmiş ya da içe aktarılmış bir projeyi güncel formata getirir. */

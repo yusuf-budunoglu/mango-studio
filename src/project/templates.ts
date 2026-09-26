@@ -1,4 +1,6 @@
+import { evaluateLayer } from '../engine/evaluate'
 import { newId } from '../engine/ids'
+import { PRESETS } from '../engine/presets'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -8,7 +10,7 @@ import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project
 const t = (key: string, options?: Record<string, unknown>) => i18n.t(key, options)
 
 type BlockSpec = Omit<Block, 'id'>
-type LayerSpec = Omit<Layer, 'id' | 'blocks' | 'rotation' | 'scale' | 'opacity'> &
+type LayerSpec = Omit<Layer, 'id' | 'blocks' | 'rotation' | 'scale' | 'opacity' | 'start' | 'duration'> &
   Partial<Pick<Layer, 'rotation' | 'scale' | 'opacity'>> & { blocks: BlockSpec[] }
 
 const b = (preset: string, start: number, duration: number, extra: Partial<BlockSpec> = {}): BlockSpec => ({
@@ -23,6 +25,8 @@ function layer(spec: LayerSpec): Layer {
     rotation: [0, 0, 0],
     scale: 1,
     opacity: 1,
+    start: 0,
+    duration: 0,
     ...spec,
     id: newId('l'),
     blocks: spec.blocks.map((block) => ({ ...block, id: newId('b') })),
@@ -33,8 +37,59 @@ function camera(blocks: BlockSpec[], position: CameraTrack['position'] = [0, 0, 
   return { id: 'camera', name: t('layer.defaults.camera'), position, fov: 40, blocks: blocks.map((block) => ({ ...block, id: newId('b') })) }
 }
 
+// Testler şablonu klibe oturtulmadan önceki haliyle (tüm videoya yayılmış) karşılaştırabilsin diye.
+let fitClips = true
+
 function project(name: string, duration: number, background: string, layers: Layer[], cam: CameraTrack): Project {
-  return { version: PROJECT_VERSION, id: newId('p'), name, duration, fps: 30, width: 1920, height: 1080, background, numberLocale: currentNumberLocale(), layers, camera: cam }
+  const fitted = fitClips ? layers.map((l) => fitClip(l, duration)) : layers.map((l) => ({ ...l, start: 0, duration }))
+  return { version: PROJECT_VERSION, id: newId('p'), name, duration, fps: 30, width: 1920, height: 1080, background, numberLocale: currentNumberLocale(), layers: fitted, camera: cam }
+}
+
+/** Şablonun klibe oturtulmamış hali: her katman tüm video boyunca, bloklar videoya göre (test için). */
+export function buildUnfitted(template: Template): Project {
+  fitClips = false
+  try {
+    return template.build()
+  } finally {
+    fitClips = true
+  }
+}
+
+/**
+ * Şablon katmanları bloklarıyla (videoya göre) yazılır; klip, katmanın gerçekten göründüğü aralığa
+ * oturtulur ve bloklar klibe göre kaydırılır. Görünmeye başlatan bir giriş bloğu varsa klip onun
+ * başından başlar (giriş animasyonu klibin içinde kalsın).
+ */
+export function fitClip(layer: Layer, total: number): Layer {
+  const step = 1 / 60
+  const full = { ...layer, start: 0, duration: total }
+  let first = -1
+  let last = -1
+  // Tam sayı adımlarla örnekle: art arda toplamak kayan nokta hatası biriktirip kesme anını kaçırıyordu.
+  for (let i = 0; i < Math.round(total / step); i++) {
+    const t = i * step
+    if (evaluateLayer(full, t).opacity > 0.001) {
+      if (first < 0) first = t
+      last = t
+    }
+  }
+  if (first < 0) return full
+  const opening = layer.blocks.filter((b) => b.start <= first + 1e-6 && first - b.start < 1.5).map((b) => b.start)
+  const start = first <= step ? 0 : Math.round((opening.length ? Math.max(...opening) : first) * 100) / 100
+  // Son: katmanı kaybettiren çıkış bloğunun bittiği an (klip sonu hariç tutulur); yoksa görünür
+  // son örnekten sonraki ilk an.
+  const closing = layer.blocks.map((b) => b.start + b.duration).filter((e) => e >= last - 1e-9 && e <= last + 2 * step)
+  const end = last >= total - step - 1e-9 ? total : Math.min(total, Math.round((closing.length ? Math.min(...closing) : last + step) * 100) / 100)
+  const duration = Math.round((end - start) * 100) / 100
+  const blocks = layer.blocks
+    .map((b) => ({ ...b, start: Math.round((b.start - start) * 1000) / 1000 }))
+    // Klibin kenarındaki anlık (0 sn) belirme/kaybolma blokları sert kesme içindi; artık klip yapıyor.
+    .filter((b) => {
+      if (b.duration > 0.001) return true
+      const category = PRESETS[b.preset]?.category
+      return !((category === 'in' && b.start <= 0.001) || (category === 'out' && b.start >= duration - 0.02))
+    })
+  return { ...layer, start, duration, blocks }
 }
 
 export interface Template {

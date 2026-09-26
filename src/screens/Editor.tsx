@@ -2,14 +2,15 @@ import type { TimelineState } from '@xzdarcy/react-timeline-editor'
 import { useEffect, useRef, useState } from 'react'
 import { Grid2x2, Magnet, Move, RotateCw, Scaling } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useStore } from 'zustand'
 import { navigate } from '../router'
 import { ExportButton } from '../components/ExportButton'
-import { Inspector } from '../components/Inspector'
+import { LibraryPanel } from '../components/LibraryPanel'
+import { PropertiesPanel } from '../components/PropertiesPanel'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { Stage } from '../components/Stage'
 import { TimelinePanel } from '../components/TimelinePanel'
 import { attachAudioPreview } from '../audio/engine'
+import { deleteSelection, duplicateSelection, splitSelection } from '../editor/commands'
 import { NewerProjectVersionError } from '../engine/migrate'
 import { projectToFile } from '../persistence/projectFile'
 import { repository } from '../persistence/repository'
@@ -109,8 +110,7 @@ export function Editor({ projectId }: { projectId: string }) {
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'newer'>('loading')
   const project = useProjectStore((s) => s.project)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
-  const canUndo = useStore(useProjectStore.temporal, (s) => s.pastStates.length > 0)
-  const canRedo = useStore(useProjectStore.temporal, (s) => s.futureStates.length > 0)
+  const timelineHeight = useEditorStore((s) => s.timelineHeight)
   const saveStatus = useAutosave(state === 'ready')
 
   useEffect(() => {
@@ -196,9 +196,10 @@ export function Editor({ projectId }: { projectId: string }) {
         store.pasteBlocks(usePlaybackStore.getState().time)
       } else if (mod && key === 'd') {
         handled()
-        store.duplicateBlocks(selected)
+        duplicateSelection()
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        store.removeBlocks(selected)
+        handled()
+        deleteSelection()
       } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && selected.length) {
         handled()
         const step = e.shiftKey ? 1 : 0.1
@@ -211,7 +212,7 @@ export function Editor({ projectId }: { projectId: string }) {
         seek(Math.min(project.duration, Math.max(0, now + (e.key === 'ArrowLeft' ? -step : step))))
       } else if (!mod && key === 's') {
         handled()
-        store.splitBlocks(selected, usePlaybackStore.getState().time)
+        splitSelection()
       } else if (!mod && (key === 'w' || key === 'e' || key === 'r')) {
         useEditorStore.getState().setTransformMode(key === 'w' ? 'translate' : key === 'e' ? 'rotate' : 'scale')
       } else if (e.key === 'Escape') {
@@ -240,7 +241,7 @@ export function Editor({ projectId }: { projectId: string }) {
   if (state === 'loading') return <div className="loading">{t('editor.loading')}</div>
 
   return (
-    <div className="app">
+    <div className="app" style={{ gridTemplateRows: `auto minmax(0, 1fr) ${timelineHeight}px` }}>
       <header className="topbar">
         <button type="button" className="back" onClick={() => void leaveToVideos()} title={t('topbar.backToProjectsTitle')}>
           {t('topbar.backToProjects')}
@@ -251,12 +252,6 @@ export function Editor({ projectId }: { projectId: string }) {
         <div className="project-name">{project.name}</div>
         <span className={`save-status save-status--${saveStatus}`}>{t(`save.${saveStatus}`)}</span>
         <div className="controls">
-          <button type="button" onClick={() => useProjectStore.temporal.getState().undo()} disabled={!canUndo} title={t('topbar.undoTitle')}>
-            {t('topbar.undo')}
-          </button>
-          <button type="button" onClick={() => useProjectStore.temporal.getState().redo()} disabled={!canRedo} title={t('topbar.redoTitle')}>
-            {t('topbar.redo')}
-          </button>
           <button
             type="button"
             onClick={() => void projectToFile(project).then((text) => downloadText(`${safeFileName(project.name)}.motion.json`, text))}
@@ -270,6 +265,7 @@ export function Editor({ projectId }: { projectId: string }) {
       </header>
 
       <main className="workspace">
+        <LibraryPanel />
         <div className="stage-wrap">
           <Stage />
           <div className="transport">
@@ -283,7 +279,7 @@ export function Editor({ projectId }: { projectId: string }) {
             <TimeDisplay duration={project.duration} />
           </div>
         </div>
-        <Inspector />
+        <PropertiesPanel />
       </main>
 
       <TimelinePanel timelineRef={timelineRef} />

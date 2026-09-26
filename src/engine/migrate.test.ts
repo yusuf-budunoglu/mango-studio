@@ -1,23 +1,44 @@
 import { describe, expect, it } from 'vitest'
 import { createRepository, parseProjectFile, type KeyValue } from '../persistence/repository'
-import { TEMPLATES } from '../project/templates'
+import { buildUnfitted, TEMPLATES } from '../project/templates'
 import { evaluateLayer } from './evaluate'
 import { migrateProject, NewerProjectVersionError } from './migrate'
 import { PRESETS, resolveParams } from './presets'
 import { PROJECT_VERSION, type Layer } from './types'
 
-/** Sürüm alanı eklenmeden önce kaydedilmiş bir proje (sürüm 0). */
+/**
+ * Sürüm alanı eklenmeden önce kaydedilmiş bir proje (sürüm 0): katmanların klibi yok, blok
+ * zamanları videoya göre.
+ */
 function legacyProject() {
-  const { version: _drop, ...rest } = TEMPLATES[0].build()
-  return rest
+  const { version: _drop, ...rest } = buildUnfitted(TEMPLATES[0])
+  return { ...rest, layers: rest.layers.map(({ start: _s, duration: _d, ...l }) => l) }
 }
 
 describe('sürüm geçişi', () => {
-  it('sürümsüz eski projeyi güncel sürüme getirir, içeriğe dokunmaz', () => {
+  it('sürümsüz eski projeyi güncel sürüme getirir; video aynı görünür', () => {
     const old = legacyProject()
     const migrated = migrateProject(old)
     expect(migrated.version).toBe(PROJECT_VERSION)
-    expect({ ...migrated, version: undefined }).toEqual({ ...old, version: undefined })
+    const original = TEMPLATES[0].build()
+    // Aynı şablonun yeni hali ile taşınmış eski hali her anda aynı kareyi vermeli.
+    for (let i = 0; i < original.duration * 4; i++) {
+      const t = i / 4
+      migrated.layers.forEach((layer, i) => {
+        const a = evaluateLayer(layer, t)
+        const b = evaluateLayer({ ...original.layers[i], blocks: original.layers[i].blocks.map((x, j) => ({ ...x, id: layer.blocks[j].id })) }, t)
+        expect(a.opacity, `${layer.name} @${t}`).toBeCloseTo(b.opacity, 5)
+        expect(a.x).toBeCloseTo(b.x, 5)
+        expect(a.y).toBeCloseTo(b.y, 5)
+      })
+    }
+  })
+
+  it('1 → 2: video katmanının klibi eski başlangıcından başlar', () => {
+    const v1 = { version: 1, duration: 10, layers: [{ id: 'v', kind: 'video', mediaStart: 3, blocks: [{ id: 'b', preset: 'fade-in', start: 3, duration: 1 }] }] }
+    const layer = migrateProject(v1).layers[0]
+    expect(layer).toMatchObject({ start: 3, duration: 7, blocks: [{ start: 0 }] })
+    expect('mediaStart' in layer).toBe(false)
   })
 
   it('güncel projeyi olduğu gibi bırakır', () => {
@@ -47,7 +68,7 @@ describe('sürüm geçişi', () => {
 describe('blok ayarları', () => {
   const layer = (blocks: Layer['blocks']): Layer => ({
     id: 'l', name: 'x', kind: 'text', text: 'a', color: '#fff',
-    position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1, blocks,
+    position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1, start: 0, duration: 100, blocks,
   })
 
   it('kaydedilmemiş ayarlar varsayılanlarla doldurulur', () => {

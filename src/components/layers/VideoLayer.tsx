@@ -107,7 +107,7 @@ export function VideoLayer({ layer, register }: LayerProps) {
     const { element } = video
     const { time, isPlaying } = usePlaybackStore.getState()
     const target = videoSourceTime(layer, time, video.duration)
-    const inRange = time >= (layer.mediaStart ?? 0)
+    const inRange = time >= layer.start && time <= layer.start + layer.duration
     if (isPlaying && inRange) {
       if (element.paused) void element.play().catch(() => undefined)
       if (Math.abs(element.currentTime - target) > 0.25) element.currentTime = target

@@ -6,7 +6,7 @@ import type { Layer } from './types'
 
 const layer = (blocks: Layer['blocks']): Layer => ({
   id: 'l', name: 'x', kind: 'shape', color: '#fff',
-  position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1, blocks,
+  position: [0, 0, 0], rotation: [0, 0, 0], scale: 1, opacity: 1, start: 0, duration: 100, blocks,
 })
 
 describe('özel hareket', () => {

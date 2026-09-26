@@ -7,6 +7,8 @@ import type { Layer } from './types'
 const layer = (blocks: Layer['blocks'], extra: Partial<Layer> = {}): Layer => ({
   id: 'l',
   name: 'Test',
+  start: 0,
+  duration: 100,
   kind: 'text',
   text: 'Merhaba',
   color: '#fff',
@@ -89,6 +91,27 @@ describe('easing', () => {
     for (const [name, fn] of Object.entries(EASINGS)) {
       expect(fn(0), name).toBeCloseTo(0, 2)
       expect(fn(1), name).toBeCloseTo(1, 2)
+    }
+  })
+})
+
+describe('şablon klipleri', () => {
+  it('klibe oturtulan her şablon katmanı, tüm videoya yayılmış haliyle aynı görünür', async () => {
+    const { TEMPLATES, buildUnfitted } = await import('../project/templates')
+    for (const template of TEMPLATES) {
+      const project = template.build()
+      const original = buildUnfitted(template)
+      project.layers.forEach((l, i) => {
+        const full = original.layers[i]
+        for (let i = 0; i < project.duration * 10; i++) {
+          const t = i / 10
+          const a = evaluateLayer(l, t)
+          const b = evaluateLayer(full, t)
+          const label = `${template.id}/${l.name} @${t.toFixed(1)}`
+          expect(a.opacity, label).toBeCloseTo(b.opacity, 4)
+          if (b.opacity > 0.001) expect(a.x, label).toBeCloseTo(b.x, 4)
+        }
+      })
     }
   })
 })

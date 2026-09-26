@@ -19,10 +19,13 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Video katmanı: önizlemede `<video>` timeline'a eşlenir; dışa aktarmada `prepareFrameHooks` ile Mediabunny `CanvasSink` o anın karesini tam çözer (oynatıcı kare-doğru değildir). Videonun sesi kullanılmaz.
 - Önizlemede düzenleme (`Stage.tsx` → `LayerGizmo`): tıklayınca seçim, drei `TransformControls` ile taşı/döndür/ölçekle (W/E/R). Bırakınca `manualTransformPatch` (`src/engine/manualTransform.ts`) animasyon etkisini koruyarak katmanın temel değerlerini günceller. Sürükleme sürerken `manualDrag.layerId` o katmanın motor tarafından ezilmesini engeller. Yardımcılar (`editor-helpers` grubu) video çıktısında kaldırılır, küçük resimde o kare için gizlenir; asla sürükleme sırasında React ile kaldırma.
 - Seçili katman `useProjectStore.selectedTrackId`'de (önizleme, timeline, panel paylaşır); önizleme araçlarının durumu `src/store/editorStore.ts`.
-- `src/components/LayerPanel.tsx` — katman ekleme/düzenleme; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
+- Editör düzeni (CapCut gibi): sol `LibraryPanel` (sekmeler: metin, cihaz, medya, şekil, ses, efekt, geçiş, kamera; tıklanan öğe oynatma kafasına eklenir, yeni katman en üste), orta önizleme, sağ `PropertiesPanel` (seçime göre: blok ayarları / ses parçası / klip → Temel + Animasyon sekmeleri / hiçbiri → Proje + Efektler), altta timeline. Timeline yüksekliği sürüklenerek değişir (`editorStore.timelineHeight`, localStorage).
+- `src/components/LayerPanel.tsx` — `LayerFields`: seçili klibin içerik ve konum ayarları; yüklenen görseller 2048 px'e küçültülüp data URL olarak projede saklanır (ileride Supabase Storage).
+- `src/components/AnimationPanel.tsx` — klibin Animasyon sekmesi: giriş/çıkış tek seçimli (klibin kenarına yapışık, süre kaydırıcısı), vurgu/hareket/metin oynatma kafasına eklenir; altta klipteki tüm bloklar (tıklayınca blok ayarları).
+- `src/editor/commands.ts` — böl / sil / çoğalt: seçili blok varsa bloklara, yoksa seçili klibe. Araç çubuğu, sağ tık menüsü ve kısayollar bunu kullanır.
 - `src/export/` — MP4 çıktısı (Mediabunny + WebCodecs). `bridge.ts` Canvas içindeki sahneyle bağlantı; kareler `advance()` ile tek tek çizilir. Metin (troika) worker'da hazırlandığı için kare yakalamadan önce `pendingTextSyncs` beklenir.
-- `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Blok = timeline aksiyonu; çakışan bloklar şeritlere bölünür. Ctrl+tekerlek ile zoom, genişliğe sığdır. Blok sağ tık menüsü (çoğalt, böl, katmana taşı, sil).
-- `src/components/TrackList.tsx` — sol sütun: `dnd-kit` ile sürükleyerek sıralama (listede üstteki katman aynı derinlikte önde, `renderOrder`), göz (gizle) / kilit, çift tıkla yeniden adlandırma, sağ tık menüsü. Kütüphane blokları satırlar arası sürüklemeyi desteklemediği için taşıma menüden yapılır.
+- `src/components/TimelinePanel.tsx` — `@xzdarcy/react-timeline-editor`. Her katman bir klip satırı (`ClipBar`: giriş/çıkış kenarda gölge, diğer bloklar altta ince işaret). Klip açılınca (liste oku ya da çift tık, `editorStore.expandedLayers`) altında blok şeritleri; çakışan bloklar ayrı şeritte. Kamera ve ses satırları blok/parça gösterir. Timeline mutlak zamanla çalışır; `applyChanges` yalnızca değişen aksiyonları store'a verir (önce bloklar, sonra klipler). Satır başına yükseklik `rowHeight`. Araç çubuğu: geri al/yinele, böl, çoğalt, sil, zoom.
+- `src/components/TrackList.tsx` — sol sütun: `dnd-kit` ile sürükleyerek sıralama (listede üstteki katman aynı derinlikte önde, `renderOrder`), animasyon şeridini aç/kapa, göz (gizle) / kilit, çift tıkla yeniden adlandırma, sağ tık menüsü. Kütüphane blokları satırlar arası sürüklemeyi desteklemediği için taşıma menüden yapılır.
 - `hidden` katman önizlemede ve videoda çizilmez; `locked` katman timeline'da ve önizlemede sürüklenemez, önizlemeden seçilmez.
 - `src/project/templates.ts` — kendi şablonlarımız (sadece metin/şekil/telefon, dış asset yok). Her `build()` yeni id'ler üretir.
 - `src/persistence/repository.ts` — proje kaydı (şimdilik IndexedDB, `idb-keyval`). Supabase'e geçişte aynı arayüz korunacak. `parseProjectFile` içe aktarılan JSON'u doğrular.
@@ -33,7 +36,15 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Geri alma: zundo `handleSet` 600 ms içindeki ardışık değişiklikleri tek adımda birleştirir; `loadProject` geçmişi sıfırlar.
 
 ## Kısayollar
-Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · ←/→ seçili blokları 0,1 sn kaydır (Shift: 1 sn) · W/E/R taşı/döndür/ölçekle · S oynatma kafasından böl · ←/→ seçim yokken 1 kare (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
+Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) · Ctrl+D çoğalt · Delete sil · S oynatma kafasından böl (son üçü blok seçili değilse klibe) · ←/→ seçili blokları 0,1 sn kaydır (Shift: 1 sn) · W/E/R taşı/döndür/ölçekle · ←/→ seçim yokken 1 kare (Shift: 1 sn) · Esc seçimi bırak · Home başa sar · Shift+tık çoklu seçim
+
+## Klipler (format sürüm 2)
+- Her katman bir klip: `Layer.start` + `Layer.duration` (sn). Klibin dışında katman çizilmez (`inClip`; başı dahil, sonu hariç: art arda iki klip kesmede aynı karede görünmez).
+- Katman bloklarının `start`'ı klibin başına göre; kamera blokları ve ses parçaları videoya göre. Store dışarıya mutlak zaman alır/verir (`trackOffset`); dönüşüm store'da.
+- `setClipTimes`: süre aynıysa taşıma (bloklar klible gider); kırpmada bloklar mutlak yerinde kalır, kenardaki giriş (sol) / çıkış (sağ) animasyonu kenarla gider; video soldan kırpılınca `mediaOffset` artar. `splitClip`: ikinci parça üstte yeni katman, bitmiş giriş animasyonları ona geçmez.
+- Proje süresi değişince videonun sonuna kadar süren klipler yeni sona uyar. Yeni katman oynatma kafasında 5 sn.
+- Şablonlar bloklarıyla videoya göre yazılır; `fitClip` klibi katmanın göründüğü aralığa oturtur ve kenardaki 0 sn belirme/kaybolma bloklarını atar. Test (`buildUnfitted`) her şablonun eski haliyle aynı göründüğünü kontrol eder.
+- Video katmanında eski `mediaStart` yok; video klibin başında başlar.
 
 ## Proje formatı sürümleri
 - `Project.version` ve `PROJECT_VERSION` (`src/engine/types.ts`). Formatı değiştirirken sürümü artır ve `src/engine/migrate.ts`'e bir adım ekle; eski adımları değiştirme. Kayıttan yükleme ve dosyadan içe aktarma `migrateProject`'ten geçer.

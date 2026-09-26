@@ -4,7 +4,7 @@ import type { EffectsPatch } from './effects'
 // Formatı değiştirirken PROJECT_VERSION'ı artır ve migrate.ts'e bir adım ekle. Varsayılanı olan
 // isteğe bağlı yeni alanlar (hidden, locked…) eski projeleri bozmadığı için sürüm gerektirmez.
 
-export const PROJECT_VERSION = 1
+export const PROJECT_VERSION = 2
 
 export type Vec3 = [number, number, number]
 
@@ -18,7 +18,7 @@ export type DeviceFinish = 'silver' | 'space' | 'titanium' | 'blue'
 export interface Block {
   id: string
   preset: string
-  /** saniye */
+  /** saniye: katman bloklarında klibin başından, kamera bloklarında videonun başından itibaren */
   start: number
   /** saniye */
   duration: number
@@ -33,6 +33,9 @@ export interface Layer {
   id: string
   name: string
   kind: LayerKind
+  /** klip: katmanın videoda göründüğü aralık (sn); dışında çizilmez. Bloklar klibe göre zamanlanır. */
+  start: number
+  duration: number
   text?: string
   /** metin hizası; boşsa ortalı */
   align?: 'left' | 'center' | 'right'
@@ -49,8 +52,6 @@ export interface Layer {
   image?: string
   /** SVG logo ya da video katmanının dosyası (asset:<id>) */
   media?: string
-  /** video: videonun başladığı proje anı (sn) */
-  mediaStart?: number
   /** video: kaynakta nereden başladığı (sn) */
   mediaOffset?: number
   /** SVG: orijinal renkler yerine katman rengiyle boya */

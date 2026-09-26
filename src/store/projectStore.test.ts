@@ -27,7 +27,8 @@ describe('blok işlemleri', () => {
     const blocks = titleLayer().blocks
     expect(blocks).toHaveLength(4)
     const pasted = blocks.filter((b) => store().selectedBlockIds.includes(b.id))
-    expect(pasted.map((b) => b.start)).toEqual([5, 5])
+    // bloklar klibe göre tutulur; mutlak zamanları oynatma kafası
+    expect(pasted.map((b) => b.start + titleLayer().start)).toEqual([5, 5])
     expect(new Set(allBlocks().map((b) => b.id)).size).toBe(allBlocks().length)
   })
 
@@ -93,14 +94,14 @@ describe('katman yönetimi', () => {
   it('bloğu oynatma kafasından böler, kenardaysa bölmez', () => {
     const typewriter = titleLayer().blocks[1]
     const end = typewriter.start + typewriter.duration
-    store().splitBlocks([typewriter.id], typewriter.start + 0.4)
+    store().splitBlocks([typewriter.id], titleLayer().start + typewriter.start + 0.4)
     const parts = titleLayer().blocks.filter((b) => b.preset === 'typewriter').sort((a, b) => a.start - b.start)
     expect(parts).toHaveLength(2)
     expect(parts[0].duration).toBeCloseTo(0.4)
     expect(parts[1].start).toBeCloseTo(typewriter.start + 0.4)
     expect(parts[1].start + parts[1].duration).toBeCloseTo(end)
 
-    store().splitBlocks([parts[0].id], parts[0].start)
+    store().splitBlocks([parts[0].id], titleLayer().start + parts[0].start)
     expect(titleLayer().blocks.filter((b) => b.preset === 'typewriter')).toHaveLength(2)
   })
 })
@@ -153,5 +154,74 @@ describe('şablonlar', () => {
     }
     // Her şablon her seferinde yeni id'lerle üretilir.
     expect(template.build().id).not.toBe(project.id)
+  })
+})
+
+describe('klipler', () => {
+  const clip = () => ({ layer: titleLayer(), abs: (b: { start: number }) => b.start + titleLayer().start })
+
+  it('taşıyınca animasyonlar klible birlikte gider', () => {
+    const before = titleLayer()
+    const absBefore = before.blocks.map((b) => b.start + before.start)
+    store().setClipTimes({ [before.id]: { start: before.start + 2, end: before.start + before.duration + 2 } })
+    expect(titleLayer().start).toBeCloseTo(before.start + 2)
+    expect(titleLayer().blocks.map(clip().abs)).toEqual(absBefore.map((t) => expect.closeTo(t + 2)))
+  })
+
+  it('soldan kırpınca bloklar yerinde kalır, kenardaki giriş animasyonu kenarla gider', () => {
+    const l = titleLayer()
+    l.blocks.forEach((b) => expect(b.start).toBeGreaterThanOrEqual(0))
+    store().updateBlock(l.blocks[1].id, { start: 1 }) // typewriter klibin içinde, 1. saniyede
+    const typewriterAbs = l.start + 1
+    store().setClipTimes({ [l.id]: { start: l.start + 0.5, end: l.start + l.duration } })
+    const [slide, typewriter] = titleLayer().blocks
+    expect(slide.start).toBe(0)
+    expect(clip().abs(typewriter)).toBeCloseTo(typewriterAbs)
+    expect(titleLayer().start + titleLayer().duration).toBeCloseTo(l.start + l.duration)
+  })
+
+  it('sağdan kırpınca sondaki çıkış animasyonu yeni sona taşınır', () => {
+    const l = titleLayer()
+    store().addBlock(l.id, 'fade-out', l.start + l.duration - 0.5)
+    const out = findBlock(store().project, store().selectedBlockIds[0])!.block
+    expect(out.start + out.duration).toBeCloseTo(l.duration)
+    store().setClipTimes({ [l.id]: { start: l.start, end: l.start + l.duration - 1 } })
+    const moved = findBlock(store().project, out.id)!.block
+    expect(moved.start + moved.duration).toBeCloseTo(titleLayer().duration)
+  })
+
+  it('klip dışında katman çizilmez', async () => {
+    const { evaluateLayer } = await import('../engine/evaluate')
+    const l = titleLayer()
+    store().setClipTimes({ [l.id]: { start: 2, end: 3 } })
+    expect(evaluateLayer(titleLayer(), 1.9).opacity).toBe(0)
+    expect(evaluateLayer(titleLayer(), 3.1).opacity).toBe(0)
+    expect(evaluateLayer(titleLayer(), 2.9).opacity).toBeGreaterThan(0)
+  })
+
+  it('klibi oynatma kafasından böler; ikinci parça üstte yeni katman', () => {
+    const l = titleLayer()
+    const count = store().project.layers.length
+    const at = l.start + 2
+    store().splitClip(l.id, at)
+    expect(store().project.layers).toHaveLength(count + 1)
+    const [second, first] = [store().project.layers[1], store().project.layers[2]]
+    expect(first.id).toBe(l.id)
+    expect(first.start + first.duration).toBeCloseTo(at)
+    expect(second.start).toBeCloseTo(at)
+    expect(second.start + second.duration).toBeCloseTo(l.start + l.duration)
+    // bitmiş giriş animasyonu ikinci parçaya geçmez
+    expect(second.blocks.some((b) => b.preset === 'slide-up')).toBe(false)
+    // kenarda bölmez
+    store().splitClip(first.id, first.start)
+    expect(store().project.layers).toHaveLength(count + 1)
+  })
+
+  it('yeni katman oynatma kafasında 5 sn klip olarak eklenir, video sonunu aşmaz', () => {
+    const total = store().project.duration
+    const id = store().addLayer('text', total - 1)
+    const layer = store().project.layers.find((l) => l.id === id)!
+    expect(layer.duration).toBe(5)
+    expect(layer.start + layer.duration).toBeLessThanOrEqual(total)
   })
 })

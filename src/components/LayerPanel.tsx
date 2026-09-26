@@ -1,13 +1,9 @@
-import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { readAudioDuration } from '../audio/engine'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
-import { assetRef, assets } from '../persistence/assets'
 import { AssetPicker } from './AssetPicker'
 import { DEFAULT_FONT, FONTS } from '../render/fonts'
-import { useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { useProjectStore } from '../store/projectStore'
 
-const ADDABLE: LayerKind[] = ['text', 'image', 'phone', 'laptop', 'tablet', 'shape', 'svg', 'video']
 const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet']
 
 function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; label: string; value: number; step?: number; onChange: (v: number) => void }) {
@@ -19,7 +15,8 @@ function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; l
   )
 }
 
-function LayerFields({ layer }: { layer: Layer }) {
+/** Seçili katmanın (klibin) içerik ve konum ayarları. */
+export function LayerFields({ layer }: { layer: Layer }) {
   const { t } = useTranslation()
   const updateLayer = useProjectStore((s) => s.updateLayer)
   const removeLayer = useProjectStore((s) => s.removeLayer)
@@ -114,10 +111,7 @@ function LayerFields({ layer }: { layer: Layer }) {
       {layer.kind === 'video' && (
         <>
           <AssetPicker id="layer-video" label={t('layer.videoFile')} kind="video" value={layer.media} onChange={(media) => update({ media })} />
-          <div className="row">
-            <NumberField id="layer-media-start" label={t('layer.videoStart')} value={layer.mediaStart ?? 0} onChange={(v) => update({ mediaStart: Math.max(0, v) })} />
-            <NumberField id="layer-media-offset" label={t('layer.videoOffset')} value={layer.mediaOffset ?? 0} onChange={(v) => update({ mediaOffset: Math.max(0, v) })} />
-          </div>
+          <NumberField id="layer-media-offset" label={t('layer.videoOffset')} value={layer.mediaOffset ?? 0} onChange={(v) => update({ mediaOffset: Math.max(0, v) })} />
           <p className="hint">{t('layer.videoHint')}</p>
         </>
       )}
@@ -162,48 +156,5 @@ function LayerFields({ layer }: { layer: Layer }) {
         {t('layer.delete')}
       </button>
     </>
-  )
-}
-
-export function LayerPanel() {
-  const layer = useProjectStore((s) => s.project.layers.find((l) => l.id === s.selectedTrackId))
-  const addLayer = useProjectStore((s) => s.addLayer)
-  const { t } = useTranslation()
-  const audioInput = useRef<HTMLInputElement>(null)
-
-  // Ses dosyası: süresini oku, depoya koy, oynatma kafasına parça olarak ekle.
-  const addAudio = async (file: File) => {
-    const duration = await readAudioDuration(file)
-    const meta = await assets.put(file, { name: file.name, kind: 'audio', duration })
-    useProjectStore.getState().addAudioClip(assetRef(meta.id), file.name.replace(/\.[^.]+$/, ''), duration, usePlaybackStore.getState().time)
-  }
-
-  return (
-    <section>
-      <h2>{t('layer.title')}</h2>
-      <div className="add-layer">
-        {ADDABLE.map((kind) => (
-          <button key={kind} type="button" onClick={() => addLayer(kind, +usePlaybackStore.getState().time.toFixed(2))}>
-            {t(`layer.add.${kind}`)}
-          </button>
-        ))}
-        <button type="button" onClick={() => audioInput.current?.click()}>
-          {t('layer.add.audio')}
-        </button>
-        <input
-          ref={audioInput}
-          id="audio-file"
-          type="file"
-          accept="audio/*"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) void addAudio(file)
-            e.target.value = ''
-          }}
-        />
-      </div>
-      {layer ? <LayerFields key={layer.id} layer={layer} /> : <p className="hint">{t('layer.empty')}</p>}
-    </section>
   )
 }

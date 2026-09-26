@@ -2,6 +2,23 @@ import { create } from 'zustand'
 
 export type TransformMode = 'translate' | 'rotate' | 'scale'
 
+export type LayerTab = 'basic' | 'animation'
+export type ProjectTab = 'project' | 'effects'
+
+export type LibraryTab = 'text' | 'devices' | 'media' | 'shapes' | 'audio' | 'effects' | 'transitions' | 'camera'
+
+const TIMELINE_HEIGHT_KEY = 'motion-studio.timeline-height'
+export const TIMELINE_MIN = 180
+
+function readTimelineHeight() {
+  try {
+    const v = Number(localStorage.getItem(TIMELINE_HEIGHT_KEY))
+    return Number.isFinite(v) && v >= TIMELINE_MIN ? v : 320
+  } catch {
+    return 320
+  }
+}
+
 interface EditorStore {
   /** Önizlemedeki tutamacın modu: taşı / döndür / ölçekle (W / E / R). */
   transformMode: TransformMode
@@ -19,6 +36,20 @@ interface EditorStore {
   cleanRenders: number
   beginCleanRender: () => void
   endCleanRender: () => void
+  /** Timeline'da animasyon şeridi açık klipler (katman id'leri). */
+  expandedLayers: string[]
+  toggleExpanded: (layerId: string) => void
+  /** Sol kütüphanenin açık sekmesi. */
+  libraryTab: LibraryTab
+  setLibraryTab: (tab: LibraryTab) => void
+  /** Sağ paneldeki sekmeler; klipler arasında geçerken korunur. */
+  layerTab: LayerTab
+  setLayerTab: (tab: LayerTab) => void
+  projectTab: ProjectTab
+  setProjectTab: (tab: ProjectTab) => void
+  /** Timeline panelinin yüksekliği (px); tarayıcıda hatırlanır. */
+  timelineHeight: number
+  setTimelineHeight: (px: number) => void
 }
 
 export const useEditorStore = create<EditorStore>()((set) => ({
@@ -31,6 +62,24 @@ export const useEditorStore = create<EditorStore>()((set) => ({
   cleanRenders: 0,
   beginCleanRender: () => set((s) => ({ cleanRenders: s.cleanRenders + 1 })),
   endCleanRender: () => set((s) => ({ cleanRenders: Math.max(0, s.cleanRenders - 1) })),
+  expandedLayers: [],
+  toggleExpanded: (id) => set((s) => ({ expandedLayers: s.expandedLayers.includes(id) ? s.expandedLayers.filter((x) => x !== id) : [...s.expandedLayers, id] })),
+  libraryTab: 'text',
+  setLibraryTab: (libraryTab) => set({ libraryTab }),
+  layerTab: 'basic',
+  setLayerTab: (layerTab) => set({ layerTab }),
+  projectTab: 'project',
+  setProjectTab: (projectTab) => set({ projectTab }),
+  timelineHeight: readTimelineHeight(),
+  setTimelineHeight: (px) => {
+    const timelineHeight = Math.round(Math.max(TIMELINE_MIN, px))
+    try {
+      localStorage.setItem(TIMELINE_HEIGHT_KEY, String(timelineHeight))
+    } catch {
+      // kaydedilemese de bu oturumda çalışır
+    }
+    set({ timelineHeight })
+  },
 }))
 
 /**

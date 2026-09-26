@@ -1,12 +1,13 @@
 import { closestCenter, DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Box, Clapperboard, Eye, EyeOff, GripVertical, Image, Laptop, Lock, LockOpen, Music, PenTool, Smartphone, Tablet, Type, Video, type LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronRight, Eye, EyeOff, GripVertical, Lock, LockOpen, Music, Video } from 'lucide-react'
 import { useState, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CameraTrack, Layer, LayerKind } from '../engine/types'
+import type { CameraTrack, Layer } from '../engine/types'
+import { KIND_ICON } from './kindIcons'
+import { useEditorStore } from '../store/editorStore'
 import { useProjectStore } from '../store/projectStore'
 
-const KIND_ICON: Record<LayerKind, LucideIcon> = { text: Type, phone: Smartphone, laptop: Laptop, tablet: Tablet, image: Image, shape: Box, svg: PenTool, video: Clapperboard }
 
 /** Ses parçalarının timeline satırı (katman değil; sıralanmaz). */
 export interface AudioTrackRow {
@@ -16,13 +17,14 @@ export interface AudioTrackRow {
 
 export interface TrackRow {
   track: Layer | CameraTrack | AudioTrackRow
-  /** timeline'da kaç satır (şerit) kapladığı */
-  lanes: number
+  /** timeline'daki satırın yüksekliği (px); katmanda klip satırı */
+  height: number
+  /** katmanın açık animasyon şeritlerinin toplam yüksekliği (px) */
+  subHeight?: number
 }
 
 interface Props {
   rows: TrackRow[]
-  rowHeight: number
   containerRef: RefObject<HTMLDivElement | null>
   onContextMenu: (track: Layer, e: MouseEvent) => void
   renamingId: string | null
@@ -56,9 +58,10 @@ function NameEditor({ layer, onDone }: { layer: Layer; onDone: () => void }) {
   )
 }
 
-function LayerRow({ layer, height, onContextMenu, renaming, onRenameStart, onRenameEnd }: {
+function LayerRow({ layer, height, subHeight, onContextMenu, renaming, onRenameStart, onRenameEnd }: {
   layer: Layer
   height: number
+  subHeight: number
   onContextMenu: Props['onContextMenu']
   renaming: boolean
   onRenameStart: () => void
@@ -66,6 +69,7 @@ function LayerRow({ layer, height, onContextMenu, renaming, onRenameStart, onRen
 }) {
   const { t } = useTranslation()
   const selected = useProjectStore((s) => s.selectedTrackId === layer.id)
+  const expanded = useEditorStore((s) => s.expandedLayers.includes(layer.id))
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: layer.id, disabled: renaming })
   const Icon = KIND_ICON[layer.kind]
   const update = (patch: Partial<Layer>) => useProjectStore.getState().updateLayer(layer.id, patch)
@@ -73,14 +77,35 @@ function LayerRow({ layer, height, onContextMenu, renaming, onRenameStart, onRen
   return (
     <div
       ref={setNodeRef}
-      className={`track-name ${selected ? 'is-selected' : ''} ${layer.hidden ? 'is-hidden' : ''} ${isDragging ? 'is-dragging' : ''}`}
-      style={{ height, transform: transform ? `translate3d(0, ${transform.y}px, 0)` : undefined, transition }}
-      onClick={() => useProjectStore.getState().selectTrack(layer.id)}
+      className={`track-layer ${isDragging ? 'is-dragging' : ''}`}
+      style={{ height: height + subHeight, transform: transform ? `translate3d(0, ${transform.y}px, 0)` : undefined, transition }}
+    >
+    <div
+      className={`track-name ${selected ? 'is-selected' : ''} ${layer.hidden ? 'is-hidden' : ''}`}
+      style={{ height }}
+      onClick={() => {
+        useProjectStore.getState().selectBlock(null)
+        useProjectStore.getState().selectTrack(layer.id)
+      }}
       onDoubleClick={onRenameStart}
       onContextMenu={(e) => onContextMenu(layer, e)}
     >
       <button type="button" className="track-grip" {...attributes} {...listeners} aria-label={t('tracks.reorder')} title={t('tracks.reorder')}>
         <GripVertical size={13} strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        className="track-expand"
+        onClick={(e) => {
+          e.stopPropagation()
+          useEditorStore.getState().toggleExpanded(layer.id)
+        }}
+        aria-expanded={expanded}
+        aria-label={expanded ? t('clip.collapse') : t('clip.expand')}
+        title={expanded ? t('clip.collapse') : t('clip.expand')}
+        disabled={!layer.blocks.length}
+      >
+        {expanded ? <ChevronDown size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
       </button>
       <Icon size={13} strokeWidth={1.75} className="track-kind" aria-hidden="true" />
       {renaming ? <NameEditor layer={layer} onDone={onRenameEnd} /> : <span className="track-label" title={layer.name}>{layer.name}</span>}
@@ -111,11 +136,17 @@ function LayerRow({ layer, height, onContextMenu, renaming, onRenameStart, onRen
         {layer.locked ? <Lock size={13} strokeWidth={1.75} /> : <LockOpen size={13} strokeWidth={1.75} />}
       </button>
     </div>
+      {subHeight > 0 && (
+        <div className="track-sub" style={{ height: subHeight }}>
+          {t('clip.animationsLabel')}
+        </div>
+      )}
+    </div>
   )
 }
 
 /** Timeline'ın sol sütunu: katman adları. Sürükleyerek sıralanır; üstteki katman öndedir. */
-export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renamingId, onRenameStart, onRenameEnd }: Props) {
+export function TrackList({ rows, containerRef, onContextMenu, renamingId, onRenameStart, onRenameEnd }: Props) {
   const { t } = useTranslation()
   const cameraSelected = useProjectStore((s) => s.selectedTrackId === 'camera')
   const audioSelected = useProjectStore((s) => s.selectedTrackId === 'audio')
@@ -135,11 +166,12 @@ export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renami
     <div className="track-names" ref={containerRef}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={layerRows.map((r) => r.track.id)} strategy={verticalListSortingStrategy}>
-          {layerRows.map(({ track, lanes }) => (
+          {layerRows.map(({ track, height, subHeight }) => (
             <LayerRow
               key={track.id}
               layer={track}
-              height={rowHeight * lanes}
+              height={height}
+              subHeight={subHeight ?? 0}
               onContextMenu={onContextMenu}
               renaming={renamingId === track.id}
               onRenameStart={() => onRenameStart(track.id)}
@@ -151,7 +183,7 @@ export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renami
       {cameraRow && (
         <div
           className={`track-name track-name--camera ${cameraSelected ? 'is-selected' : ''}`}
-          style={{ height: rowHeight * cameraRow.lanes }}
+          style={{ height: cameraRow.height }}
           onClick={() => useProjectStore.getState().selectTrack('camera')}
         >
           <span className="track-grip" aria-hidden="true" />
@@ -162,7 +194,7 @@ export function TrackList({ rows, rowHeight, containerRef, onContextMenu, renami
       {audioRow && (
         <div
           className={`track-name track-name--audio ${audioSelected ? 'is-selected' : ''}`}
-          style={{ height: rowHeight * audioRow.lanes }}
+          style={{ height: audioRow.height }}
           onClick={() => useProjectStore.getState().selectTrack('audio')}
         >
           <span className="track-grip" aria-hidden="true" />

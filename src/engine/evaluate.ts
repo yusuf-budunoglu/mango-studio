@@ -13,6 +13,14 @@ function sortedBlocks(blocks: Block[]) {
   return [...blocks].sort((a, b) => a.start - b.start)
 }
 
+/**
+ * Katman o anda klibinin içinde mi. Başı dahil, sonu hariç: arka arkaya iki klip kesme anında
+ * aynı karede görünmez (video kareleri 0..süre arasında, son an çizilmez).
+ */
+export function inClip(layer: Pick<Layer, 'start' | 'duration'>, time: number) {
+  return time >= layer.start - 1e-6 && time < layer.start + layer.duration - 1e-6
+}
+
 export function evaluateLayer(layer: Layer, time: number): LayerState {
   const s: LayerState = {
     x: layer.position[0],
@@ -31,10 +39,13 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     revealSoftness: 0.3,
     letterSpacing: 0,
   }
+  // Klibin dışında katman çizilmez; bloklar klibin başından itibaren zamanlanır.
+  if (!inClip(layer, time)) s.opacity = 0
+  const local = time - layer.start
   for (const block of sortedBlocks(layer.blocks)) {
     const preset = PRESETS[block.preset]
     if (!preset || preset.target !== 'layer') continue
-    const p = progress(block, time)
+    const p = progress(block, local)
     const e = easingFor(block, preset.defaultEasing)(p)
     preset.apply(s, e, p, resolveParams(preset, block.params), block.duration)
   }

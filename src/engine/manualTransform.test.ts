@@ -5,7 +5,7 @@ import type { Layer } from './types'
 
 const layer = (extra: Partial<Layer> = {}): Layer => ({
   id: 'l', name: 'x', kind: 'shape', color: '#fff',
-  position: [1, 2, 0], rotation: [0, 10, 0], scale: 1, opacity: 1, blocks: [],
+  position: [1, 2, 0], rotation: [0, 10, 0], scale: 1, opacity: 1, start: 0, duration: 100, blocks: [],
   ...extra,
 })
 

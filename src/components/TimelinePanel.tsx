@@ -1,25 +1,32 @@
 import { Timeline } from '@xzdarcy/react-timeline-editor'
 import type { TimelineEditor, TimelineState } from '@xzdarcy/react-timeline-editor'
 import '@xzdarcy/react-timeline-editor/dist/react-timeline-editor.css'
-import { MoveHorizontal } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type RefObject } from 'react'
+import { Copy, MoveHorizontal, Redo2, Scissors, Trash2, Undo2, ZoomIn, ZoomOut } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useStore } from 'zustand'
+import { canSplit, deleteSelection, duplicateSelection, splitSelection } from '../editor/commands'
 import { PRESETS } from '../engine/presets'
-import type { Layer } from '../engine/types'
+import type { Block, Layer } from '../engine/types'
 import { easingLabel, presetLabel } from '../i18n/labels'
-import { findAudio, findBlock, useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { useEditorStore } from '../store/editorStore'
+import { findAudio, findBlock, trackOffset, useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { ClipBar } from './ClipBar'
 import { ContextMenu, type MenuItem } from './ContextMenu'
-import { TrackList, type AudioTrackRow } from './TrackList'
+import { TrackList, type TrackRow } from './TrackList'
 import { Waveform } from './Waveform'
 
 type TimelineRow = TimelineEditor['editorData'][number]
 
-const ROW_HEIGHT = 34
+/** Satır yükseklikleri: klip satırı belirgin, animasyon şeritleri ince. */
+const ROW = { clip: 44, lane: 26, camera: 30, audio: 40 }
 const START_LEFT = 16
-const ZOOM_MIN = 40
+const ZOOM_MIN = 20
 const ZOOM_MAX = 480
 const LANE_SEP = '::'
+const CLIP_PREFIX = 'clip:'
 const trackIdOf = (rowId: string) => rowId.split(LANE_SEP)[0]
+const EPS = 1e-4
 
 /** Çakışmayan blokları aynı şeride koyar, çakışanlar için yeni şerit açar. */
 function splitIntoLanes<T extends { start: number; duration: number }>(blocks: T[]): T[][] {
@@ -38,7 +45,28 @@ function splitIntoLanes<T extends { start: number; duration: number }>(blocks: T
 }
 
 const AUDIO_EFFECT = 'audio'
-const EFFECTS = Object.fromEntries([...Object.keys(PRESETS), AUDIO_EFFECT].map((id) => [id, { id }]))
+const CLIP_EFFECT = 'clip'
+const EFFECTS = Object.fromEntries([...Object.keys(PRESETS), AUDIO_EFFECT, CLIP_EFFECT].map((id) => [id, { id }]))
+
+/** Bir satırın bloklarını mutlak (videoya göre) zamanla timeline aksiyonlarına çevirir. */
+function blockActions(blocks: Block[], offset: number, selected: string[], locked: boolean, bounds: { min: number; max: number }) {
+  return blocks.map((b) => {
+    const start = b.start + offset
+    const end = start + b.duration
+    return {
+      id: b.id,
+      start,
+      end,
+      // Katman blokları klibin içinde kalır (eskiden taşmış blok bozulmasın diye kendi sınırı da kabul).
+      minStart: Math.min(bounds.min, start),
+      maxEnd: Math.max(bounds.max, end),
+      movable: !locked,
+      flexible: !locked,
+      effectId: b.preset,
+      selected: selected.includes(b.id),
+    }
+  })
+}
 
 interface Props {
   timelineRef: RefObject<TimelineState | null>
@@ -51,79 +79,114 @@ export function TimelinePanel({ timelineRef }: Props) {
   const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
   const selectTrack = useProjectStore((s) => s.selectTrack)
   const selectBlock = useProjectStore((s) => s.selectBlock)
-  const setBlockTimes = useProjectStore((s) => s.setBlockTimes)
+  const expanded = useEditorStore((s) => s.expandedLayers)
   const setTime = usePlaybackStore((s) => s.setTime)
   const setPlaying = usePlaybackStore((s) => s.setPlaying)
+  const time = usePlaybackStore((s) => s.time)
+  const canUndo = useStore(useProjectStore.temporal, (s) => s.pastStates.length > 0)
+  const canRedo = useStore(useProjectStore.temporal, (s) => s.futureStates.length > 0)
 
   const namesRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   // Timeline yakınlaştırma: 1 saniyenin kaç piksel olduğu.
-  const [scaleWidth, setScaleWidth] = useState(120)
+  const [scaleWidth, setScaleWidth] = useState(100)
   const [scrollLeft, setScrollLeft] = useState(0)
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
 
-  const zoom = (factor: number) => setScaleWidth((w) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(w * factor))))
-  const zoomToFit = () => {
+  const clampZoom = (w: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(w)))
+  const zoom = (factor: number) => setScaleWidth((w) => clampZoom(w * factor))
+  const zoomToFit = useCallback(() => {
     const width = wrapRef.current?.clientWidth ?? 800
-    setScaleWidth(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.floor((width - START_LEFT - 32) / project.duration))))
-  }
+    setScaleWidth(clampZoom((width - START_LEFT - 40) / project.duration))
+  }, [project.duration])
+  // Proje açılınca tüm video görünsün.
+  const fitted = useRef(false)
+  useEffect(() => {
+    if (fitted.current || !wrapRef.current) return
+    fitted.current = true
+    zoomToFit()
+  }, [zoomToFit])
 
-  const tracks = useMemo(() => [...project.layers, project.camera], [project])
-  const trackLanes = useMemo(() => tracks.map((track) => ({ track, lanes: splitIntoLanes(track.blocks) })), [tracks])
   const audioLanes = useMemo(() => splitIntoLanes(project.audio ?? []), [project.audio])
-  const audioTrack: AudioTrackRow = { id: 'audio', name: t('tracks.audio') }
+  const cameraLanes = useMemo(() => splitIntoLanes(project.camera.blocks), [project.camera.blocks])
+  const layerLanes = useMemo(
+    () => project.layers.map((layer) => ({ layer, lanes: expanded.includes(layer.id) ? splitIntoLanes(layer.blocks) : [] })),
+    [project.layers, expanded],
+  )
 
-  // Proje verisi → timeline'ın beklediği satır/aksiyon formatı. Her blok bir aksiyon;
-  // bir katmanın çakışan blokları alt alta ayrı satırlara (şeritlere) dağıtılır.
-  const editorData: TimelineRow[] = useMemo(
-    () =>
-      trackLanes.flatMap(({ track, lanes }) => {
-        const locked = 'locked' in track && !!track.locked
-        const hidden = 'hidden' in track && !!track.hidden
-        return lanes.map((blocks, lane) => ({
-          id: `${track.id}${LANE_SEP}${lane}`,
-          selected: track.id === selectedTrackId,
-          classNames: hidden ? ['is-hidden'] : [],
-          actions: blocks.map((b) => ({
-            id: b.id,
-            start: b.start,
-            end: b.start + b.duration,
-            // Bloklar videonun bitişinden öteye sürüklenemez (eski projelerde taşan blok bozulmasın diye onun sonu da kabul).
-            maxEnd: Math.max(project.duration, b.start + b.duration),
-            // Kilitli katmanın blokları taşınamaz ve uzatılamaz.
+  // Proje → timeline satırları. Her katman bir klip satırı; açıksa altında animasyon şeritleri.
+  // Aynı dizi referansı kalmalı: timeline motoru verisi her değiştiğinde oynatmayı durdurur.
+  const rows: TimelineRow[] = useMemo(() => {
+    const out: TimelineRow[] = []
+    for (const { layer, lanes } of layerLanes) {
+      const locked = !!layer.locked
+      const end = layer.start + layer.duration
+      out.push({
+        id: `${layer.id}${LANE_SEP}clip`,
+        rowHeight: ROW.clip,
+        selected: layer.id === selectedTrackId,
+        classNames: ['row-clip', ...(layer.hidden ? ['is-hidden'] : [])],
+        actions: [
+          {
+            id: CLIP_PREFIX + layer.id,
+            start: layer.start,
+            end,
+            minStart: 0,
+            maxEnd: Math.max(project.duration, end),
             movable: !locked,
             flexible: !locked,
-            effectId: b.preset,
-            selected: selectedBlockIds.includes(b.id),
-          })),
-        }))
+            effectId: CLIP_EFFECT,
+            selected: layer.id === selectedTrackId && !selectedBlockIds.length,
+          },
+        ],
+      })
+      lanes.forEach((blocks, i) =>
+        out.push({
+          id: `${layer.id}${LANE_SEP}${i}`,
+          rowHeight: ROW.lane,
+          classNames: ['row-lane', ...(layer.hidden ? ['is-hidden'] : [])],
+          actions: blockActions(blocks, layer.start, selectedBlockIds, locked, { min: layer.start, max: end }),
+        }),
+      )
+    }
+    cameraLanes.forEach((blocks, i) =>
+      out.push({
+        id: `camera${LANE_SEP}${i}`,
+        rowHeight: ROW.camera,
+        selected: selectedTrackId === 'camera',
+        classNames: ['row-camera'],
+        actions: blockActions(blocks, 0, selectedBlockIds, false, { min: 0, max: project.duration }),
       }),
-    [trackLanes, selectedBlockIds, selectedTrackId, project.duration],
-  )
+    )
+    // Ses parçaları: kaynak dosyanın dışına kırpılamaz, videonun sonunu geçemez.
+    if (project.audio?.length)
+      audioLanes.forEach((clips, i) =>
+        out.push({
+          id: `audio${LANE_SEP}${i}`,
+          rowHeight: ROW.audio,
+          selected: selectedTrackId === 'audio',
+          actions: clips.map((c) => ({
+            id: c.id,
+            start: c.start,
+            end: c.start + c.duration,
+            minStart: Math.max(0, c.start - c.offset),
+            maxEnd: Math.max(c.start + c.duration, Math.min(project.duration, c.start + (c.sourceDuration - c.offset))),
+            effectId: AUDIO_EFFECT,
+            selected: selectedBlockIds.includes(c.id),
+          })),
+        }),
+      )
+    return out
+  }, [layerLanes, cameraLanes, audioLanes, project.audio, project.duration, selectedBlockIds, selectedTrackId])
 
-  // Ses parçaları ayrı satırlarda; kaynak dosyanın dışına kırpılamaz, videonun sonunu geçemez.
-  const audioData: TimelineRow[] = useMemo(
-    () =>
-      audioLanes.map((clips, lane) => ({
-        id: `audio${LANE_SEP}${lane}`,
-        selected: selectedTrackId === 'audio',
-        actions: clips.map((c) => ({
-          id: c.id,
-          start: c.start,
-          end: c.start + c.duration,
-          minStart: Math.max(0, c.start - c.offset),
-          maxEnd: Math.max(c.start + c.duration, Math.min(project.duration, c.start + (c.sourceDuration - c.offset))),
-          effectId: AUDIO_EFFECT,
-          selected: selectedBlockIds.includes(c.id),
-        })),
-      })),
-    [audioLanes, selectedBlockIds, selectedTrackId, project.duration],
-  )
-  // Aynı dizi referansı kalmalı: timeline motoru verisi her değiştiğinde oynatmayı durdurur.
-  const allRows = useMemo(() => (audioData.length ? [...editorData, ...audioData] : editorData), [editorData, audioData])
+  const trackRows: TrackRow[] = [
+    ...layerLanes.map(({ layer, lanes }) => ({ track: layer, height: ROW.clip, subHeight: lanes.length * ROW.lane })),
+    { track: project.camera, height: cameraLanes.length * ROW.camera },
+    ...(project.audio?.length ? [{ track: { id: 'audio' as const, name: t('tracks.audio') }, height: audioLanes.length * ROW.audio }] : []),
+  ]
 
   // Timeline kendi saatini çalıştırıyor; zamanı oradan önizlemeye aktarıyoruz.
   useEffect(() => {
@@ -178,26 +241,47 @@ export function TimelinePanel({ timelineRef }: Props) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
+  // Timeline'ın üst kenarından sürükleyerek yüksekliği değiştir.
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startH = useEditorStore.getState().timelineHeight
+    const max = window.innerHeight - 240
+    const onMove = (ev: PointerEvent) => useEditorStore.getState().setTimelineHeight(Math.min(max, startH - (ev.clientY - startY)))
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+
+  const layerMenuItems = (layer: Layer): MenuItem[] => {
+    const store = useProjectStore.getState()
+    const index = project.layers.findIndex((l) => l.id === layer.id)
+    const now = usePlaybackStore.getState().time
+    const isExpanded = useEditorStore.getState().expandedLayers.includes(layer.id)
+    return [
+      { label: isExpanded ? t('clip.collapse') : t('clip.expand'), onSelect: () => useEditorStore.getState().toggleExpanded(layer.id) },
+      { label: t('clip.split'), hint: 'S', disabled: !(now > layer.start + 0.05 && now < layer.start + layer.duration - 0.05), onSelect: () => store.splitClip(layer.id, now) },
+      { label: t('tracks.duplicate'), hint: 'Ctrl+D', onSelect: () => store.duplicateLayer(layer.id) },
+      { label: t('tracks.rename'), onSelect: () => setRenamingId(layer.id) },
+      { kind: 'separator' },
+      { label: layer.hidden ? t('tracks.show') : t('tracks.hide'), onSelect: () => store.updateLayer(layer.id, { hidden: !layer.hidden }) },
+      { label: layer.locked ? t('tracks.unlock') : t('tracks.lock'), onSelect: () => store.updateLayer(layer.id, { locked: !layer.locked }) },
+      { kind: 'separator' },
+      { label: t('tracks.moveUp'), disabled: index <= 0, onSelect: () => store.moveLayer(layer.id, index - 1) },
+      { label: t('tracks.moveDown'), disabled: index >= project.layers.length - 1, onSelect: () => store.moveLayer(layer.id, index + 1) },
+      { kind: 'separator' },
+      { label: t('layer.delete'), hint: 'Del', danger: true, onSelect: () => store.removeLayer(layer.id) },
+    ]
+  }
+
   const layerMenu = (layer: Layer, e: MouseEvent) => {
     e.preventDefault()
     selectTrack(layer.id)
-    const store = useProjectStore.getState()
-    const index = project.layers.findIndex((l) => l.id === layer.id)
-    setMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: [
-        { label: t('tracks.rename'), onSelect: () => setRenamingId(layer.id) },
-        { label: t('tracks.duplicate'), onSelect: () => store.duplicateLayer(layer.id) },
-        { label: layer.hidden ? t('tracks.show') : t('tracks.hide'), onSelect: () => store.updateLayer(layer.id, { hidden: !layer.hidden }) },
-        { label: layer.locked ? t('tracks.unlock') : t('tracks.lock'), onSelect: () => store.updateLayer(layer.id, { locked: !layer.locked }) },
-        { kind: 'separator' },
-        { label: t('tracks.moveUp'), disabled: index <= 0, onSelect: () => store.moveLayer(layer.id, index - 1) },
-        { label: t('tracks.moveDown'), disabled: index >= project.layers.length - 1, onSelect: () => store.moveLayer(layer.id, index + 1) },
-        { kind: 'separator' },
-        { label: t('layer.delete'), danger: true, onSelect: () => store.removeLayer(layer.id) },
-      ],
-    })
+    selectBlock(null)
+    setMenu({ x: e.clientX, y: e.clientY, items: layerMenuItems(layer) })
   }
 
   const blockMenu = (blockId: string, e: MouseEvent) => {
@@ -206,34 +290,22 @@ export function TimelinePanel({ timelineRef }: Props) {
     // Seçimin dışındaki bloğa sağ tıklanınca sadece o blok seçilir.
     if (!store.selectedBlockIds.includes(blockId)) store.selectBlock(blockId)
     const ids = useProjectStore.getState().selectedBlockIds
-    const time = usePlaybackStore.getState().time
-    const canSplit = ids.some((id) => {
-      const b = findBlock(project, id)?.block ?? findAudio(project, id)
-      return !!b && time > b.start + 0.01 && time < b.start + b.duration - 0.01
+    const now = usePlaybackStore.getState().time
+    const splittable = ids.some((id) => {
+      const found = findBlock(project, id)
+      const b = found ? { start: found.block.start + trackOffset(found.track), duration: found.block.duration } : findAudio(project, id)
+      return !!b && now > b.start + 0.01 && now < b.start + b.duration - 0.01
     })
     const found = findBlock(project, blockId)
-    if (!found) {
-      if (!findAudio(project, blockId)) return
-      setMenu({
-        x: e.clientX,
-        y: e.clientY,
-        items: [
-          { label: t('blockMenu.duplicate'), hint: 'Ctrl+D', onSelect: () => store.duplicateBlocks(ids) },
-          { label: t('blockMenu.split'), hint: 'S', disabled: !canSplit, onSelect: () => store.splitBlocks(ids, time) },
-          { kind: 'separator' },
-          { label: t('block.delete', { count: ids.length }), hint: 'Del', danger: true, onSelect: () => store.removeBlocks(ids) },
-        ],
-      })
-      return
-    }
-    const isCamera = PRESETS[found.block.preset]?.target === 'camera'
-    const targets = isCamera ? [] : project.layers.filter((l) => l.id !== found.track.id)
+    if (!found && !findAudio(project, blockId)) return
+    const isCamera = !!found && PRESETS[found.block.preset]?.target === 'camera'
+    const targets = !found || isCamera ? [] : project.layers.filter((l) => l.id !== found.track.id)
     setMenu({
       x: e.clientX,
       y: e.clientY,
       items: [
         { label: t('blockMenu.duplicate'), hint: 'Ctrl+D', onSelect: () => store.duplicateBlocks(ids) },
-        { label: t('blockMenu.split'), hint: 'S', disabled: !canSplit, onSelect: () => store.splitBlocks(ids, time) },
+        { label: t('blockMenu.split'), hint: 'S', disabled: !splittable, onSelect: () => store.splitBlocks(ids, now) },
         ...(targets.length
           ? ([
               { kind: 'separator' },
@@ -247,25 +319,82 @@ export function TimelinePanel({ timelineRef }: Props) {
     })
   }
 
+  // Timeline'dan gelen değişiklikler: yalnızca gerçekten değişen klip/blok/ses parçaları uygulanır.
+  // Önce bloklar (klibin eski başına göre), sonra klipler: taşınan klibin blokları onunla birlikte gider.
+  const applyChanges = (changed: TimelineRow[]) => {
+    const store = useProjectStore.getState()
+    const current = store.project
+    const clips: Record<string, { start: number; end: number }> = {}
+    const blocks: Record<string, { start: number; end: number }> = {}
+    const audio: Record<string, { start: number; end: number }> = {}
+    for (const row of changed)
+      for (const a of row.actions) {
+        if (a.effectId === CLIP_EFFECT) {
+          const layer = current.layers.find((l) => CLIP_PREFIX + l.id === a.id)
+          if (layer && (Math.abs(a.start - layer.start) > EPS || Math.abs(a.end - layer.start - layer.duration) > EPS)) clips[layer.id] = { start: a.start, end: a.end }
+        } else if (a.effectId === AUDIO_EFFECT) {
+          audio[a.id] = { start: a.start, end: a.end }
+        } else {
+          const found = findBlock(current, a.id)
+          if (!found) continue
+          const start = found.block.start + trackOffset(found.track)
+          if (Math.abs(a.start - start) > EPS || Math.abs(a.end - start - found.block.duration) > EPS) blocks[a.id] = { start: a.start, end: a.end }
+        }
+      }
+    if (Object.keys(blocks).length) store.setBlockTimes(blocks)
+    if (Object.keys(clips).length) store.setClipTimes(clips)
+    if (Object.keys(audio).length && current.audio?.length) store.setAudioTimes(audio)
+  }
+
+  const layerOfClip = (actionId: string) => project.layers.find((l) => CLIP_PREFIX + l.id === actionId)
+  const hasSelection = !!selectedBlockIds.length || project.layers.some((l) => l.id === selectedTrackId)
+  // Oynatma kafası hareket edince "böl" düğmesinin durumu güncellensin.
+  const splitEnabled = hasSelection && time >= 0 && canSplit()
+
   return (
     <div className="timeline-panel" ref={panelRef}>
-      <div className="zoom-controls">
-        <button type="button" onClick={() => zoom(1 / 1.25)} title={t('timeline.zoomOut')} aria-label={t('timeline.zoomOut')}>
-          −
+      <div className="timeline-resizer" onPointerDown={startResize} role="separator" aria-orientation="horizontal" aria-label={t('timeline.resize')} title={t('timeline.resize')} />
+      <div className="timeline-toolbar" role="toolbar" aria-label={t('timeline.toolbar')}>
+        <button type="button" onClick={() => useProjectStore.temporal.getState().undo()} disabled={!canUndo} title={t('topbar.undoTitle')} aria-label={t('topbar.undo')}>
+          <Undo2 size={16} strokeWidth={1.75} />
         </button>
-        <button type="button" onClick={() => zoom(1.25)} title={t('timeline.zoomIn')} aria-label={t('timeline.zoomIn')}>
-          +
+        <button type="button" onClick={() => useProjectStore.temporal.getState().redo()} disabled={!canRedo} title={t('topbar.redoTitle')} aria-label={t('topbar.redo')}>
+          <Redo2 size={16} strokeWidth={1.75} />
         </button>
-        <button type="button" onClick={zoomToFit} title={t('timeline.fit')} aria-label={t('timeline.fit')}>
-          <MoveHorizontal size={13} strokeWidth={1.75} />
+        <span className="tool-sep" />
+        <button type="button" onClick={splitSelection} disabled={!splitEnabled} title={`${t('clip.split')} (S)`} aria-label={t('clip.split')}>
+          <Scissors size={16} strokeWidth={1.75} />
         </button>
+        <button type="button" onClick={duplicateSelection} disabled={!hasSelection} title={`${t('tracks.duplicate')} (Ctrl+D)`} aria-label={t('tracks.duplicate')}>
+          <Copy size={16} strokeWidth={1.75} />
+        </button>
+        <button type="button" onClick={deleteSelection} disabled={!hasSelection} title={`${t('clip.delete')} (Del)`} aria-label={t('clip.delete')}>
+          <Trash2 size={16} strokeWidth={1.75} />
+        </button>
+        <span className="timeline-hint">{t('timeline.hint')}</span>
+        <div className="timeline-zoom">
+          <button type="button" onClick={() => zoom(1 / 1.25)} title={t('timeline.zoomOut')} aria-label={t('timeline.zoomOut')}>
+            <ZoomOut size={16} strokeWidth={1.75} />
+          </button>
+          <input
+            id="timeline-zoom"
+            type="range"
+            min={ZOOM_MIN}
+            max={ZOOM_MAX}
+            value={scaleWidth}
+            onChange={(e) => setScaleWidth(clampZoom(Number(e.target.value)))}
+            aria-label={t('timeline.zoom')}
+          />
+          <button type="button" onClick={() => zoom(1.25)} title={t('timeline.zoomIn')} aria-label={t('timeline.zoomIn')}>
+            <ZoomIn size={16} strokeWidth={1.75} />
+          </button>
+          <button type="button" onClick={zoomToFit} title={t('timeline.fit')} aria-label={t('timeline.fit')}>
+            <MoveHorizontal size={16} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
       <TrackList
-        rows={[
-          ...trackLanes.map(({ track, lanes }) => ({ track, lanes: lanes.length })),
-          ...(project.audio?.length ? [{ track: audioTrack, lanes: audioLanes.length }] : []),
-        ]}
-        rowHeight={ROW_HEIGHT}
+        rows={trackRows}
         containerRef={namesRef}
         onContextMenu={layerMenu}
         renamingId={renamingId}
@@ -275,13 +404,13 @@ export function TimelinePanel({ timelineRef }: Props) {
       <div className="timeline-wrap" ref={wrapRef}>
         <Timeline
           ref={timelineRef}
-          editorData={allRows}
+          editorData={rows}
           effects={EFFECTS}
           scale={1}
           scaleSplitCount={10}
           scaleWidth={scaleWidth}
           startLeft={START_LEFT}
-          rowHeight={ROW_HEIGHT}
+          rowHeight={ROW.clip}
           minScaleCount={Math.ceil(project.duration) + 1}
           gridSnap
           dragLine
@@ -291,19 +420,36 @@ export function TimelinePanel({ timelineRef }: Props) {
             setScrollLeft(left)
           }}
           style={{ width: '100%', height: '100%' }}
-          onChange={(rows) => {
-            const times: Record<string, { start: number; end: number }> = {}
-            for (const row of rows) for (const a of row.actions) times[a.id] = { start: a.start, end: a.end }
-            setBlockTimes(times)
-            if (project.audio?.length) useProjectStore.getState().setAudioTimes(times)
-          }}
+          onChange={applyChanges}
           onClickActionOnly={(e, { action, row }) => {
+            if (action.effectId === CLIP_EFFECT) {
+              selectBlock(null)
+              selectTrack(trackIdOf(row.id))
+              return
+            }
             selectBlock(action.id, e.shiftKey || e.ctrlKey || e.metaKey)
             selectTrack(trackIdOf(row.id))
           }}
-          onClickRow={(_e, { row }) => selectTrack(trackIdOf(row.id))}
-          onContextMenuAction={(e, { action }) => blockMenu(action.id, e)}
+          onDoubleClickAction={(_e, { action }) => {
+            const layer = layerOfClip(action.id)
+            if (layer) useEditorStore.getState().toggleExpanded(layer.id)
+          }}
+          onClickRow={(e, { row }) => {
+            // Aynı tıklama bloğa da gelir; bloğun seçimini satır tıklaması silmesin.
+            if ((e.target as HTMLElement).closest('.timeline-editor-action')) return
+            selectBlock(null)
+            selectTrack(trackIdOf(row.id))
+          }}
+          onContextMenuAction={(e, { action }) => {
+            const layer = layerOfClip(action.id)
+            if (layer) layerMenu(layer, e)
+            else blockMenu(action.id, e)
+          }}
           getActionRender={(action) => {
+            if (action.effectId === CLIP_EFFECT) {
+              const layer = layerOfClip(action.id)
+              return layer ? <ClipBar layer={layer} selected={!!action.selected} expanded={expanded.includes(layer.id)} /> : null
+            }
             if (action.effectId === AUDIO_EFFECT) {
               const clip = findAudio(project, action.id)
               if (!clip) return null
