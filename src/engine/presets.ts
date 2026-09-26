@@ -16,26 +16,36 @@ export interface ParamSpec {
 
 interface PresetBase {
   /** adı ve kategori adı çeviri dosyalarında: `presets.<id>`, `categories.<category>` */
-  category: 'in' | 'out' | 'emphasis' | 'move' | 'text' | 'camera' | 'transition'
+  category: 'in' | 'out' | 'emphasis' | 'move' | 'text' | 'camera' | 'transition' | 'lens'
   defaultEasing: string
   defaultDuration: number
   /** paneldeki ayarlar; `apply` bunların varsayılanlarla birleşmiş halini alır */
   params?: ParamSpec[]
 }
 
+/** `duration`: bloğun süresi (sn); zamana bağlı titreşim gibi bloklar için. */
 export interface LayerPreset extends PresetBase {
   target: 'layer'
-  apply: (s: LayerState, e: number, p: number, params: Record<string, number>) => void
+  apply: (s: LayerState, e: number, p: number, params: Record<string, number>, duration: number) => void
 }
 
 export interface CameraPreset extends PresetBase {
   target: 'camera'
-  apply: (s: CameraState, e: number, p: number, params: Record<string, number>) => void
+  apply: (s: CameraState, e: number, p: number, params: Record<string, number>, duration: number) => void
 }
 
 export type Preset = LayerPreset | CameraPreset
 
 const DEG = Math.PI / 180
+
+/** Yumuşak, tekrarlanabilir titreşim (-1..1): farklı frekanslı sinüslerin toplamı, rastgelelik yok. */
+export function wobble(t: number, seed: number) {
+  const w = 2 * Math.PI
+  return 0.5 * Math.sin(t * w * 1.3 + seed * 1.7) + 0.3 * Math.sin(t * w * 2.9 + seed * 4.1) + 0.2 * Math.sin(t * w * 5.3 + seed * 2.3)
+}
+
+/** Blok içinde 0'dan 1'e ve geri: bloğun dışında 0. */
+const bell = (p: number) => (p <= 0 || p >= 1 ? 0 : Math.sin(Math.PI * p))
 const distance = (d: number): ParamSpec => ({ key: 'distance', default: d, min: -20, max: 20, step: 0.1 })
 
 export const PRESETS: Record<string, Preset> = {
@@ -199,6 +209,64 @@ export const PRESETS: Record<string, Preset> = {
       s.overlayOpacity = Math.max(s.overlayOpacity, p < peak ? p / peak : 1 - (p - peak) / (1 - peak))
       s.overlayWhite = 1
     },
+  },
+  'camera-shake': {
+    // El kamerası: kamera ve baktığı nokta küçük, düzensiz ama tekrarlanabilir biçimde sallanır.
+    target: 'camera', category: 'camera', defaultEasing: 'linear', defaultDuration: 2,
+    params: [
+      { key: 'amount', default: 0.06, min: 0, max: 0.5, step: 0.01 },
+      { key: 'speed', default: 1, min: 0.1, max: 4, step: 0.1 },
+    ],
+    apply: (s, _e, p, { amount, speed }, duration) => {
+      if (p <= 0 || p >= 1) return
+      const local = p * duration
+      // baş ve sonda 0,2 sn'de yumuşakça başlayıp biter; kesme anında zıplama olmaz
+      const a = amount * Math.min(1, local / 0.2, (duration - local) / 0.2)
+      const dx = a * wobble(local * speed, 0)
+      const dy = a * wobble(local * speed, 1)
+      s.x += dx
+      s.y += dy
+      s.targetX += dx * 0.6
+      s.targetY += dy * 0.6
+    },
+  },
+  'lens-punch': {
+    // Vuruş: kısa bir yakınlaşma ve kenarlarda renk kayması; kesme ya da ritim anına koyulur.
+    target: 'camera', category: 'lens', defaultEasing: 'linear', defaultDuration: 0.4,
+    params: [
+      { key: 'amount', default: 1, min: 0, max: 3, step: 0.1 },
+      { key: 'zoom', default: 0.06, min: 0, max: 0.3, step: 0.01 },
+    ],
+    apply: (s, _e, p, { amount, zoom }) => {
+      if (p <= 0 || p >= 1) return
+      const peak = 0.2
+      const env = p < peak ? p / peak : (1 - (p - peak) / (1 - peak)) ** 2
+      s.aberration += amount * env
+      s.fov *= 1 - zoom * env
+    },
+  },
+  'flare-sweep': {
+    // Ekranı yatay geçen lens parlaması; ortasında en güçlü.
+    target: 'camera', category: 'lens', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
+    params: [
+      { key: 'from', default: -1.2, min: -2, max: 2, step: 0.05 },
+      { key: 'to', default: 1.2, min: -2, max: 2, step: 0.05 },
+      { key: 'y', default: 0.4, min: -1, max: 1, step: 0.05 },
+      { key: 'intensity', default: 1.5, min: 0, max: 4, step: 0.1 },
+    ],
+    apply: (s, e, p, { from, to, y, intensity }) => {
+      const k = bell(p)
+      if (k <= 0) return
+      s.flare = intensity * k
+      s.flareX = from + (to - from) * e
+      s.flareY = y
+    },
+  },
+  'light-leak': {
+    // Işık sızması patlaması: sıcak renkli ışık ekrana yayılıp söner; geçişlerde kullanılır.
+    target: 'camera', category: 'lens', defaultEasing: 'linear', defaultDuration: 1.2,
+    params: [{ key: 'intensity', default: 1.2, min: 0, max: 3, step: 0.1 }],
+    apply: (s, _e, p, { intensity }) => { s.leak = Math.max(s.leak, intensity * bell(p)) },
   },
   'camera-pan': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { exportSize, subframeTimes, supersampleFactor } from '../export/exportVideo'
 import { TEMPLATES } from '../project/templates'
-import { DEFAULT_EFFECTS, resolveEffects } from './effects'
+import { DEFAULT_EFFECTS, lensFrame, lensPasses, resolveEffects } from './effects'
 import { evaluateCamera } from './evaluate'
 
 describe('efektler', () => {
@@ -51,5 +51,23 @@ describe('dışa aktarma boyutu', () => {
     expect(exportSize({ width: 1080, height: 1920 }, 720)).toEqual({ width: 720, height: 1280 })
     expect(exportSize({ width: 1080, height: 1350 }, 2160)).toEqual({ width: 2160, height: 2700 })
     expect(exportSize({ width: 1080, height: 1080 }, 1080)).toEqual({ width: 1080, height: 1080 })
+  })
+})
+
+describe('lens efektleri', () => {
+  it('kapalı ayarlar ve bloksuz kamera hiçbir lens geçişi eklemez', () => {
+    const project = TEMPLATES[0].build()
+    project.camera.blocks = []
+    expect(lensPasses(resolveEffects(undefined), project)).toEqual({ lens: false, flare: false, sweep: false, leak: false })
+    project.camera.blocks = [{ id: 'p', preset: 'lens-punch', start: 0, duration: 0.4 }]
+    expect(lensPasses(resolveEffects(undefined), project).lens).toBe(true)
+  })
+  it('proje ayarı ve blok değerleri toplanır', () => {
+    const fx = resolveEffects({ chromatic: { enabled: true, amount: 0.5 }, lightLeak: { enabled: true, intensity: 0.3 } })
+    const camera = { ...evaluateCamera(TEMPLATES[0].build(), 0), aberration: 1, leak: 0.2 }
+    const lens = lensFrame(fx, camera, 2)
+    expect(lens.aberration).toBeCloseTo(1.5)
+    expect(lens.leak).toEqual({ time: 2, intensity: 0.5 })
+    expect(lens.flare.intensity).toBe(0)
   })
 })

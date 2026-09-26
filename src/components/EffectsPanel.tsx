@@ -79,6 +79,42 @@ export function EffectsPanel() {
         </>
       )}
 
+      <h3>{t('effects.lens')}</h3>
+
+      <label className="fx-toggle" htmlFor="fx-lensFlare">
+        {toggle('lensFlare')} {t('effects.lensFlare')}
+      </label>
+      {effects.lensFlare.enabled && (
+        <>
+          <Slider id="fx-flare-intensity" label={t('effects.intensity')} value={effects.lensFlare.intensity} min={0} max={3} step={0.05} onChange={(v) => update({ lensFlare: { intensity: v } })} />
+          <Slider id="fx-flare-x" label={t('effects.flareX')} value={effects.lensFlare.x} min={-1} max={1} step={0.01} onChange={(v) => update({ lensFlare: { x: v } })} />
+          <Slider id="fx-flare-y" label={t('effects.flareY')} value={effects.lensFlare.y} min={-1} max={1} step={0.01} onChange={(v) => update({ lensFlare: { y: v } })} />
+          <Slider id="fx-flare-streak" label={t('effects.streak')} value={effects.lensFlare.streak} min={0} max={2} step={0.05} onChange={(v) => update({ lensFlare: { streak: v } })} />
+        </>
+      )}
+
+      <label className="fx-toggle" htmlFor="fx-lightLeak">
+        {toggle('lightLeak')} {t('effects.lightLeak')}
+      </label>
+      {effects.lightLeak.enabled && (
+        <Slider id="fx-leak-intensity" label={t('effects.intensity')} value={effects.lightLeak.intensity} min={0} max={2} step={0.05} onChange={(v) => update({ lightLeak: { intensity: v } })} />
+      )}
+
+      <label className="fx-toggle" htmlFor="fx-chromatic">
+        {toggle('chromatic')} {t('effects.chromatic')}
+      </label>
+      {effects.chromatic.enabled && (
+        <Slider id="fx-chromatic-amount" label={t('effects.amount')} value={effects.chromatic.amount} min={0} max={3} step={0.05} onChange={(v) => update({ chromatic: { amount: v } })} />
+      )}
+
+      <label className="fx-toggle" htmlFor="fx-distortion">
+        {toggle('distortion')} {t('effects.distortion')}
+      </label>
+      {effects.distortion.enabled && (
+        <Slider id="fx-distortion-amount" label={t('effects.amount')} value={effects.distortion.amount} min={-0.5} max={0.5} step={0.01} onChange={(v) => update({ distortion: { amount: v } })} />
+      )}
+      <p className="hint">{t('effects.lensHint')}</p>
+
       <h3>{t('effects.color')}</h3>
       <Slider id="fx-saturation" label={t('effects.saturation')} value={effects.color.saturation} min={-1} max={1} step={0.01} onChange={(v) => update({ color: { saturation: v } })} />
       <Slider id="fx-contrast" label={t('effects.contrast')} value={effects.color.contrast} min={-1} max={1} step={0.01} onChange={(v) => update({ color: { contrast: v } })} />

@@ -177,6 +177,14 @@ export interface CameraState {
   overlayOpacity: number
   /** örtü rengi: 0 = siyah, 1 = beyaz */
   overlayWhite: number
+  /** lens darbesi: proje ayarına eklenen kromatik sapma */
+  aberration: number
+  /** geçen lens parlaması: gücü (0 = yok) ve ekrandaki konumu (-1..1) */
+  flare: number
+  flareX: number
+  flareY: number
+  /** ışık sızması patlaması: proje ayarına eklenen güç */
+  leak: number
 }
 
 export interface FrameState {

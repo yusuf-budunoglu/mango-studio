@@ -36,7 +36,7 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     if (!preset || preset.target !== 'layer') continue
     const p = progress(block, time)
     const e = easingFor(block, preset.defaultEasing)(p)
-    preset.apply(s, e, p, resolveParams(preset, block.params))
+    preset.apply(s, e, p, resolveParams(preset, block.params), block.duration)
   }
   return s
 }
@@ -54,13 +54,18 @@ export function evaluateCamera(project: Project, time: number): CameraState {
     focusBlur: 1,
     overlayOpacity: 0,
     overlayWhite: 0,
+    aberration: 0,
+    flare: 0,
+    flareX: 0,
+    flareY: 0,
+    leak: 0,
   }
   for (const block of sortedBlocks(cam.blocks)) {
     const preset = PRESETS[block.preset]
     if (!preset || preset.target !== 'camera') continue
     const p = progress(block, time)
     const e = easingFor(block, preset.defaultEasing)(p)
-    preset.apply(s, e, p, resolveParams(preset, block.params))
+    preset.apply(s, e, p, resolveParams(preset, block.params), block.duration)
   }
   return s
 }

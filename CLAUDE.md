@@ -60,6 +60,13 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Alan derinliği açılıp kapanınca `EffectComposer` `key` ile yeniden kurulur (yoksa çizim donuyor).
 - `Project.accentLight`: sol alttaki vurgu ışığının rengi (boşsa mor).
 
+## Lens efektleri
+- Proje ayarı (`effects`): `lensFlare` (sabit parlama, ekran konumu x/y -1..1), `lightLeak`, `chromatic`, `distortion`. Kamera satırı blokları (`lens` kategorisi): `lens-punch` (renk kayması + kısa yakınlaşma), `flare-sweep` (ekranı geçen parlama), `light-leak` (sızma patlaması); `camera-shake` (`camera` kategorisi, `wobble` ile rastgelelik olmadan sallanır).
+- Shader'lar `src/render/lensEffects.ts`; değerleri `lensFrame` (effects.ts) ile her karede Stage yazar. postprocessing'in `time` sayacı ve lib'in `LensFlare`'i (zaman ve fare/raycast'e bağlı) kullanılmaz: aynı an hep aynı kareyi vermeli.
+- Lens bükülmesi/renk kayması kendi `EffectPass`'inde (`LensPass`): aynı geçişte postprocessing efektleri özelliklerine göre sıralıyor, lens alan derinliğinin önüne geçip siliniyordu.
+- Zincirde hangi efektlerin olduğu `EffectComposer` `key`'ine girer: alan derinliği açıkken geçiş eklenip çıkınca çizim donuyor.
+- Preset `apply`'ın 5. argümanı blok süresi (zamana bağlı bloklar için).
+
 ## 3D cihaz modelleri
 - `public/models/{phone,tablet,laptop}.glb`, `node scripts/process-models.mjs` ile `models-src/*.glb`'den (git'e girmez, Sketchfab indirmeleri) üretilir: logo/marka yazıları, klavye kılıfı/kalem ve duvar kağıtları çıkarılır; parça adları genelleştirilir; ekran +z'ye döndürülür, ölçü procedural maketlerle aynı; meshopt sıkıştırma.
 - Dosyadaki sözleşme: ekran düğümü `screen` (0..1 UV, üst kenar v=1), gövde malzemeleri `finish:frame` / `finish:back`, laptop kapağı `lid` düğümü (menteşede, `extras.baseAngle`).

@@ -1,16 +1,17 @@
 import { Environment, Lightformer, Line, TransformControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette } from '@react-three/postprocessing'
-import type { DepthOfFieldEffect } from 'postprocessing'
+import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette, wrapEffect } from '@react-three/postprocessing'
+import { BlendFunction, EffectPass, type DepthOfFieldEffect } from 'postprocessing'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { CanvasTexture, Color, DoubleSide, PMREMGenerator, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
-import { resolveEffects, type ProjectEffects } from '../engine/effects'
+import { lensFrame, lensPasses, resolveEffects, type ProjectEffects } from '../engine/effects'
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
+import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
 import { LayerNode } from './layers/LayerNode'
 import { applyLayerOrder, type Applier, type Register } from './layers/shared'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
@@ -106,21 +107,53 @@ function LayerGizmo({ project }: { project: Project }) {
   )
 }
 
+const Flare = wrapEffect(FlareEffect, { blendFunction: BlendFunction.NORMAL, opacity: 1 })
+const LightLeak = wrapEffect(LightLeakEffect, { blendFunction: BlendFunction.NORMAL, opacity: 1 })
+
+/**
+ * Lens bükülmesi ve renk kayması kendi geçişinde çalışır: aynı geçişe birleşince postprocessing
+ * efektleri özelliklerine göre yeniden sıralıyor ve lens, alan derinliğinin önüne geçip onun
+ * tarafından siliniyordu. Ayrı geçiş, önceki efektlerin bitmiş görüntüsünü okur.
+ */
+function LensPass({ ref }: { ref: React.Ref<LensEffect> }) {
+  const camera = useThree((s) => s.camera)
+  const [effect] = useState(() => new LensEffect())
+  const pass = useMemo(() => new EffectPass(camera, effect), [camera, effect])
+  useImperativeHandle(ref, () => effect, [effect])
+  useEffect(() => () => pass.dispose(), [pass])
+  return <primitive object={pass} dispose={null} />
+}
+
+interface EffectRefs {
+  dofRef: React.RefObject<DepthOfFieldEffect | null>
+  lensRef: React.RefObject<LensEffect | null>
+  flareRef: React.RefObject<FlareEffect | null>
+  sweepRef: React.RefObject<FlareEffect | null>
+  leakRef: React.RefObject<LightLeakEffect | null>
+}
+
 /**
  * Proje ayarlarından efekt zinciri. EffectComposer çocukları değişince zinciri yeniden kurar;
  * kapalı efektler hiç eklenmez (performans).
  */
-function SceneEffects({ effects, dofRef }: { effects: ProjectEffects; dofRef: React.RefObject<DepthOfFieldEffect | null> }) {
+function SceneEffects({ effects, passes, dofRef, lensRef, flareRef, sweepRef, leakRef }: { effects: ProjectEffects; passes: ReturnType<typeof lensPasses> } & EffectRefs) {
   const { bloom, vignette, dof, grain, color } = effects
   const hasColor = color.saturation !== 0 || color.contrast !== 0 || color.brightness !== 0
-  // Alan derinliği derinlik dokusu ister; açılıp kapanınca zincir baştan kurulmazsa çizim donuyor
-  // (glBlitFramebuffer derinlik biçimi hatası). key ile yeniden kurdur.
+  // Alan derinliği derinlik dokusu ister; açıkken zincire geçiş eklenip çıkarılınca (ya da kendisi
+  // açılıp kapanınca) zincir baştan kurulmazsa çizim donuyor (glBlitFramebuffer derinlik biçimi hatası).
+  // Bu yüzden hangi efektlerin açık olduğu key'e girer; ayar değerleri girmez.
+  const chainKey = [dof.enabled, bloom.enabled, hasColor, grain.enabled, vignette.enabled, passes.lens, passes.flare, passes.sweep, passes.leak].map(Number).join('')
+  // Sıra: ışık ekleyenler (parlama, sızma) → renk → lens (bükülme ve renk kayması tüm görüntüye) → gren → vinyet.
   return (
-    <EffectComposer key={dof.enabled ? 'dof' : 'flat'}>
+    <EffectComposer key={chainKey}>
       <>{dof.enabled && <DepthOfField ref={dofRef} target={[0, 0, 0]} focusRange={dof.range} bokehScale={dof.bokeh} />}</>
       <>{bloom.enabled && <Bloom intensity={bloom.intensity} luminanceThreshold={bloom.threshold} mipmapBlur />}</>
+      <>{passes.leak && <LightLeak ref={leakRef} />}</>
+      <>{passes.flare && <Flare ref={flareRef} />}</>
+      <>{passes.sweep && <Flare ref={sweepRef} />}</>
       <>{hasColor && <HueSaturation saturation={color.saturation} />}</>
       <>{hasColor && <BrightnessContrast brightness={color.brightness} contrast={color.contrast} />}</>
+      <>{passes.lens && <LensPass ref={lensRef} />}</>
       <>{grain.enabled && <Noise opacity={grain.amount} premultiply />}</>
       <>{vignette.enabled && <Vignette darkness={vignette.darkness} offset={0.3} />}</>
     </EffectComposer>
@@ -251,7 +284,13 @@ function ExportBridge() {
 
 function Scene({ project }: { project: Project }) {
   const dofRef = useRef<DepthOfFieldEffect | null>(null)
-  const dofBokeh = resolveEffects(project.effects).dof.bokeh
+  const effects = resolveEffects(project.effects)
+  const dofBokeh = effects.dof.bokeh
+  const passes = lensPasses(effects, project)
+  const lensRef = useRef<LensEffect | null>(null)
+  const flareRef = useRef<FlareEffect | null>(null)
+  const sweepRef = useRef<FlareEffect | null>(null)
+  const leakRef = useRef<LightLeakEffect | null>(null)
   const overlayRef = useRef<Mesh>(null)
   const appliers = useRef(new Map<string, Applier>())
   const groups = useRef(new Map<string, Object3D>())
@@ -278,6 +317,11 @@ function Scene({ project }: { project: Project }) {
       dofRef.current.target = focusTarget.set(c.targetX, c.targetY, c.focusZ)
       dofRef.current.bokehScale = dofBokeh * c.focusBlur
     }
+    const lens = lensFrame(effects, c, frame.time)
+    lensRef.current?.setValues(lens)
+    flareRef.current?.setValues(lens.flare)
+    sweepRef.current?.setValues(lens.sweep)
+    leakRef.current?.setValues(lens.leak)
     camera.position.set(c.x, c.y, c.z)
     camera.lookAt(c.targetX, c.targetY, 0)
     if (camera.fov !== c.fov) {
@@ -326,7 +370,7 @@ function Scene({ project }: { project: Project }) {
           <meshBasicMaterial color="#000000" transparent opacity={0} depthTest={false} depthWrite={false} toneMapped={false} side={DoubleSide} />
         </mesh>
       </group>
-      <SceneEffects effects={resolveEffects(project.effects)} dofRef={dofRef} />
+      <SceneEffects effects={effects} passes={passes} dofRef={dofRef} lensRef={lensRef} flareRef={flareRef} sweepRef={sweepRef} leakRef={leakRef} />
       <LayerGizmo project={project} />
       <ExportBridge />
     </>

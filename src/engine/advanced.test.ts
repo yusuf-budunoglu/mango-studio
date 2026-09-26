@@ -63,3 +63,42 @@ describe('özel eğri', () => {
     expect(easingFor({}, 'linear')(0.4)).toBeCloseTo(0.4)
   })
 })
+
+describe('lens blokları', () => {
+  const at = (preset: string, t: number, params?: Record<string, number>) => {
+    const project = TEMPLATES[0].build()
+    project.camera.blocks = [{ id: 'l', preset, start: 1, duration: 1, params }]
+    return { base: evaluateCamera({ ...project, camera: { ...project.camera, blocks: [] } }, t), s: evaluateCamera(project, t) }
+  }
+
+  it('el kamerası sarsıntısı blok dışında kamerayı değiştirmez, içinde tekrarlanabilir biçimde sallar', () => {
+    for (const t of [0.5, 1, 2, 3]) expect(at('camera-shake', t).s).toEqual(at('camera-shake', t).base)
+    const { s, base } = at('camera-shake', 1.5, { amount: 0.1 })
+    expect(Math.abs(s.x - base.x) + Math.abs(s.y - base.y)).toBeGreaterThan(0.001)
+    expect(Math.abs(s.x - base.x)).toBeLessThanOrEqual(0.1)
+    // aynı an → aynı sonuç (video çıktısı buna güvenir)
+    expect(at('camera-shake', 1.5, { amount: 0.1 }).s).toEqual(s)
+  })
+
+  it('lens darbesi hızla yükselip söner; yakınlaşma görüş açısını daraltır', () => {
+    expect(at('lens-punch', 0.9).s.aberration).toBe(0)
+    expect(at('lens-punch', 1.2).s.aberration).toBeCloseTo(1)
+    expect(at('lens-punch', 1.6).s.aberration).toBeLessThan(0.5)
+    expect(at('lens-punch', 2.1).s.aberration).toBe(0)
+    const { s, base } = at('lens-punch', 1.2)
+    expect(s.fov).toBeLessThan(base.fov)
+  })
+
+  it('geçen parlama soldan sağa gider, ortada en güçlü', () => {
+    expect(at('flare-sweep', 0.5).s.flare).toBe(0)
+    const mid = at('flare-sweep', 1.5, { from: -1, to: 1, intensity: 2 }).s
+    expect(mid.flare).toBeCloseTo(2)
+    expect(at('flare-sweep', 1.1, { from: -1, to: 1 }).s.flareX).toBeLessThan(mid.flareX)
+    expect(at('flare-sweep', 2.5).s.flare).toBe(0)
+  })
+
+  it('ışık sızması blok ortasında tepe yapar', () => {
+    expect(at('light-leak', 1.5, { intensity: 1 }).s.leak).toBeCloseTo(1)
+    expect(at('light-leak', 3).s.leak).toBe(0)
+  })
+})
