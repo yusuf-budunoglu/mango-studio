@@ -6,6 +6,7 @@ import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
 import type { AudioClip, Block, CameraTrack, Layer, LayerKind, Project } from '../engine/types'
 import { DEFAULT_TEMPLATE } from '../project/templates'
+import { preferredFont } from '../render/fonts'
 
 /** Katman id'si ya da 'camera'. */
 export type TrackId = string
@@ -43,6 +44,8 @@ interface ProjectStore {
   pasteBlocks: (at: number) => void
   duplicateBlocks: (blockIds: string[]) => void
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
+  /** Cihaz ekranı: aynı ekran görüntüsünü paylaşan aynı türdeki cihazlar da (bir animasyonun çekimleri) birlikte değişir. */
+  setScreenImage: (layerId: string, image: string | undefined) => void
   addLayer: (kind: LayerKind, time: number) => string
   removeLayer: (layerId: string) => void
   /** Katmanı listede `toIndex` konumuna taşır (0 = en üst = en önde). */
@@ -70,7 +73,7 @@ function layerDefaults(kind: LayerKind): Omit<Layer, 'id' | 'blocks' | 'start' |
   const base = { position: [0, 0, 0] as Layer['position'], rotation: [0, 0, 0] as Layer['rotation'], scale: 1, opacity: 1 }
   switch (kind) {
     case 'text':
-      return { ...base, name: t('text'), kind, text: t('newText'), color: '#ffffff', fontSize: 0.4, position: [0, 0, 0.5] }
+      return { ...base, name: t('text'), kind, text: t('newText'), color: '#ffffff', fontSize: 0.4, fontFamily: preferredFont(), position: [0, 0, 0.5] }
     case 'phone':
       return { ...base, name: t('phone'), kind, color: '#4fc3cf', rotation: [0, -15, 0] }
     case 'laptop':
@@ -260,6 +263,13 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) },
         })),
+      setScreenImage: (layerId, image) =>
+        set((s) => {
+          const target = s.project.layers.find((l) => l.id === layerId)
+          if (!target) return {}
+          const shared = (l: Layer) => l.id === layerId || (!!target.image && l.kind === target.kind && l.image === target.image)
+          return { project: { ...s.project, layers: s.project.layers.map((l) => (shared(l) ? { ...l, image } : l)) } }
+        }),
       addLayer: (kind, time) => {
         // Yeni klip oynatma kafasından başlar, 5 sn sürer; videonun sonuna sığmazsa geri çekilir.
         const total = get().project.duration

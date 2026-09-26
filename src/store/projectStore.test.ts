@@ -106,6 +106,26 @@ describe('katman yönetimi', () => {
   })
 })
 
+describe('cihaz ekranı', () => {
+  it('aynı ekranı paylaşan çekimlerin hepsi birlikte değişir, diğer cihazlar değişmez', () => {
+    store().loadProject(TEMPLATES.find((tpl) => tpl.id === 'fintech')!.build())
+    const phones = () => store().project.layers.filter((l) => l.kind === 'phone')
+    const other = store().addLayer('phone', 0)
+    store().setScreenImage(phones().find((l) => l.id !== other)!.id, 'asset:yeni')
+    expect(phones().filter((l) => l.id !== other).map((l) => l.image)).toEqual(['asset:yeni', 'asset:yeni', 'asset:yeni', 'asset:yeni'])
+    expect(phones().find((l) => l.id === other)!.image).toBeUndefined()
+  })
+
+  it('görseli olmayan cihazda yalnızca o katman değişir', () => {
+    const a = store().addLayer('phone', 0)
+    const b = store().addLayer('phone', 0)
+    store().setScreenImage(a, 'asset:x')
+    const layer = (id: string) => store().project.layers.find((l) => l.id === id)!
+    expect(layer(a).image).toBe('asset:x')
+    expect(layer(b).image).toBeUndefined()
+  })
+})
+
 describe('videonun sınırları', () => {
   it('bitişe yakın eklenen blok videonun içinde kalır', () => {
     const duration = store().project.duration

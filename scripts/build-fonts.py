@@ -22,7 +22,13 @@ SRC = ROOT / 'node_modules' / '@fontsource'
 OUT = ROOT / 'src' / 'assets' / 'fonts'
 TMP = OUT / '.tmp'
 
-FAMILIES = ['inter', 'poppins', 'montserrat', 'playfair-display', 'space-grotesk', 'jetbrains-mono']
+FAMILIES = [
+    'inter', 'poppins', 'montserrat', 'playfair-display', 'space-grotesk', 'jetbrains-mono',
+    'roboto', 'open-sans', 'dm-sans', 'manrope', 'plus-jakarta-sans', 'outfit', 'sora', 'raleway',
+    'nunito', 'work-sans', 'rubik', 'syne', 'oswald', 'bebas-neue', 'fraunces', 'dm-serif-display', 'instrument-serif',
+]
+# Tek kalınlığı olan fontlarda (Bebas Neue, DM Serif Display, Instrument Serif) 700 üretilmez;
+# uygulama kalın için 400 dosyasını kullanır (src/render/fonts.ts).
 WEIGHTS = [400, 700]
 # Ürün videolarında sık kullanılan sembol blokları: oklar, şekiller, çeşitli semboller, dingbat'lar.
 SYMBOL_RANGES = [(0x2190, 0x21FF), (0x25A0, 0x25FF), (0x2600, 0x27BF), (0x2B00, 0x2BFF)]
@@ -78,6 +84,8 @@ def main():
     try:
         for family in FAMILIES:
             for weight in WEIGHTS:
+                if not (SRC / family / 'files' / f'{family}-latin-{weight}-normal.woff2').exists():
+                    continue
                 path = build(family, weight)
                 print(f'{path.name:32} {path.stat().st_size // 1024} KB')
             shutil.copy(SRC / family / 'LICENSE', OUT / f'LICENSE-{family}.txt')

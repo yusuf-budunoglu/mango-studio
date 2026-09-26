@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import type { Layer, LayerKind, Vec3 } from '../engine/types'
 import { AssetPicker } from './AssetPicker'
-import { DEFAULT_FONT, FONTS } from '../render/fonts'
+import { FontPicker } from './FontPicker'
+import { isUploadedFont } from '../render/fonts'
 import { useProjectStore } from '../store/projectStore'
 
 const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet']
@@ -20,6 +21,11 @@ export function LayerFields({ layer }: { layer: Layer }) {
   const { t } = useTranslation()
   const updateLayer = useProjectStore((s) => s.updateLayer)
   const removeLayer = useProjectStore((s) => s.removeLayer)
+  const setScreenImage = useProjectStore((s) => s.setScreenImage)
+  // Aynı ekranı paylaşan cihazlar (ör. şablonda her çekim ayrı telefon katmanı) birlikte değişir.
+  const sharedScreens = useProjectStore((s) =>
+    DEVICE_KINDS.includes(layer.kind) && layer.image ? s.project.layers.filter((l) => l.kind === layer.kind && l.image === layer.image).length : 1,
+  )
   const update = (patch: Partial<Layer>) => updateLayer(layer.id, patch)
   const setVec = (key: 'position' | 'rotation', index: number, v: number) => {
     const next = [...layer[key]] as Vec3
@@ -37,25 +43,19 @@ export function LayerFields({ layer }: { layer: Layer }) {
           <label htmlFor="layer-text">{t('layer.text')}</label>
           <textarea id="layer-text" rows={2} value={layer.text ?? ''} onChange={(e) => update({ text: e.target.value })} />
           <NumberField id="layer-font" label={t('layer.fontSize')} value={layer.fontSize ?? 0.4} step={0.05} onChange={(v) => update({ fontSize: Math.max(0.05, v) })} />
-          <div className="row">
-            <div>
-              <label htmlFor="layer-font-family">{t('layer.font')}</label>
-              <select id="layer-font-family" value={layer.fontFamily ?? DEFAULT_FONT} onChange={(e) => update({ fontFamily: e.target.value })}>
-                {FONTS.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="layer-font-weight">{t('layer.weight')}</label>
-              <select id="layer-font-weight" value={layer.fontWeight ?? 400} onChange={(e) => update({ fontWeight: Number(e.target.value) as 400 | 700 })}>
-                <option value={400}>{t('layer.weightRegular')}</option>
-                <option value={700}>{t('layer.weightBold')}</option>
-              </select>
-            </div>
-          </div>
+          <label htmlFor="layer-font-family">{t('layer.font')}</label>
+          <FontPicker id="layer-font-family" value={layer.fontFamily} onChange={(fontFamily) => update({ fontFamily })} />
+          <label htmlFor="layer-font-weight">{t('layer.weight')}</label>
+          {/* yüklenen font tek dosya: kalınlığı dosyanın kendisi */}
+          <select
+            id="layer-font-weight"
+            value={layer.fontWeight ?? 400}
+            disabled={isUploadedFont(layer.fontFamily)}
+            onChange={(e) => update({ fontWeight: Number(e.target.value) as 400 | 700 })}
+          >
+            <option value={400}>{t('layer.weightRegular')}</option>
+            <option value={700}>{t('layer.weightBold')}</option>
+          </select>
           <div className="row">
             <NumberField id="layer-text-width" label={t('layer.textWidth')} value={layer.textWidth ?? 5} step={0.25} onChange={(v) => update({ textWidth: Math.max(0.5, v) })} />
             <NumberField id="layer-line-height" label={t('layer.lineHeight')} value={layer.lineHeight ?? 1.2} step={0.05} onChange={(v) => update({ lineHeight: Math.max(0.5, v) })} />
@@ -70,14 +70,13 @@ export function LayerFields({ layer }: { layer: Layer }) {
         </>
       )}
 
-      {(layer.kind === 'image' || DEVICE_KINDS.includes(layer.kind)) && (
-        <AssetPicker
-          id="layer-image"
-          label={layer.kind === 'image' ? t('layer.image') : t('layer.screenshot')}
-          kind="image"
-          value={layer.image}
-          onChange={(image) => update({ image })}
-        />
+      {layer.kind === 'image' && <AssetPicker id="layer-image" label={t('layer.image')} kind="image" value={layer.image} onChange={(image) => update({ image })} />}
+
+      {DEVICE_KINDS.includes(layer.kind) && (
+        <>
+          <AssetPicker id="layer-image" label={t('layer.screenshot')} kind="image" value={layer.image} onChange={(image) => setScreenImage(layer.id, image)} />
+          {sharedScreens > 1 && <p className="hint">{t('layer.sharedScreen', { count: sharedScreens })}</p>}
+        </>
       )}
 
       {DEVICE_KINDS.includes(layer.kind) && (

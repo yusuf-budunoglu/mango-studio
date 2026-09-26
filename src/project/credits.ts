@@ -1,6 +1,8 @@
 // Uygulamada kullanılan üçüncü taraf içerikler ve lisansları (Katkılar ve lisanslar sayfası).
 // Model başlıkları gösterilmez (marka adı içeriyorlar); yazar, kaynak bağlantısı ve lisans yeterli.
 
+import { FONTS } from '../render/fonts'
+
 export interface Credit {
   /** i18n anahtarı: ne olduğu ("Telefon modeli") */
   labelKey: string
@@ -43,4 +45,4 @@ export const MODEL_CREDITS: Credit[] = [
   },
 ]
 
-export const FONT_CREDITS = ['Inter', 'JetBrains Mono', 'Montserrat', 'Noto Sans Symbols 2', 'Playfair Display', 'Poppins', 'Space Grotesk']
+export const FONT_CREDITS = [...FONTS.map((f) => f.label), 'Noto Sans Symbols 2'].sort((a, b) => a.localeCompare(b))

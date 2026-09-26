@@ -1,16 +1,17 @@
-import { Film, Music, PenTool, Upload, type LucideIcon } from 'lucide-react'
+import { Film, Music, PenTool, Type, Upload, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppShell } from '../layout/AppShell'
-import { assetRef, assets, resolveAssetUrl, type AssetKind, type AssetMeta } from '../persistence/assets'
+import { FONT_EXTENSIONS, assetRef, assets, resolveAssetUrl, type AssetKind, type AssetMeta } from '../persistence/assets'
 import { collectAssetRefs } from '../persistence/projectFile'
 import { repository } from '../persistence/repository'
 import { storeFile } from '../persistence/storeFile'
 import { matchesSearch, useUiStore } from '../store/uiStore'
 
-const KIND_ICON: Record<Exclude<AssetKind, 'image'>, LucideIcon> = { audio: Music, video: Film, svg: PenTool }
+const KIND_ICON: Record<Exclude<AssetKind, 'image'>, LucideIcon> = { audio: Music, video: Film, svg: PenTool, font: Type }
 
 function kindOf(file: File): AssetKind | null {
+  if (FONT_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))) return 'font'
   if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) return 'svg'
   if (file.type.startsWith('image/')) return 'image'
   if (file.type.startsWith('audio/')) return 'audio'
@@ -34,7 +35,7 @@ function Preview({ asset }: { asset: AssetMeta }) {
   )
 }
 
-/** Dosya kütüphanesi: yüklenen görsel, ses, video ve SVG'ler; hangi projede kullanıldığı. */
+/** Dosya kütüphanesi: yüklenen görsel, ses, video, SVG ve fontlar; hangi projede kullanıldığı. */
 export function Assets() {
   const { t, i18n } = useTranslation()
   const search = useUiStore((s) => s.search)
@@ -95,7 +96,7 @@ export function Assets() {
             id="assets-upload"
             type="file"
             multiple
-            accept="image/*,audio/*,video/*,.svg"
+            accept={`image/*,audio/*,video/*,.svg,${FONT_EXTENSIONS.join(',')}`}
             hidden
             onChange={(e) => {
               if (e.target.files?.length) void upload(e.target.files)

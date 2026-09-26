@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { MeshBasicMaterial, type Group, type Mesh } from 'three'
 import { displayText } from '../../engine/evaluate'
 import { pendingTextSyncs } from '../../export/bridge'
-import { fontUrl } from '../../render/fonts'
+import { useTextFontUrl } from '../../render/fontFaces'
 import { applyTransform, selectOnClick, type LayerProps } from './shared'
 
 // troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
@@ -53,6 +53,7 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
   const group = useRef<Group>(null)
   const text = useRef<TroikaText>(null)
   const reveal = useRevealMaterial()
+  const font = useTextFontUrl(layer.fontFamily, layer.fontWeight ?? 400)
 
   useLayoutEffect(() => {
     register(layer.id, (s) => {
@@ -95,10 +96,11 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
 
   return (
     <group ref={group} name={`layer:${layer.id}`} onClick={selectOnClick(layer)}>
+      {font && (
       <Text
         ref={text}
         material={reveal.material}
-        font={fontUrl(layer.fontFamily, layer.fontWeight)}
+        font={font}
         fontSize={layer.fontSize ?? 0.4}
         color={layer.color}
         anchorX={layer.align ?? 'center'}
@@ -110,6 +112,7 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
       >
         {layer.text ?? ''}
       </Text>
+      )}
     </group>
   )
 }

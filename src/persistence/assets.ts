@@ -3,11 +3,14 @@ import { newId } from '../engine/ids'
 import type { KeyValue } from './repository'
 
 /**
- * Yüklenen dosyalar (görsel, ses, video, SVG). Proje verisi dosyanın kendisini değil
+ * Yüklenen dosyalar (görsel, ses, video, SVG, font). Proje verisi dosyanın kendisini değil
  * `asset:<id>` referansını tutar; böylece proje küçük kalır, geri alma geçmişi şişmez.
  * Şimdilik tarayıcının IndexedDB'sinde; Supabase Storage'a geçişte aynı arayüz korunur.
  */
-export type AssetKind = 'image' | 'audio' | 'video' | 'svg'
+export type AssetKind = 'image' | 'audio' | 'video' | 'svg' | 'font'
+
+/** Metin motorunun (troika) açabildiği font dosyaları; .woff2 açılamıyor. */
+export const FONT_EXTENSIONS = ['.ttf', '.otf', '.woff']
 
 export interface AssetMeta {
   id: string
