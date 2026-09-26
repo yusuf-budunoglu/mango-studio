@@ -15,7 +15,8 @@ export function ImageLayer({ layer, register }: LayerProps) {
     <group {...node}>
       <mesh>
         <planeGeometry args={[width, height]} />
-        {image ? <meshBasicMaterial key={image.url} map={image.texture} toneMapped={false} /> : <meshBasicMaterial color="#2a303a" />}
+        {/* saydam PNG'ler (logo, gölgeli etiket) kenarlarıyla karışsın; opak görsellerde fark yok */}
+        {image ? <meshBasicMaterial key={image.url} map={image.texture} transparent toneMapped={false} /> : <meshBasicMaterial color="#2a303a" />}
       </mesh>
     </group>
   )

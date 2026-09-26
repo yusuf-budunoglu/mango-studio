@@ -310,37 +310,48 @@ export const TEMPLATES: Template[] = [
         b('move', start, duration, typeof easing === 'string' ? { params: { dx: 0, ...params }, easing } : { params: { dx: 0, ...params }, easing: 'custom', bezier: easing })
       const cut = (from: number, to: number) => [b('fade-in', from, 0), b('fade-out', to, 0)]
       const focus = (at: number, z: number, blur = 1) => b('focus-pull', at, 0, { params: { from: z, to: z, blur } })
-      // telefon alttan girer: referansta yolun %33'ü 0.15 sn'de, %74'ü 0.45 sn'de, %91'i 0.75 sn'de
-      const RISE: Bezier = [0.25, 0.05, 0, 0.75]
       const phone = (n: number, spec: Omit<LayerSpec, 'name' | 'kind' | 'color'>) =>
         layer({ name: `${t('layerNames.phone')} ${n}`, kind: 'phone', color: '#f2553f', image: screen, deviceFinish: 'space', ...spec })
       const glow = (n: number, image: string, spec: Omit<LayerSpec, 'name' | 'kind' | 'color' | 'image'>) =>
         layer({ name: `${t('layerNames.glow')} ${n}`, kind: 'image', color: '#ffffff', image, ...spec })
       const heading = { kind: 'text' as const, fontFamily: 'open-sans', fontWeight: 700 as const, textWidth: 6 }
-      // Özellik etiketi: beyaz yuvarlak kutu + ikonlu yazı; küçükten zıplayarak gelir, küçülerek kaybolur.
-      const badge = (n: number, label: string, x: number, y: number, width: number, inFrame: number, outFrame: number) => {
-        const blocks = [
-          ...cut(f(inFrame), f(outFrame) + 0.2),
-          b('pop', f(inFrame), 0.4, { easing: 'spring-gentle' }),
-          move(f(inFrame), f(outFrame) - f(inFrame), { dy: 0.08 }, 'linear'),
-          b('scale-out', f(outFrame), 0.2),
-        ]
-        return [
-          layer({ name: t('layerNames.label', { n }), kind: 'text', text: label, color: '#1a1717', fontFamily: 'open-sans', fontWeight: 400, fontSize: 0.25, position: [x, y, 0.82], blocks }),
-          // buzlu cam: açık gri, hafif saydam (referansta 241,234,233)
-          layer({ name: `${t('layerNames.label', { n })} ▭`, kind: 'shape', shape: 'rounded', color: '#f1ebe9', opacity: 0.92, shapeWidth: width, shapeHeight: 0.5, position: [x, y, 0.8], blocks }),
-        ]
+      // Özellik etiketi: tasarımı hazır, saydam PNG (buzlu cam kutu, ince kenar, yumuşak gölge, çizgi ikon);
+      // her dil için ayrı dosya. Referanstaki gibi ~8 karede yumuşakça büyüyerek belirir, telefonla birlikte
+      // süzülür ve çıkışta telefonla aynı eğriyle yukarı kayar.
+      const lang = i18n.language?.startsWith('tr') ? 'tr' : 'en'
+      // PNG genişlikleri (yükseklik 342 px); tüm kutular aynı yükseklikte görünsün diye ölçek buna göre
+      const BADGE_WIDTH: Record<string, Record<string, number>> = {
+        en: { fast: 564, secure: 651, reliable: 684 },
+        tr: { fast: 567, secure: 675, reliable: 717 },
       }
+      const badge = (id: 'fast' | 'secure' | 'reliable', x: number, y: number, inFrame: number, outFrame: number) =>
+        layer({
+          name: t(`templates.wallet-promo.${id}`),
+          kind: 'image',
+          color: '#ffffff',
+          image: `${base}templates/wallet/badge-${id}-${lang}.png`,
+          // görselin kapladığı yükseklik 0.92 birim (kutu 0.39 birim, referanstaki gibi); kutu merkezden biraz yukarıda
+          scale: (0.92 * (BADGE_WIDTH[lang][id] / 342)) / 3,
+          position: [x, y - 0.057, 0.8],
+          blocks: [
+            ...cut(f(inFrame), f(outFrame) + 0.14),
+            b('pop', f(inFrame), 0.14, { easing: 'ease-out' }),
+            move(f(inFrame), f(310) - f(inFrame), { dy: 0.08 }, 'linear'),
+            move(f(310), f(360) - f(310), { dy: 5.5, dx: -2.5 }, [0.32, 0, 0.67, 0]),
+            // referansta sırayla küçülerek kaybolur: Reliable ~310, Secure ~316, Fast ~324
+            b('scale-out', f(outFrame), 0.14, { easing: 'ease-in' }),
+          ],
+        })
       return {
         ...project(
           t('templates.wallet-promo.name'),
           f(1145),
           '#ffffff',
           [
-            // Etiketler (1. telefonun önünde): Fast solda, Secure sağda, Reliable üstte; ters sırayla kaybolur.
-            ...badge(3, `✓ ${t('templates.wallet-promo.reliable')}`, -0.2, 1.61, 1.56, 253, 314),
-            ...badge(2, `⛊ ${t('templates.wallet-promo.secure')}`, 0.91, 0.72, 1.26, 245, 320),
-            ...badge(1, `⚡ ${t('templates.wallet-promo.fast')}`, -0.71, -0.48, 1.02, 222, 328),
+            // Etiketler (1. telefonun önünde): Fast solda, Secure sağda, Reliable üstte.
+            badge('reliable', -0.2, 1.61, 253, 308),
+            badge('secure', 0.91, 0.72, 245, 315),
+            badge('fast', -0.71, -0.48, 219, 323),
             // 1) Açılış + özellikler: alttan dönerek yükselir (69–135), durur, geriye yatıp eğilir (190–235),
             //    yavaşça süzülür, sonra yatarak yukarı fırlar (310–360).
             phone(1, {
@@ -349,10 +360,14 @@ export const TEMPLATES: Template[] = [
               scale: 1.42,
               blocks: [
                 ...cut(f(69), f(362)),
-                move(f(69), 1.1, { dy: 5.6, rotY: -65 }, RISE),
-                // eğilme: referansta 210. karede yarıyı geçmiş, ~228'de bitmiş; eğilince geri çekilir (küçülür)
-                move(f(191), 0.65, { rotX: -18, rotate: 18, dx: 0.15, dy: 0.17, scaleBy: 0.74 }, 'ease-out'),
-                move(f(235), f(310) - f(235), { dy: 0.12 }, 'linear'),
+                // giriş uzun bir kuyrukla yavaşlar (referansta üst kenar 132'de %16.5, 148'de %14.6; ~152'de oturur)
+                move(f(69), f(152) - f(69), { dy: 5.6, rotY: -65 }, [0.2, 0, 0, 0.95]),
+                // referansta telefon hiç tamamen durmaz: girişle eğilme arasında çok hafif bir süzülme
+                move(f(130), f(232) - f(130), { dy: 0.05, rotY: -2 }, 'linear'),
+                // eğilme 166'da çok yavaş başlar (telefon hiç tam durmaz), 200–220 arası hızlanır, 232'de biter;
+                // eğilince geri çekilir (küçülür). Eğri referanstan ölçüldü: %8 190'da, %38 200'de, %70 210'da.
+                move(f(166), f(232) - f(166), { rotX: -18, rotate: 18, dx: 0.15, dy: 0.17, scaleBy: 0.74 }, [0.75, 0, 0.35, 0.75]),
+                move(f(232), f(310) - f(232), { dy: 0.12 }, 'linear'),
                 // çıkış: kübik hızlanma (referansta yolun %3'ü 325'te, %20'si 340'ta, %55'i 352'de)
                 move(f(310), f(360) - f(310), { dy: 5.5, dx: -2.5, rotate: 35, rotX: -40 }, [0.32, 0, 0.67, 0]),
               ],
@@ -385,18 +400,19 @@ export const TEMPLATES: Template[] = [
             }),
             // 3) Yan çekim: arkası dönük telefon (kamera çıkıntısı) alttan yükselirken öne döner, yakınlaşıp çıkar.
             phone(3, {
-              position: [0.29, -7, 1],
+              position: [0.29, -6.6, 1],
               rotation: [0, 200, 0],
               scale: 2.1,
               deviceFinish: 'silver',
               blocks: [
                 ...cut(f(648), f(884)),
-                // yükselme çok hızlı başlar (referansta yolun %34'ü 652'de, %66'sı 664'te),
-                // dönüş ise neredeyse doğrusal başlayıp yavaşlar (664'te tam yandan görünür)
-                move(f(648), 1.1, { dy: 5 }, [0.1, 0.7, 0.2, 1]),
-                move(f(648), 0.7, { rotY: -175 }, 'ease-out'),
-                move(f(710), f(825) - f(710), { dy: 0.1, scaleBy: 1.06 }, 'linear'),
-                move(f(825), f(884) - f(825), { dy: 7, scaleBy: 1.4 }, [0.32, 0, 0.67, 0]),
+                // Referansta telefon hiç durmaz: yükselme ve dönüş tek uzun, yavaşlayan hareket (648–795; üst kenar
+                // 680'de %31.5, 700'de %23, 760'ta %19.6), ardından çok yavaş başlayıp giderek hızlanan
+                // yakınlaşma + çıkış (790–884). Eğriler referanstaki konumlara uyduruldu.
+                move(f(648), f(795) - f(648), { dy: 4.6 }, [0.15, 1, 0.25, 1]),
+                // dönüş başta çok hızlı: 660'ta neredeyse yandan, 665'te tam yandan görünür
+                move(f(648), f(795) - f(648), { rotY: -175 }, [0.1, 0.9, 0.2, 1]),
+                move(f(790), f(884) - f(790), { dy: 7, scaleBy: 1.4 }, [1, 0, 0.65, 0.55]),
               ],
             }),
             // 4) Kapanış: ortada dikey oval ışık; yazı bulanıktan netleşir (odak kaydırma), 1013. karede
@@ -436,7 +452,8 @@ export const TEMPLATES: Template[] = [
           camera([
             focus(0, 0, 0),
             focus(f(370), 2.6, 0.8),
-            focus(f(648), 2.4, 1.4),
+            // ekran net kalsın: odak ekran düzleminde, bulanıklık hafif (yalnızca uzak kenar yumuşar)
+            focus(f(648), 1.3, 0.6),
             // kapanış yazısı bulanıktan netleşir: netlik düzlemi uzaktan yazıya gelir
             b('focus-pull', f(886), 0.65, { params: { from: -6, to: 0, blur: 1 }, easing: 'ease-out' }),
           ]),
