@@ -84,7 +84,10 @@ export function evaluateCamera(project: Project, time: number): CameraState {
 /** "t anında ekranda ne var?" Önizleme ve video çıktısı aynı fonksiyonu kullanır. */
 export function evaluate(project: Project, time: number): FrameState {
   const layers: Record<string, LayerState> = {}
-  for (const layer of project.layers) layers[layer.id] = evaluateLayer(layer, time)
+  // Oynatma kafası videonun tam sonundayken son kare gösterilsin: klip sonu hariç olduğu için
+  // sona kadar süren katmanlar o an kaybolurdu. (Video kareleri zaten sondan önce biter.)
+  const layerTime = Math.min(time, project.duration - 1e-3)
+  for (const layer of project.layers) layers[layer.id] = evaluateLayer(layer, layerTime)
   return { time, layers, camera: evaluateCamera(project, time) }
 }
 

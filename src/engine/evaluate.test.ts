@@ -115,3 +115,13 @@ describe('şablon klipleri', () => {
     }
   })
 })
+
+describe('videonun sonu', () => {
+  it('sona kadar süren klip, oynatma kafası tam sondayken de görünür', () => {
+    const project = DEFAULT_TEMPLATE.build()
+    const last = project.layers.find((l) => Math.abs(l.start + l.duration - project.duration) < 1e-6)
+    if (!last) return
+    const before = evaluate(project, project.duration - 0.01).layers[last.id].opacity
+    expect(evaluate(project, project.duration).layers[last.id].opacity).toBeCloseTo(before, 1)
+  })
+})
