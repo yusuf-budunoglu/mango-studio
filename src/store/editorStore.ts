@@ -8,6 +8,15 @@ export type ProjectTab = 'project' | 'effects'
 export type LibraryTab = 'text' | 'devices' | 'media' | 'shapes' | 'audio' | 'effects' | 'transitions' | 'camera'
 
 const TIMELINE_HEIGHT_KEY = 'motion-studio.timeline-height'
+const OVERSCAN_KEY = 'motion-studio.overscan'
+
+function readOverscan() {
+  try {
+    return localStorage.getItem(OVERSCAN_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
 export const TIMELINE_MIN = 180
 
 function readTimelineHeight() {
@@ -26,6 +35,9 @@ interface EditorStore {
   /** Hizalama çizgilerine yapışma ve 15°'lik dönüş adımları. */
   snapping: boolean
   toggleSnapping: () => void
+  /** Önizlemede kadraj dışını da göster (nesnelerin nereden gelip nereye gittiği görünsün). */
+  showOverscan: boolean
+  toggleOverscan: () => void
   /** Güvenli alan kılavuzları. */
   showGuides: boolean
   toggleGuides: () => void
@@ -59,6 +71,16 @@ export const useEditorStore = create<EditorStore>()((set) => ({
   toggleSnapping: () => set((s) => ({ snapping: !s.snapping })),
   showGuides: false,
   toggleGuides: () => set((s) => ({ showGuides: !s.showGuides })),
+  showOverscan: readOverscan(),
+  toggleOverscan: () =>
+    set((s) => {
+      try {
+        localStorage.setItem(OVERSCAN_KEY, s.showOverscan ? '0' : '1')
+      } catch {
+        // kaydedilemese de bu oturumda çalışır
+      }
+      return { showOverscan: !s.showOverscan }
+    }),
   cleanRenders: 0,
   beginCleanRender: () => set((s) => ({ cleanRenders: s.cleanRenders + 1 })),
   endCleanRender: () => set((s) => ({ cleanRenders: Math.max(0, s.cleanRenders - 1) })),

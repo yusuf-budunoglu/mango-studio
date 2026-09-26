@@ -35,6 +35,7 @@ const tr: Translation = {
       scale: 'Ölçekle (R)',
       snap: 'Ortaya ve diğer katmanlara yapış',
       guides: 'Güvenli alan kılavuzları',
+      overscan: 'Kadraj dışını göster (nesneler nereden gelip nereye gidiyor)',
     },
     timeOf: '/ {{duration}} sn',
   },

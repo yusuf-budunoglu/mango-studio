@@ -412,7 +412,9 @@ export const TEMPLATES: Template[] = [
                 move(f(648), f(795) - f(648), { dy: 4.6 }, [0.15, 1, 0.25, 1]),
                 // dönüş başta çok hızlı: 660'ta neredeyse yandan, 665'te tam yandan görünür
                 move(f(648), f(795) - f(648), { rotY: -175 }, [0.1, 0.9, 0.2, 1]),
-                move(f(790), f(884) - f(790), { dy: 7, scaleBy: 1.4 }, [1, 0, 0.65, 0.55]),
+                // çıkışta yukarı hareket yakınlaşmadan baskın olmalı: önceden büyüme alt kenarı yerinde tutuyor,
+                // telefon sonda duraksıyor ve kesmede hâlâ görünüyordu. Referansta alt kenar ~883'te kadrajdan çıkar.
+                move(f(790), f(884) - f(790), { dy: 11.5, scaleBy: 1.25 }, [0.6, 0, 0.85, 0.25]),
               ],
             }),
             // 4) Kapanış: ortada dikey oval ışık; yazı bulanıktan netleşir (odak kaydırma), 1013. karede

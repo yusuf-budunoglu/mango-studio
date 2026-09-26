@@ -1,6 +1,6 @@
 import type { TimelineState } from '@xzdarcy/react-timeline-editor'
 import { useEffect, useRef, useState } from 'react'
-import { Grid2x2, Magnet, Move, RotateCw, Scaling } from 'lucide-react'
+import { Grid2x2, Magnet, Move, RotateCw, Scaling, Scan } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { navigate } from '../router'
 import { ExportButton } from '../components/ExportButton'
@@ -32,7 +32,8 @@ function StageTools() {
   const mode = useEditorStore((s) => s.transformMode)
   const snapping = useEditorStore((s) => s.snapping)
   const showGuides = useEditorStore((s) => s.showGuides)
-  const { setTransformMode, toggleSnapping, toggleGuides } = useEditorStore.getState()
+  const showOverscan = useEditorStore((s) => s.showOverscan)
+  const { setTransformMode, toggleSnapping, toggleGuides, toggleOverscan } = useEditorStore.getState()
   return (
     <div className="stage-tools" role="toolbar" aria-label={t('editor.tools.label')}>
       {TOOLS.map(({ mode: m, key, icon: Icon }) => (
@@ -46,6 +47,9 @@ function StageTools() {
       </button>
       <button type="button" className={showGuides ? 'is-on' : ''} aria-pressed={showGuides} onClick={toggleGuides} title={t('editor.tools.guides')} aria-label={t('editor.tools.guides')}>
         <Grid2x2 size={15} strokeWidth={1.75} />
+      </button>
+      <button type="button" className={showOverscan ? 'is-on' : ''} aria-pressed={showOverscan} onClick={toggleOverscan} title={t('editor.tools.overscan')} aria-label={t('editor.tools.overscan')}>
+        <Scan size={15} strokeWidth={1.75} />
       </button>
     </div>
   )

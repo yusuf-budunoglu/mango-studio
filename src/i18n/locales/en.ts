@@ -34,6 +34,7 @@ const en = {
       scale: 'Scale (R)',
       snap: 'Snap to center and other layers',
       guides: 'Safe-area guides',
+      overscan: 'Show outside the frame (where things come from and go)',
     },
     timeOf: '/ {{duration}} s',
   },

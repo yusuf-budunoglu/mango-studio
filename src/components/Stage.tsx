@@ -12,6 +12,7 @@ import type { Layer, LayerState, Project } from '../engine/types'
 import * as bridgeModule from '../export/bridge'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
+import { overscanFov, previewFrame, previewView } from '../editor/previewFrame'
 import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
 import { LayerNode } from './layers/LayerNode'
 import { applyLayerOrder, type Applier, type Register } from './layers/shared'
@@ -326,8 +327,12 @@ function Scene({ project }: { project: Project }) {
     leakRef.current?.setValues(lens.leak)
     camera.position.set(c.x, c.y, c.z)
     camera.lookAt(c.targetX, c.targetY, 0)
-    if (camera.fov !== c.fov) {
-      camera.fov = c.fov
+    // Önizlemede kadraj dışı da görünsün diye açı genişler (kadraj içi aynı kalır); video çıktısında
+    // ve temiz çizimlerde (cleanRenders) genişleme yok.
+    const k = useEditorStore.getState().cleanRenders > 0 ? 1 : previewView.k
+    const fov = overscanFov(c.fov, k)
+    if (Math.abs(camera.fov - fov) > 1e-6) {
+      camera.fov = fov
       camera.updateProjectionMatrix()
     }
     // Geçiş örtüsü: kameranın hemen önünde, görüş alanını tam kaplayan düz renk.
@@ -379,11 +384,34 @@ function Scene({ project }: { project: Project }) {
   )
 }
 
+/** Önizleme alanının boyutu (kadraj dikdörtgenini hesaplamak için). */
+function useElementSize() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => setSize({ width: entry.contentRect.width, height: entry.contentRect.height }))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return { ref, ...size }
+}
+
 export function Stage() {
   const project = useProjectStore((s) => s.project)
   const showGuides = useEditorStore((s) => s.showGuides)
+  const showOverscan = useEditorStore((s) => s.showOverscan)
+  const { ref, width, height } = useElementSize()
+  const frame = previewFrame(width, height, project.width / project.height, showOverscan)
+  const measured = width > 0 && height > 0
+  // sahne her karede okur; küçük resim bu bölgeden kırpılır
+  useEffect(() => {
+    previewView.k = measured ? frame.k : 1
+    previewView.frame = measured ? { x: frame.x / width, y: frame.y / height, w: frame.w / width, h: frame.h / height } : { x: 0, y: 0, w: 1, h: 1 }
+  }, [measured, frame.k, frame.x, frame.y, frame.w, frame.h, width, height])
   return (
-    <div className="stage" style={{ aspectRatio: `${project.width} / ${project.height}` }}>
+    <div ref={ref} className={`stage${showOverscan ? ' is-overscan' : ''}`}>
       <Canvas
         camera={{ position: project.camera.position, fov: project.camera.fov }}
         dpr={[1, 2]}
@@ -395,14 +423,17 @@ export function Stage() {
       >
         <Scene project={project} />
       </Canvas>
-      {showGuides && (
-        // Güvenli alanlar: %90 (hareket) ve %80 (metin). HTML katmanı, videoya girmez.
-        <div className="safe-guides" aria-hidden="true">
-          <div className="safe-action" />
-          <div className="safe-title" />
-          <div className="safe-center" />
-        </div>
-      )}
+      {/* Video kadrajı: dışı karartılır (taşma kapalıyken tamamen örtülür). HTML katmanı, videoya girmez. */}
+      <div className="stage-frame" style={{ left: frame.x, top: frame.y, width: frame.w, height: frame.h }} aria-hidden="true">
+        {showGuides && (
+          // Güvenli alanlar: %90 (hareket) ve %80 (metin).
+          <div className="safe-guides">
+            <div className="safe-action" />
+            <div className="safe-title" />
+            <div className="safe-center" />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
