@@ -302,7 +302,7 @@ export const TEMPLATES: Template[] = [
       const base = import.meta.env.BASE_URL
       const screen = `${base}templates/screens/wallet.png`
       // referansın kapanış karesinden ölçülen radyal profil (dikey yarıçap yatayın 1.6 katı)
-      const glowOval = `${base}templates/glow/oval.jpg`
+      const glowOval = `${base}templates/glow/oval.png`
       const f = (frame: number) => frame / 60
       const brand = 'Pocketa'
       type Bezier = [number, number, number, number]

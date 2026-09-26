@@ -1,24 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { overscanFov, previewLayout, OVERSCAN_MARGIN } from './previewFrame'
+import { overscanFov, previewLayout, OVERSCAN_FIT } from './previewFrame'
 
 describe('önizleme taşma alanı', () => {
-  it('kadraj çevresinde kısa kenara oranlı ince şerit; alana sığar, ortalanır', () => {
+  it('taşma açıkken kanvas tüm alanı kaplar, kadraj ortada büyükçe; kapalıyken kanvas = kadraj', () => {
     const land = previewLayout(1000, 600, 16 / 9, true)
+    expect(land.view).toEqual({ x: 0, y: 0, w: 1000, h: 600 })
     expect(land.frame.w / land.frame.h).toBeCloseTo(16 / 9)
-    expect(land.frame.x).toBeCloseTo(OVERSCAN_MARGIN * land.frame.h)
-    expect(land.view.w).toBeLessThanOrEqual(1000 + 1e-6)
-    expect(land.view.h).toBeLessThanOrEqual(600 + 1e-6)
-    expect(land.view.x).toBeCloseTo((1000 - land.view.w) / 2)
+    expect(land.frame.w).toBeCloseTo(Math.min(1000 * OVERSCAN_FIT, 600 * OVERSCAN_FIT * (16 / 9)))
+    expect(land.frame.x).toBeCloseTo((1000 - land.frame.w) / 2)
+    expect(land.k).toBeCloseTo(600 / land.frame.h)
 
-    // dikey: şerit genişliğe oranlı, yani kadraja göre ince; kanvas tüm alanı kaplamaz
     const port = previewLayout(1000, 600, 9 / 16, true)
-    expect(port.frame.x).toBeCloseTo(OVERSCAN_MARGIN * port.frame.w)
-    expect(port.view.h).toBeCloseTo(600)
-    expect(port.view.w).toBeLessThan(400)
-    expect(port.k).toBeCloseTo(1 + (2 * OVERSCAN_MARGIN * 9) / 16)
+    expect(port.frame.h).toBeCloseTo(600 * OVERSCAN_FIT)
 
     const off = previewLayout(1000, 600, 9 / 16, false)
-    expect(off.k).toBeCloseTo(1)
+    expect(off.k).toBe(1)
     expect(off.view.h).toBeCloseTo(600)
     expect(off.frame).toEqual({ x: 0, y: 0, w: off.view.w, h: off.view.h })
   })

@@ -89,9 +89,15 @@ button.danger { color: var(--danger); }
   position: absolute;
   pointer-events: none;
 }
+/* kadraj dışındaki nesneler koyu zeminde soluk (hayalet gibi) görünür */
+.stage.is-overscan .stage-view {
+  border-radius: 0;
+  box-shadow: none;
+}
+/* İnce koyu kenar bandı: alan derinliği bulanıklığının kadraj arka planından dışarı taşan birkaç
+   pikselini örter (aksi halde kadrajın çevresinde açık bir hale görünüyor). */
 .stage.is-overscan .stage-frame {
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 0 0 100vmax rgba(11, 14, 19, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 7px rgba(11, 14, 19, 0.96), 0 0 0 100vmax rgba(11, 14, 19, 0.62);
 }
 .transport { display: flex; align-items: center; gap: 8px; }
 .transport .play { width: 44px; }

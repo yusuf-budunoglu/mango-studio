@@ -209,8 +209,18 @@ function ProductStudio({ accent }: { accent: string }) {
   )
 }
 
-/** Arka plan: düz renk ya da iki renkli (doğrusal / merkezden) degrade; ekran boyunca sabit. */
-function Background({ project }: { project: Project }) {
+/** Önizlemede kadraj dışının zemini (editör rengi); proje arka planı yalnızca kadraja çizilir. */
+const OUTSIDE_COLOR = new Color('#0b0e13')
+/** Kadraja çizilen arka plan düzleminin kameraya uzaklığı (her şeyin arkasında kalsın). */
+const BACKGROUND_DISTANCE = 400
+
+/**
+ * Arka plan: düz renk ya da iki renkli (doğrusal / merkezden) degrade; ekran boyunca sabit.
+ * Video çıktısında sahnenin arka planıdır. Önizlemede kadraj dışı açıkken aynı arka plan,
+ * kameraya bağlı ve tam kadraj boyutunda bir düzleme çizilir (Scene her karede yerleştirir);
+ * böylece kadraj dışı editörün koyu zemini olur.
+ */
+function Background({ project, planeRef, sourceRef }: { project: Project; planeRef: React.RefObject<Mesh | null>; sourceRef: React.RefObject<Color | CanvasTexture | null> }) {
   const { background, background2, backgroundStyle = 'solid' } = project
   const texture = useMemo(() => {
     if (backgroundStyle === 'solid' || !background2) return null
@@ -233,7 +243,19 @@ function Background({ project }: { project: Project }) {
 
   const color = useMemo(() => new Color(background), [background])
   useEffect(() => () => texture?.dispose(), [texture])
-  return <primitive attach="background" object={texture ?? color} />
+  useEffect(() => {
+    sourceRef.current = texture ?? color
+  }, [sourceRef, texture, color])
+  return (
+    <mesh ref={planeRef} renderOrder={-1000} frustumCulled={false} visible={false}>
+      <planeGeometry args={[1, 1]} />
+      {texture ? (
+        <meshBasicMaterial key={texture.uuid} map={texture} toneMapped={false} depthWrite={false} />
+      ) : (
+        <meshBasicMaterial color={color} toneMapped={false} depthWrite={false} />
+      )}
+    </mesh>
+  )
 }
 
 /** Video çıktısının sahneyi kare kare, istenen çözünürlükte çizmesini sağlar. */
@@ -248,10 +270,15 @@ function ExportBridge() {
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera)
 
+  // Kadraj dışının zemini (sahne arka planı yalnızca kadraja çizildiğinde görünür)
+  useEffect(() => {
+    gl.setClearColor(OUTSIDE_COLOR, 1)
+  }, [gl])
+
   // Otomatik tarayıcı testleri için sahneye erişim (sadece geliştirmede).
   useEffect(() => {
     // __bridge: tek kare çizimi (sahnenin kullandığı modül örneği; HMR'de başka kopya olabiliyor)
-    if (import.meta.env.DEV) Object.assign(window, { __r3f: { scene, camera, canvas: gl.domElement }, __bridge: bridgeModule })
+    if (import.meta.env.DEV) Object.assign(window, { __r3f: { scene, camera, canvas: gl.domElement }, __bridge: bridgeModule, __preview: previewView })
   }, [scene, camera, gl])
 
   useEffect(() => {
@@ -287,6 +314,8 @@ function ExportBridge() {
 
 function Scene({ project }: { project: Project }) {
   const dofRef = useRef<DepthOfFieldEffect | null>(null)
+  const bgPlaneRef = useRef<Mesh | null>(null)
+  const bgSourceRef = useRef<Color | CanvasTexture | null>(null)
   const effects = resolveEffects(project.effects)
   const dofBokeh = effects.dof.bokeh
   const passes = lensPasses(effects, project)
@@ -329,11 +358,26 @@ function Scene({ project }: { project: Project }) {
     camera.lookAt(c.targetX, c.targetY, 0)
     // Önizlemede kadraj dışı da görünsün diye açı genişler (kadraj içi aynı kalır); video çıktısında
     // ve temiz çizimlerde (cleanRenders) genişleme yok.
-    const k = useEditorStore.getState().cleanRenders > 0 ? 1 : previewView.k
+    const clean = useEditorStore.getState().cleanRenders > 0
+    const k = clean ? 1 : previewView.k
     const fov = overscanFov(c.fov, k)
     if (Math.abs(camera.fov - fov) > 1e-6) {
       camera.fov = fov
       camera.updateProjectionMatrix()
+    }
+    // Arka plan: önizlemede kadraj dışı açıkken yalnızca kadraja (kameraya bağlı düzlem), aksi halde sahne arka planı.
+    const plane = bgPlaneRef.current
+    if (plane) {
+      const framed = previewView.overscan && !clean
+      state.scene.background = framed ? null : bgSourceRef.current
+      plane.visible = framed
+      if (framed) {
+        const h = 2 * BACKGROUND_DISTANCE * Math.tan((c.fov * Math.PI) / 360)
+        plane.position.copy(camera.position)
+        plane.quaternion.copy(camera.quaternion)
+        plane.translateZ(-BACKGROUND_DISTANCE)
+        plane.scale.set(h * (project.width / project.height), h, 1)
+      }
     }
     // Geçiş örtüsü: kameranın hemen önünde, görüş alanını tam kaplayan düz renk.
     const overlay = overlayRef.current
@@ -355,7 +399,7 @@ function Scene({ project }: { project: Project }) {
 
   return (
     <>
-      <Background project={project} />
+      <Background project={project} planeRef={bgPlaneRef} sourceRef={bgSourceRef} />
       {project.lighting === 'studio' ? (
         <ProductStudio accent={project.accentLight ?? '#6c5ce7'} />
       ) : (
@@ -408,8 +452,9 @@ export function Stage() {
   // sahne her karede okur; küçük resim kanvasın bu bölgesinden kırpılır
   useEffect(() => {
     previewView.k = measured ? k : 1
+    previewView.overscan = measured && showOverscan
     previewView.frame = measured ? { x: frame.x / view.w, y: frame.y / view.h, w: frame.w / view.w, h: frame.h / view.h } : { x: 0, y: 0, w: 1, h: 1 }
-  }, [measured, k, frame.x, frame.y, frame.w, frame.h, view.w, view.h])
+  }, [measured, showOverscan, k, frame.x, frame.y, frame.w, frame.h, view.w, view.h])
   return (
     <div ref={ref} className={`stage${showOverscan ? ' is-overscan' : ''}`}>
       {/* kanvas: kadraj + çevresindeki ince şerit (taşma kapalıyken yalnızca kadraj) */}
