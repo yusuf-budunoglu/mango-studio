@@ -76,17 +76,22 @@ button.danger { color: var(--danger); }
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
 }
-/* Video kadrajı: dışını karartan dev gölge; taşma kapalıyken dışı tamamen örtülür (eski görünüm). */
+/* Kanvasın yeri: kadraj + ince taşma şeridi, önizleme alanında ortalı */
+.stage-view {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+/* Video kadrajı: dışındaki şeridi karartan gölge (kanvasın dışına taşmaz: overflow gizli) */
 .stage-frame {
   position: absolute;
   pointer-events: none;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px var(--line), 0 0 0 100vmax var(--bg);
 }
 .stage.is-overscan .stage-frame {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 0 0 100vmax rgba(11, 14, 19, 0.62);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 0 0 100vmax rgba(11, 14, 19, 0.55);
 }
 .transport { display: flex; align-items: center; gap: 8px; }
 .transport .play { width: 44px; }

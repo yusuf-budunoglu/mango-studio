@@ -1,11 +1,13 @@
 /**
- * Önizlemede kadraj dışı (taşma): kanvas tüm önizleme alanını kaplar, video kadrajı ortada bir
- * dikdörtgendir. Kamera, kadraj içi aynı kalacak şekilde daha geniş açıyla çizer; böylece kadraja
- * giren/çıkan nesneler dışarıda da görünür. Video çıktısı ve küçük resim yalnızca kadrajı içerir.
+ * Önizlemede kadraj dışı (taşma): video kadrajının çevresinde ince bir şerit de çizilir; böylece
+ * kadraja giren/çıkan nesneler dışarıda da görünür. Şerit her kenarda kadrajın kısa kenarının
+ * OVERSCAN_MARGIN katı (dikey videoda kısa kenar genişlik olduğu için şerit daha ince kalır).
+ * Kanvas yalnızca kadraj + şerit alanını kaplar; kamera, kadraj içi aynı kalacak şekilde daha geniş
+ * açıyla çizer. Video çıktısı ve küçük resim yalnızca kadrajı içerir.
  */
 
-/** Kadrajın önizleme alanında kapladığı oran (taşma açıkken); kalan kısım kadraj dışı. */
-export const OVERSCAN_FIT = 0.72
+/** Şeridin kalınlığı: kadrajın kısa kenarına oranı (her kenarda). */
+export const OVERSCAN_MARGIN = 0.14
 
 export interface FrameRect {
   x: number
@@ -14,12 +16,30 @@ export interface FrameRect {
   h: number
 }
 
-/** Kadraj dikdörtgeni (piksel) ve dikey genişleme katsayısı k = alan yüksekliği / kadraj yüksekliği. */
-export function previewFrame(width: number, height: number, aspect: number, overscan: boolean): FrameRect & { k: number } {
-  const fit = overscan ? OVERSCAN_FIT : 1
-  const w = Math.max(1, Math.min(width * fit, height * fit * aspect))
+export interface PreviewLayout {
+  /** kanvasın önizleme alanındaki yeri (kadraj + şerit), piksel */
+  view: FrameRect
+  /** kadrajın kanvas içindeki yeri, piksel */
+  frame: FrameRect
+  /** dikey genişleme katsayısı: kanvas yüksekliği / kadraj yüksekliği */
+  k: number
+}
+
+/** Önizleme alanına (width × height) sığan kanvas ve kadraj yerleşimi. */
+export function previewLayout(width: number, height: number, aspect: number, overscan: boolean): PreviewLayout {
+  const m = overscan ? OVERSCAN_MARGIN : 0
+  // kısa kenar genişlikse (dikey) şerit = m·genişlik, değilse m·yükseklik
+  const fw = aspect >= 1 ? Math.min(width / (1 + (2 * m) / aspect), height / ((1 + 2 * m) / aspect)) : Math.min(width / (1 + 2 * m), height / (1 / aspect + 2 * m))
+  const w = Math.max(1, fw)
   const h = w / aspect
-  return { x: (width - w) / 2, y: (height - h) / 2, w, h, k: height > 0 ? height / h : 1 }
+  const pad = m * Math.min(w, h)
+  const vw = w + 2 * pad
+  const vh = h + 2 * pad
+  return {
+    view: { x: (width - vw) / 2, y: (height - vh) / 2, w: vw, h: vh },
+    frame: { x: pad, y: pad, w, h },
+    k: vh / h,
+  }
 }
 
 /** Kadrajın dikey görüş açısı `fov` iken, k kat yüksek alanı kaplayan görüş açısı (derece). */

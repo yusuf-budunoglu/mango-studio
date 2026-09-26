@@ -12,7 +12,7 @@ import type { Layer, LayerState, Project } from '../engine/types'
 import * as bridgeModule from '../export/bridge'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
 import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
-import { overscanFov, previewFrame, previewView } from '../editor/previewFrame'
+import { overscanFov, previewLayout, previewView } from '../editor/previewFrame'
 import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
 import { LayerNode } from './layers/LayerNode'
 import { applyLayerOrder, type Applier, type Register } from './layers/shared'
@@ -403,15 +403,17 @@ export function Stage() {
   const showGuides = useEditorStore((s) => s.showGuides)
   const showOverscan = useEditorStore((s) => s.showOverscan)
   const { ref, width, height } = useElementSize()
-  const frame = previewFrame(width, height, project.width / project.height, showOverscan)
+  const { view, frame, k } = previewLayout(width, height, project.width / project.height, showOverscan)
   const measured = width > 0 && height > 0
-  // sahne her karede okur; küçük resim bu bölgeden kırpılır
+  // sahne her karede okur; küçük resim kanvasın bu bölgesinden kırpılır
   useEffect(() => {
-    previewView.k = measured ? frame.k : 1
-    previewView.frame = measured ? { x: frame.x / width, y: frame.y / height, w: frame.w / width, h: frame.h / height } : { x: 0, y: 0, w: 1, h: 1 }
-  }, [measured, frame.k, frame.x, frame.y, frame.w, frame.h, width, height])
+    previewView.k = measured ? k : 1
+    previewView.frame = measured ? { x: frame.x / view.w, y: frame.y / view.h, w: frame.w / view.w, h: frame.h / view.h } : { x: 0, y: 0, w: 1, h: 1 }
+  }, [measured, k, frame.x, frame.y, frame.w, frame.h, view.w, view.h])
   return (
     <div ref={ref} className={`stage${showOverscan ? ' is-overscan' : ''}`}>
+      {/* kanvas: kadraj + çevresindeki ince şerit (taşma kapalıyken yalnızca kadraj) */}
+      <div className="stage-view" style={{ left: view.x, top: view.y, width: view.w, height: view.h }}>
       <Canvas
         camera={{ position: project.camera.position, fov: project.camera.fov }}
         dpr={[1, 2]}
@@ -423,7 +425,7 @@ export function Stage() {
       >
         <Scene project={project} />
       </Canvas>
-      {/* Video kadrajı: dışı karartılır (taşma kapalıyken tamamen örtülür). HTML katmanı, videoya girmez. */}
+      {/* Video kadrajı: dışındaki şerit karartılır. HTML katmanı, videoya girmez. */}
       <div className="stage-frame" style={{ left: frame.x, top: frame.y, width: frame.w, height: frame.h }} aria-hidden="true">
         {showGuides && (
           // Güvenli alanlar: %90 (hareket) ve %80 (metin).
@@ -433,6 +435,7 @@ export function Stage() {
             <div className="safe-center" />
           </div>
         )}
+      </div>
       </div>
     </div>
   )
