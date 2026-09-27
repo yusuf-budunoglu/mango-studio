@@ -222,7 +222,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
     return { x: cx + (p.cx - LOGO.full.cx) * k0, y: cy + (p.cy - LOGO.full.cy) * k0, w: p.w * k0 }
   }
   const file = { body: 'mango-body', leaf: 'mango-leaf' } as const
-  const partName = (id: 'body' | 'leaf') => `${k('layers.mark')} · ${k(`layers.${id}`)}`
+  const partName = (id: 'body' | 'leaf', scene = k('layers.mark')) => `${scene} · ${k(`layers.${id}`)}`
   // kalkış: 482 civarında en hızlı, uzun kuyrukla yavaşlar (referanstan uydurulmuş, hata 3.7 px), 520'den sonra hızlanıp çıkar
   const logoExit = [move(470, 520, { dy: -217 }, [0.388, 0.137, 0, 0.511]), move(520, 546, { dy: -330 }, [0.55, 0.085, 0.68, 0.53])]
   const BIG = 140
@@ -243,7 +243,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
    * mangostudio.design: "mangostudio" koyu, ".design" mango turuncusu (dashboard'daki gibi). Soldan sağa yumuşak
    * açılır: önce "mangostudio", ardından ".design" (süre harf sayısına göre bölünür).
    */
-  const wordmark = (y: number, start: number, frames: number, extra: BlockSpec[], from: number, to: number) => {
+  const wordmark = (y: number, start: number, frames: number, extra: BlockSpec[], from: number, to: number, scene = k('layers.wordmark')) => {
     const parts = [
       { text: 'mangostudio', color: '#1a1718', em: 6.41 },
       { text: '.design', color: '#D9711C', em: 3.557 },
@@ -257,7 +257,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
       const dur = (frames * p.text.length) / total
       x += (p.em + WORD.spacing * p.text.length) * WORD.size
       t0 += dur
-      return text(`${k('layers.wordmark')} · ${p.text}`, {
+      return text(`${scene} · ${p.text}`, {
         text: p.text,
         color: p.color,
         fontFamily: 'space-grotesk',
@@ -301,7 +301,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
     const ox = p.x - 363
     const oy = p.y - 637
     const K = 1.572
-    return image(partName(id), file[id], {
+    return image(partName(id, k('layers.icon')), file[id], {
       position: P(363 + ox * K, 637 + oy * K, id === 'leaf' ? 0.015 : 0.01),
       scale: sc(p.w) * K,
       blocks: [
@@ -325,7 +325,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
       blocks: [...cut(at, 930), move(at, at + 18, { dx, dy, rotate: angle, scaleBy: 1 / 0.7 }, [0.3, 1.3, 0.5, 1]), move(918, 928, { scaleBy: 0.94 }, 'ease-in')],
     })
   }
-  const greyBg = layer({ name: k('layers.background'), kind: 'shape', shape: 'rect', shapeWidth: 14, shapeHeight: 16, color: '#F1F2F5', position: P(360, 640, -1), blocks: cut(698, 1064) })
+  const greyBg = layer({ name: `${k('layers.background')} · ${k('layers.grey')}`, kind: 'shape', shape: 'rect', shapeWidth: 14, shapeHeight: 16, color: '#F1F2F5', position: P(360, 640, -1), blocks: cut(698, 1064) })
   const iconScene = [
     iconMango('leaf', 708),
     iconMango('body', 698),
@@ -398,7 +398,7 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
   const endMango = (id: 'body' | 'leaf', popAt: number) => {
     const from = part(id, MANGO, 360, 626)
     const to = part(id, MANGO, markX, endY)
-    return image(partName(id), file[id], {
+    return image(partName(id, k('layers.closing')), file[id], {
       position: P(from.x, from.y, id === 'leaf' ? 0.01 : 0),
       scale: sc(from.w),
       blocks: [...cut(popAt, 1306), b('pop', f(popAt), f(22), { easing: 'ease-out-back' }), move(1100, 1122, { dx: to.x - from.x, dy: to.y - from.y }, 'ease-in-out'), lift],
@@ -429,10 +429,10 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
       blocks: [...cut(1144, 1306), b('word-reveal', f(1144), f(16), { easing: 'linear' }), ...press],
     }),
     image(k('layers.button'), 'button', { position: P(362, 690), scale: sc(300), blocks: [...cut(1138, 1306), b('pop', f(1138), f(14), { easing: 'ease-out-back' }), ...press] }),
-    ...wordmark(endY + 15, 1114, 26, [lift], 1114, 1306),
+    ...wordmark(endY + 15, 1114, 26, [lift], 1114, 1306, `${k('layers.closing')} · ${k('layers.wordmark')}`),
     endMango('leaf', 1080),
     endMango('body', 1068),
-    image(k('layers.background'), 'end-bg', { position: P(360, 640, -1), scale: sc(820), blocks: cut(1064, 1306) }),
+    image(`${k('layers.background')} · ${k('layers.pink')}`, 'end-bg', { position: P(360, 640, -1), scale: sc(820), blocks: cut(1064, 1306) }),
   ]
 
   // ── Kamera ──────────────────────────────────────────────────────
@@ -471,15 +471,9 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
       f(1306),
       '#ffffff',
       [
-        ...endScene,
-        numberLayer,
-        pctLayer,
-        pillLayer,
-        automated,
-        ...iconScene,
-        greyBg,
-        ...logoScene,
-        dashboard,
+        // Timeline'da sahneler zaman sırasıyla (ilk sahne üstte). Liste sırası çizim sırası da olduğu için her sahnenin
+        // içinde öndeki katman üstte; sahneler zamanda üst üste binmediğinden aralarındaki sıra görüntüyü değiştirmez.
+        // Fonlar opak/en arkada (z = -1), derinlik testiyle her zaman arkada kalır.
         ...headA,
         headB,
         ...headC,
@@ -495,6 +489,15 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
         ...you,
         ...rivals,
         ...flashes,
+        ...logoScene,
+        dashboard,
+        ...iconScene,
+        numberLayer,
+        pctLayer,
+        pillLayer,
+        automated,
+        greyBg,
+        ...endScene,
       ],
       camera(camBlocks, camStart),
     ),

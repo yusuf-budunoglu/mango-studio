@@ -444,6 +444,7 @@ const en = {
       cta: 'Free For 3 Days',
       cards: { content: 'Content card', backlinks: 'Backlinks card', tracking: 'Tracking card' },
       layers: {
+        closing: 'Closing', grey: 'grey', pink: 'pink',
         headline2: 'Headline 2', input: 'Chat input', send: 'Send button', sendIdle: 'Send button (idle)', ring: 'Send ripple',
         prompt: 'Typed prompt', placeholder: 'Placeholder', avatar: 'Avatar', question: 'Question', answer: 'Answer title',
         highlight: 'Highlight', domain: 'Domain badge', wordmark: 'Wordmark', mark: 'Logo mark', body: 'body', leaf: 'leaf', dashboard: 'Dashboard',

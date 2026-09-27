@@ -445,6 +445,7 @@ const tr: Translation = {
       cta: '3 Gün Ücretsiz',
       cards: { content: 'İçerik kartı', backlinks: 'Backlink kartı', tracking: 'Takip kartı' },
       layers: {
+        closing: 'Kapanış', grey: 'gri', pink: 'pembe',
         headline2: 'Başlık 2', input: 'Sohbet kutusu', send: 'Gönder düğmesi', sendIdle: 'Gönder düğmesi (pasif)', ring: 'Gönder halkası',
         prompt: 'Yazılan soru', placeholder: 'Yer tutucu', avatar: 'Avatar', question: 'Soru', answer: 'Cevap başlığı',
         highlight: 'Vurgu', domain: 'Alan adı rozeti', wordmark: 'Marka yazısı', mark: 'Logo işareti', body: 'gövde', leaf: 'yaprak', dashboard: 'Dashboard',
