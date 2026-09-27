@@ -447,7 +447,7 @@ const tr: Translation = {
       layers: {
         headline2: 'Başlık 2', input: 'Sohbet kutusu', send: 'Gönder düğmesi', sendIdle: 'Gönder düğmesi (pasif)', ring: 'Gönder halkası',
         prompt: 'Yazılan soru', placeholder: 'Yer tutucu', avatar: 'Avatar', question: 'Soru', answer: 'Cevap başlığı',
-        highlight: 'Vurgu', domain: 'Alan adı rozeti', wordmark: 'Marka yazısı', mark: 'Logo işareti', sun: 'güneş', dashboard: 'Dashboard',
+        highlight: 'Vurgu', domain: 'Alan adı rozeti', wordmark: 'Marka yazısı', mark: 'Logo işareti', body: 'gövde', leaf: 'yaprak', dashboard: 'Dashboard',
         icon: 'Uygulama ikonu', background: 'Fon', counter: 'Sayaç', frame: 'Sayaç çerçevesi', cursor: 'İmleç', click: 'Tıklama halkası',
         cta: 'Düğme yazısı', button: 'Düğme',
       },

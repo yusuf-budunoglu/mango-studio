@@ -1,8 +1,8 @@
 // "AI search ad" şablonunun görselleri: HTML → başsız Chrome → saydam PNG (public/templates/ai-visibility).
 //   node scripts/build-ai-visibility-assets.mjs
 // Ölçüler referans videonun piksellerinde (720×1280 dikey kare); PNG'ler 3 kat çözünürlükte çizilir.
-// Marka (Sunrank.ai), dashboard ve ikonlar bizim tasarımımız; yalnızca ChatGPT/OpenAI logosu gerçek
-// (scripts/assets/openai-blossom.svg).
+// Dashboard ve ikonlar bizim tasarımımız, marka Mango Studio (public/brand); ChatGPT/OpenAI logosu gerçek
+// (scripts/assets/openai-blossom.svg). Logo parçaları (mango-body/leaf) mango-logo-2048.png'den kesildi.
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -83,19 +83,6 @@ shoot('domain-pill', 360, 120, `<div class="pill">mycompany.com</div>`, `
     border: 2px solid #eea27f; box-shadow: 0 0 14px rgba(230,83,36,0.28), 0 4px 10px rgba(230,83,36,0.12);
     font: 700 27px/66px Inter; letter-spacing: -0.02em; color: ${INK}; padding-left: 40px; }`)
 
-// ── Marka: Sunrank.ai (hayali) ───────────────────────────────────
-// İşaret: büyüme rampası + rampanın yüksek ucunun arkasından doğan turuncu güneş.
-// Parçalar aynı tuvalde (120×96) çizilir: üst üste aynı yere konunca birebir hizalı olur.
-const RAMP = 'M6 90 V56 Q6 52 10 51 L108 29 Q114 28 114 34 V90 Q114 94 110 94 H10 Q6 94 6 90Z'
-const markPiece = (name, fill, sun) =>
-  shoot(name, 120, 96, `<svg viewBox="0 0 120 96" width="120" height="96">
-    <defs><clipPath id="above"><path d="M0 0 H120 V18 L0 43Z"/></clipPath></defs>
-    ${sun ? `<g clip-path="url(#above)"><circle cx="78" cy="30" r="24" fill="${ORANGE}"/></g>` : `<path d="${RAMP}" fill="${fill}"/>`}
-  </svg>`, '', 6)
-markPiece('mark-ramp-dark', '#1a1718')
-markPiece('mark-ramp-light', '#ffffff')
-markPiece('mark-sun', '', true)
-
 // Uygulama ikonu: beyaz yuvarlak kare + gölge + koyu daire (işaret ayrı katmanlarda çizilir)
 shoot('app-icon', 420, 420, `<div class="sq"><div class="c"></div></div>`, `
   .sq { position: absolute; left: 40px; top: 40px; width: 340px; height: 340px; border-radius: 100px; background: #fff; box-shadow: 0 18px 40px rgba(30,35,60,0.10), 0 2px 6px rgba(30,35,60,0.05); display: grid; place-items: center; }
@@ -151,7 +138,7 @@ const cost = [8, 9, 11, 12, 12, 14, 15, 17, 18, 20, 22, 25]
 shoot('dashboard', 1200, 1130, `
 <div class="app">
   <aside>
-    <div class="brand"><svg viewBox="0 0 120 96" width="30" height="24"><path d="${RAMP}" fill="#1a1718"/><g clip-path="url(#a2)"><circle cx="78" cy="30" r="24" fill="${ORANGE}"/></g><defs><clipPath id="a2"><path d="M0 0 H120 V18 L0 43Z"/></clipPath></defs></svg><b>Sunrank<span>.ai</span></b></div>
+    <div class="brand"><img src="${pathToFileURL(path.resolve('public/brand/mango-mark.png')).href}" width="26" height="26" alt=""><b>mangostudio<span>.design</span></b></div>
     <nav>${['Overview', 'AI visibility', 'Keywords', 'Content', 'Backlinks', 'Reports', 'Settings'].map((n, i) => `<div class="${i === 0 ? 'on' : ''}"><i></i>${n}</div>`).join('')}</nav>
     <div class="plan"><b>Pro plan</b><span>12 of 20 articles</span><div class="bar"><div></div></div></div>
   </aside>
@@ -187,7 +174,7 @@ shoot('dashboard', 1200, 1130, `
 </div>`, `
   .app { position: absolute; inset: 0; display: flex; background: #f7f8fb; border-radius: 18px; overflow: hidden; border: 1px solid #e6e8ee; font-size: 14px; color: #1b1d22; }
   aside { width: 210px; background: #fff; border-right: 1px solid #eceef3; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px; }
-  .brand { display: flex; align-items: center; gap: 8px; font: 700 20px Poppins; letter-spacing: -0.02em; } .brand span { font-weight: 700; }
+  .brand { display: flex; align-items: center; gap: 7px; font: 700 16px Poppins; letter-spacing: -0.02em; } .brand span { color: #d9711c; }
   nav { display: grid; gap: 4px; } nav div { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #5b606b; }
   nav i { width: 14px; height: 14px; border-radius: 4px; border: 2px solid #c4c8d0; } nav .on { background: #fff1ec; color: ${ORANGE}; font-weight: 700; } nav .on i { border-color: ${ORANGE}; }
   .plan { margin-top: auto; padding: 14px; border-radius: 12px; background: #f7f8fb; display: grid; gap: 6px; font-size: 12px; color: #6b707a; } .plan b { color: #1b1d22; font-size: 13px; }

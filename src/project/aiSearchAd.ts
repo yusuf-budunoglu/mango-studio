@@ -3,8 +3,9 @@ import type { Block, CameraTrack, Layer, Project, Vec3 } from '../engine/types'
 
 // "AI search ad": dikey (1080×1920, 60 kare/sn) SaaS reklamı. 30 kare/sn'lik bir referans videodan kare kare
 // ölçüldü (tüm kare numaraları 60 kare/sn'ye göre). Ölçüler referansın piksellerinde (720×1280): kamera
-// z=9, fov 40 iken 1 birim = 195.4 px. Yalnızca ChatGPT/OpenAI adı ve logosu gerçek; marka (Sunrank.ai),
-// rakip adları, dashboard ve ikonlar hayali. Görseller: scripts/build-ai-visibility-assets.mjs.
+// z=9, fov 40 iken 1 birim = 195.4 px. Marka Mango Studio'nun kendisi (mangostudio.design, Mango logosu: gövde +
+// sonradan pop-up ile gelen yaprak). ChatGPT/OpenAI adı ve logosu gerçek; rakip adları ve dashboard verileri hayali.
+// Görseller: scripts/build-ai-visibility-assets.mjs (+ logo parçaları public/brand/mango-logo-2048.png'den).
 
 type BlockSpec = Omit<Block, 'id'>
 type Bezier = [number, number, number, number]
@@ -30,6 +31,12 @@ const WORD_EM: Record<string, number> = {
   yoktun: 3.4067, Seni: 2.144, listeye: 3.2617, geri: 1.9058, sokuyoruz: 5.1938,
 }
 const SPACE_EM = 0.2368
+// Mango Studio logosunun parçaları (public/brand/mango-logo-2048.png pikselleri): gövde ve yaprak ayrı PNG
+const LOGO = {
+  full: { w: 660, h: 976, cx: 1024, cy: 907 },
+  body: { w: 660, h: 731, cx: 1024, cy: 1029.5 },
+  leaf: { w: 314, h: 209, cx: 1089, cy: 523.5 },
+}
 const HEAD = { size: 73, spacing: -0.078 }
 const INK = '#111111'
 const ORANGE = '#E65324'
@@ -198,41 +205,76 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
   const headD = [...hD(line1D, 226, DSTARTS.slice(0, line1D.length)), ...hD(split('h4b'), 312, DSTARTS.slice(line1D.length))]
 
   // ── Sahne 2: logo (408–550) ─────────────────────────────────────
-  // İşaret ortada büyük çizilir (rampa 408, güneş 418), 440–458 küçülüp sola kayar, yazı açılır;
-  // 472'den itibaren yukarı kaçar (dashboard gelir).
-  const WORD = { size: 58, spacing: -0.02 }
-  const wordW = (5.618 + WORD.spacing * 10) * WORD.size
-  const MARK = 74 // küçük işaretin tuval genişliği (rampa ≈ 67 px)
-  const lockLeft = 360 - (MARK + 6 + wordW) / 2
-  const markX = lockLeft + MARK / 2
+  // Mango Studio logosu ortada büyük çizilir: gövde 408'de fırlayıp oturur, yeşil yaprak 420'de pop-up ile
+  // gelir (referanstaki turuncu dalgaların yerine); 443–461 küçülüp sola kayar, mangostudio.design açılır;
+  // 470'ten itibaren yukarı kaçar (dashboard gelir).
+  const WORD = { size: 52, spacing: -0.02, text: 'mangostudio.design' }
+  const wordW = (9.967 + WORD.spacing * WORD.text.length) * WORD.size
+  const MANGO = 74 // küçük logonun yüksekliği (px)
+  const mangoW = (MANGO * LOGO.full.w) / LOGO.full.h
+  const lockLeft = 360 - (mangoW + 12 + wordW) / 2
+  const markX = lockLeft + mangoW / 2
+  const textX = lockLeft + mangoW + 12
+  /** Logo parçasının (gövde/yaprak) yüksekliği `height` olan logodaki merkezi ve genişliği. */
+  const part = (id: 'body' | 'leaf', height: number, cx: number, cy: number) => {
+    const k0 = height / LOGO.full.h
+    const p = LOGO[id]
+    return { x: cx + (p.cx - LOGO.full.cx) * k0, y: cy + (p.cy - LOGO.full.cy) * k0, w: p.w * k0 }
+  }
+  const file = { body: 'mango-body', leaf: 'mango-leaf' } as const
+  const partName = (id: 'body' | 'leaf') => `${k('layers.mark')} · ${k(`layers.${id}`)}`
   // kalkış: 482 civarında en hızlı, uzun kuyrukla yavaşlar (referanstan uydurulmuş, hata 3.7 px), 520'den sonra hızlanıp çıkar
   const logoExit = [move(470, 520, { dy: -217 }, [0.388, 0.137, 0, 0.511]), move(520, 546, { dy: -330 }, [0.55, 0.085, 0.68, 0.53])]
-  const bigMark = (file: string, popAt: number, name: string) =>
-    image(name, file, {
-      position: P(file === 'mark-sun' ? 363 : 309, 627),
-      scale: sc(131) * (file === 'mark-sun' ? 1 : 0.5),
-      blocks: [
-        ...cut(popAt, 548),
-        ...(file === 'mark-sun'
-          ? [b('pop', f(popAt), f(26), { easing: 'ease-out-back' })]
-          : [move(408, 416, { dx: 61, scaleBy: 2.6 }, 'ease-out'), move(416, 430, { dx: -8, scaleBy: 1 / 1.3 }, 'ease-out')]),
-        move(443, 461, { dx: markX - 363, dy: 636.6 - 627, scaleBy: MARK / 131 }, 'ease-in-out'), ...logoExit],
+  const BIG = 140
+  const bigMango = (id: 'body' | 'leaf') => {
+    const from = part(id, BIG, 360, 620)
+    const to = part(id, MANGO, markX, 637)
+    const intro =
+      id === 'body'
+        ? [move(408, 416, { scaleBy: 2.6 }, 'ease-out'), move(416, 430, { scaleBy: 1 / 1.3 }, 'ease-out')]
+        : [b('pop', f(420), f(22), { easing: 'ease-out-back' })]
+    return image(partName(id), file[id], {
+      position: P(from.x, from.y, id === 'leaf' ? 0.01 : 0),
+      scale: sc(from.w) * (id === 'body' ? 0.5 : 1),
+      blocks: [...cut(id === 'body' ? 408 : 420, 548), ...intro, move(443, 461, { dx: to.x - from.x, dy: to.y - from.y, scaleBy: MANGO / BIG }, 'ease-in-out'), ...logoExit],
     })
+  }
+  /**
+   * mangostudio.design: "mangostudio" koyu, ".design" mango turuncusu (dashboard'daki gibi). Soldan sağa yumuşak
+   * açılır: önce "mangostudio", ardından ".design" (süre harf sayısına göre bölünür).
+   */
+  const wordmark = (y: number, start: number, frames: number, extra: BlockSpec[], from: number, to: number) => {
+    const parts = [
+      { text: 'mangostudio', color: '#1a1718', em: 6.41 },
+      { text: '.design', color: '#D9711C', em: 3.557 },
+    ]
+    const total = parts.reduce((n, p) => n + p.text.length, 0)
+    let x = textX
+    let t0 = start
+    return parts.map((p) => {
+      const left = x
+      const t = t0
+      const dur = (frames * p.text.length) / total
+      x += (p.em + WORD.spacing * p.text.length) * WORD.size
+      t0 += dur
+      return text(`${k('layers.wordmark')} · ${p.text}`, {
+        text: p.text,
+        color: p.color,
+        fontFamily: 'space-grotesk',
+        fontWeight: 700,
+        fontSize: WORD.size * U,
+        letterSpacing: WORD.spacing,
+        align: 'left',
+        textWidth: 20,
+        position: P(left, y),
+        blocks: [...cut(Math.max(from, Math.floor(t)), to), b('soft-reveal', f(t), f(dur), { easing: t === start ? 'linear' : 'ease-out', params: { softness: 0.25 } }), ...extra],
+      })
+    })
+  }
   const logoScene = [
-    text(k('layers.wordmark'), {
-      text: 'Sunrank.ai',
-      color: '#1a1718',
-      fontFamily: 'poppins',
-      fontWeight: 700,
-      fontSize: WORD.size * U,
-      letterSpacing: WORD.spacing,
-      align: 'left',
-      textWidth: 20,
-      position: P(lockLeft + MARK + 6, 640),
-      blocks: [...cut(459, 548), b('soft-reveal', f(459), f(20), { easing: 'ease-out', params: { softness: 0.25 } }), ...logoExit],
-    }),
-    bigMark('mark-sun', 418, `${k('layers.mark')} · ${k('layers.sun')}`),
-    bigMark('mark-ramp-dark', 408, k('layers.mark')),
+    ...wordmark(652, 459, 22, logoExit, 459, 548),
+    bigMango('leaf'),
+    bigMango('body'),
   ]
 
   // ── Sahne 3: dashboard (476–698) ────────────────────────────────
@@ -252,8 +294,25 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
   // ── Sahne 4: uygulama ikonu + özellik kartları (698–930), gri fon ──
   const iconMoves = [move(698, 766, { scaleBy: 1 / 1.572 }, [0.088, 0.323, 0, 1]), move(768, 786, { dy: 95, scaleBy: 0.83 }, 'ease-in-out'), move(918, 928, { scaleBy: 0.94 }, 'ease-in')]
   const ICON = 441 // ikon tuvali: daire 229 px olacak şekilde
-  const iconMark = (file: string, popAt: number, name: string) =>
-    image(name, file, { position: P(363, 639, file === 'mark-sun' ? 0.015 : 0.01), scale: sc(132) * 1.572, blocks: [...cut(698, 930), b('pop', f(popAt), f(18), { easing: 'ease-out-back' }), ...iconMoves] })
+  const ICON_MANGO = 150 // dairedeki logonun yüksekliği
+  /** Logo parçası ikonun merkezine göre durur; ikon küçülürken merkeze olan uzaklığı da aynı oranda küçülür. */
+  const iconMango = (id: 'body' | 'leaf', popAt: number) => {
+    const p = part(id, ICON_MANGO, 363, 637)
+    const ox = p.x - 363
+    const oy = p.y - 637
+    const K = 1.572
+    return image(partName(id), file[id], {
+      position: P(363 + ox * K, 637 + oy * K, id === 'leaf' ? 0.015 : 0.01),
+      scale: sc(p.w) * K,
+      blocks: [
+        ...cut(popAt, 930),
+        b('pop', f(popAt), f(18), { easing: 'ease-out-back' }),
+        move(698, 766, { dx: ox * (1 - K), dy: oy * (1 - K), scaleBy: 1 / K }, [0.088, 0.323, 0, 1]),
+        move(768, 786, { dx: ox * (0.83 - 1), dy: 95 + oy * (0.83 - 1), scaleBy: 0.83 }, 'ease-in-out'),
+        move(918, 928, { dx: ox * 0.83 * (0.94 - 1), dy: oy * 0.83 * (0.94 - 1), scaleBy: 0.94 }, 'ease-in'),
+      ],
+    })
+  }
   const PIVOT: [number, number] = [363, 731]
   const card = (id: string, angle: number, at: number) => {
     const r = 222
@@ -268,8 +327,8 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
   }
   const greyBg = layer({ name: k('layers.background'), kind: 'shape', shape: 'rect', shapeWidth: 14, shapeHeight: 16, color: '#F1F2F5', position: P(360, 640, -1), blocks: cut(698, 1064) })
   const iconScene = [
-    iconMark('mark-sun', 706, `${k('layers.mark')} · ${k('layers.sun')}`),
-    iconMark('mark-ramp-light', 698, k('layers.mark')),
+    iconMango('leaf', 708),
+    iconMango('body', 698),
     image(k('layers.icon'), 'app-icon', { position: P(363, 637), scale: sc(ICON) * 1.572, blocks: [...cut(698, 930), ...iconMoves] }),
     card('content', 32, 775),
     card('backlinks', 0, 822),
@@ -278,34 +337,41 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
 
   // ── Sahne 5: sayaç (928–1064) ───────────────────────────────────
   // Çerçeve büyük gelir ve yavaşlayarak oturur, sayı 17'den 100'e sayar; 988'de hepsi sola kayar, "automated" alttan sekerek gelir.
-  const PILL = { x: 357, y: 633, w: 264 } // kaymadan önce
+  // çerçeve: sol kenar 54 px, yükseklik 85 px (597–682), sağ ucu solarak açık; kaymadan önce 184 px sağda
+  const PILL = { x: 372.6, y: 640, w: 299 }
   const K0 = 1.62
   /** Katmanı çerçevenin merkezine göre K0 katından 1'e küçültür (konumu da merkeze göre). */
   const settle = (x: number, y: number, z = 0.01) => ({
     position: P(PILL.x + (x - PILL.x) * K0, y, z),
     blocks: [move(928, 986, { dx: (x - PILL.x) * (1 - K0), scaleBy: 1 / K0 }, [0.25, 0.7, 0.4, 1]), move(990, 1002, { dx: -184 }, 'ease-in-out'), move(1056, 1064, { scaleBy: 0.92 }, 'ease-in'), fadeOut(1058, 6)],
   })
-  const NUM = 66
-  const pctW = 0.9819 * NUM
-  const numW = 1.6685 * NUM
-  const numLeft = PILL.x - (numW + pctW) / 2
+  // Referanstan: "100%" 92–275 px (sağ ucu çerçevenin solan ucunda), büyük harf yüksekliği 52 px, taban çizgisi 667;
+  // kaymadan önce her şey 184 px sağda. Yazı tipi Plus Jakarta Sans 700, sıkı aralık.
+  const NUM = { size: 70, spacing: -0.06, font: 'plus-jakarta-sans' }
+  const pctW = (1.046 + NUM.spacing) * NUM.size
+  const numY = 667 - 0.22 * NUM.size
   const pctFirst = lang === 'tr'
-  const numberLayer = (() => {
-    const s = settle(pctFirst ? numLeft + pctW : numLeft + numW, 633)
-    return text(k('layers.counter'), {
-      text: '100',
+  const numText = (name: string, spec: { text: string; x: number; align: 'left' | 'right'; blocks: BlockSpec[] }) => {
+    const st = settle(spec.x + 184, numY)
+    return text(name, {
+      text: spec.text,
       color: ORANGE,
-      fontSize: NUM * U * K0,
-      align: pctFirst ? 'left' : 'right',
+      fontFamily: NUM.font,
+      fontWeight: 700,
+      fontSize: NUM.size * U * K0,
+      letterSpacing: NUM.spacing,
+      align: spec.align,
       textWidth: 20,
-      position: s.position,
-      blocks: [...cut(930, 1064), b('count-up', f(928), f(20), { easing: 'custom', bezier: [0.35, 0.35, 0.45, 1], params: { from: 17, to: 100 } }), ...s.blocks],
+      position: st.position,
+      blocks: [...cut(930, 1064), ...spec.blocks, ...st.blocks],
     })
-  })()
-  const pctLayer = (() => {
-    const s = settle(pctFirst ? numLeft : numLeft + numW + 2, 633)
-    return text('%', { text: '%', color: ORANGE, fontSize: NUM * U * K0, align: 'left', textWidth: 20, position: s.position, blocks: [...cut(930, 1064), ...s.blocks] })
-  })()
+  }
+  const countUp = b('count-up', f(928), f(20), { easing: 'custom', bezier: [0.35, 0.35, 0.45, 1], params: { from: 17, to: 100 } })
+  // EN: sayı sağa yaslı, "%" sabit (iki basamakta arada boşluk kalır, referanstaki gibi); TR: "%" solda, sayı ardından
+  const numberLayer = pctFirst
+    ? numText(k('layers.counter'), { text: '100', x: 92 + pctW, align: 'left', blocks: [countUp] })
+    : numText(k('layers.counter'), { text: '100', x: 275 - pctW + 3, align: 'right', blocks: [countUp] })
+  const pctLayer = numText('%', { text: '%', x: pctFirst ? 92 : 275 - pctW, align: 'left', blocks: [] })
   const pillLayer = (() => {
     const s = settle(PILL.x, PILL.y, -0.01)
     return image(k('layers.frame'), 'counter-pill', { position: s.position, scale: sc(PILL.w) * K0, blocks: [...cut(928, 1064), ...s.blocks] })
@@ -313,24 +379,31 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
   const automated = text(k('automated'), {
     text: k('automated'),
     color: INK,
-    fontSize: 70 * U,
+    fontFamily: NUM.font,
+    fontWeight: 700,
+    fontSize: 68 * U,
+    letterSpacing: -0.05,
     align: 'left',
     textWidth: 20,
-    position: P(289, 643 + 31, 0.01),
+    position: P(287, 668 - 0.22 * 68 + 31, 0.01),
     blocks: [...cut(997, 1064), fadeIn(997, 3), move(997, 1020, { dy: -31 }, [0.25, 1.8, 0.45, 1]), move(1056, 1064, { dx: -20, scaleBy: 0.92 }, 'ease-in'), fadeOut(1058, 6)],
   })
 
   // ── Sahne 6: kapanış (1064–1306), pembe fon ─────────────────────
   // İşaret ortada küçük çizilir, sola kayar ve yazı açılır; logo yukarı kalkar, düğme belirir,
   // imleç sağ alttan gelip tıklar.
-  const endMarkY = 630
+  const endY = 630
   const lift = move(1128, 1146, { dy: -47 }, 'ease-out')
-  const endMark = (file: string, popAt: number, name: string) =>
-    image(name, file, {
-      position: P(350, 626),
-      scale: sc(MARK),
-      blocks: [...cut(popAt, 1306), b('pop', f(popAt), f(22), { easing: 'ease-out-back' }), move(1100, 1122, { dx: markX - 350, dy: endMarkY - 626 }, 'ease-in-out'), lift],
+  // logo ortada küçük çizilir (gövde 1068, yaprak 1080 pop-up), 1100–1122 sola kayar
+  const endMango = (id: 'body' | 'leaf', popAt: number) => {
+    const from = part(id, MANGO, 360, 626)
+    const to = part(id, MANGO, markX, endY)
+    return image(partName(id), file[id], {
+      position: P(from.x, from.y, id === 'leaf' ? 0.01 : 0),
+      scale: sc(from.w),
+      blocks: [...cut(popAt, 1306), b('pop', f(popAt), f(22), { easing: 'ease-out-back' }), move(1100, 1122, { dx: to.x - from.x, dy: to.y - from.y }, 'ease-in-out'), lift],
     })
+  }
   const press = [move(1190, 1197, { scaleBy: 0.94 }, 'ease-out'), move(1197, 1210, { scaleBy: 1 / 0.94 }, 'ease-out')]
   const TIP: [number, number] = [457, 731]
   const CURSOR = 56 // imleç tuvali (ok ≈ 60 px)
@@ -356,20 +429,9 @@ export function buildAiSearchAd({ t, b, layer, camera, project }: Kit): Project 
       blocks: [...cut(1144, 1306), b('word-reveal', f(1144), f(16), { easing: 'linear' }), ...press],
     }),
     image(k('layers.button'), 'button', { position: P(362, 690), scale: sc(300), blocks: [...cut(1138, 1306), b('pop', f(1138), f(14), { easing: 'ease-out-back' }), ...press] }),
-    text(k('layers.wordmark'), {
-      text: 'Sunrank.ai',
-      color: '#1a1718',
-      fontFamily: 'poppins',
-      fontWeight: 700,
-      fontSize: WORD.size * U,
-      letterSpacing: WORD.spacing,
-      align: 'left',
-      textWidth: 20,
-      position: P(lockLeft + MARK + 6, endMarkY + 3.4),
-      blocks: [...cut(1114, 1306), b('soft-reveal', f(1114), f(24), { easing: 'ease-out', params: { softness: 0.25 } }), lift],
-    }),
-    endMark('mark-sun', 1078, `${k('layers.mark')} · ${k('layers.sun')}`),
-    endMark('mark-ramp-dark', 1068, k('layers.mark')),
+    ...wordmark(endY + 15, 1114, 26, [lift], 1114, 1306),
+    endMango('leaf', 1080),
+    endMango('body', 1068),
     image(k('layers.background'), 'end-bg', { position: P(360, 640, -1), scale: sc(820), blocks: cut(1064, 1306) }),
   ]
 

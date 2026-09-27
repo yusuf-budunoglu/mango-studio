@@ -446,7 +446,7 @@ const en = {
       layers: {
         headline2: 'Headline 2', input: 'Chat input', send: 'Send button', sendIdle: 'Send button (idle)', ring: 'Send ripple',
         prompt: 'Typed prompt', placeholder: 'Placeholder', avatar: 'Avatar', question: 'Question', answer: 'Answer title',
-        highlight: 'Highlight', domain: 'Domain badge', wordmark: 'Wordmark', mark: 'Logo mark', sun: 'sun', dashboard: 'Dashboard',
+        highlight: 'Highlight', domain: 'Domain badge', wordmark: 'Wordmark', mark: 'Logo mark', body: 'body', leaf: 'leaf', dashboard: 'Dashboard',
         icon: 'App icon', background: 'Background', counter: 'Counter', frame: 'Counter frame', cursor: 'Cursor', click: 'Click ripple',
         cta: 'Button text', button: 'Button',
       },
