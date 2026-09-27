@@ -5,7 +5,7 @@ import { templateDescription, templateName, type Template } from '../project/tem
 /** Şablon kartı: `public/templates/<id>.jpg` önizlemesi, yoksa şablon renginde bir degrade. */
 export function TemplateCard({ template }: { template: Template }) {
   const [imageFailed, setImageFailed] = useState(false)
-  const fallback = { background: `radial-gradient(circle at 30% 30%, ${template.accent}, #0b0e13 75%)` }
+  const fallback = { background: `radial-gradient(circle at 30% 30%, ${template.accent}, #0a0a0b 75%)` }
 
   return (
     <button type="button" className="tile" onClick={() => void createFromTemplate(template.id)}>

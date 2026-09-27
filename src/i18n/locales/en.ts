@@ -460,7 +460,7 @@ const en = {
   },
   credits: {
     title: 'Credits & licenses',
-    intro: 'Motion Studio is built on work that others shared. Thank you!',
+    intro: 'Mango Studio is built on work that others shared. Thank you!',
     models: '3D device models',
     fonts: 'Fonts',
     by: 'by',

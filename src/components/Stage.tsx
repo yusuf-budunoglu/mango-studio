@@ -210,7 +210,7 @@ function ProductStudio({ accent }: { accent: string }) {
 }
 
 /** Önizlemede kadraj dışının zemini (editör rengi); proje arka planı yalnızca kadraja çizilir. */
-const OUTSIDE_COLOR = new Color('#0b0e13')
+const OUTSIDE_COLOR = new Color('#0a0a0b')
 /** Kadraja çizilen arka plan düzleminin kameraya uzaklığı (her şeyin arkasında kalsın). */
 const BACKGROUND_DISTANCE = 400
 

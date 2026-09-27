@@ -251,7 +251,8 @@ export function Editor({ projectId }: { projectId: string }) {
           {t('topbar.backToProjects')}
         </button>
         <div className="brand">
-          motion<span>studio</span>
+          <img className="brand-logo" src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" />
+          Mango <span>Studio</span>
         </div>
         <div className="project-name">{project.name}</div>
         <span className={`save-status save-status--${saveStatus}`}>{t(`save.${saveStatus}`)}</span>

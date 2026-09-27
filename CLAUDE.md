@@ -1,6 +1,6 @@
-# motion-studio
+# motion-studio (marka: Mango Studio)
 
-Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu editörü.
+Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu editörü. Ürünün adı **Mango Studio**; renkler, logo ve wordmark kuralları `src/styles/brand.md`'de (arayüz siyah, vurgular mango turuncusu/altın/yaprak yeşili; renkleri `src/index.css` tokenlarından kullan, sabit renk yazma).
 
 ## Komutlar
 - `npm run dev` — geliştirme sunucusu

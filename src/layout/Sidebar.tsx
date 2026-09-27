@@ -85,10 +85,10 @@ export function Sidebar({ current }: { current: Route }) {
     <aside className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}>
       <a className="sidebar-brand" href="#/">
         <span className="brand-mark" aria-hidden="true">
-          ◆
+          <img src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" />
         </span>
         <span className="nav-label brand">
-          motion<span>studio</span>
+          Mango <span>Studio</span>
         </span>
       </a>
 

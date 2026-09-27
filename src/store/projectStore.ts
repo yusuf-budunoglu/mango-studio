@@ -75,11 +75,11 @@ function layerDefaults(kind: LayerKind): Omit<Layer, 'id' | 'blocks' | 'start' |
     case 'text':
       return { ...base, name: t('text'), kind, text: t('newText'), color: '#ffffff', fontSize: 0.4, fontFamily: preferredFont(), position: [0, 0, 0.5] }
     case 'phone':
-      return { ...base, name: t('phone'), kind, color: '#4fc3cf', rotation: [0, -15, 0] }
+      return { ...base, name: t('phone'), kind, color: '#f0922b', rotation: [0, -15, 0] }
     case 'laptop':
-      return { ...base, name: t('laptop'), kind, color: '#6c5ce7', rotation: [8, -18, 0], scale: 0.9 }
+      return { ...base, name: t('laptop'), kind, color: '#e8b63c', rotation: [8, -18, 0], scale: 0.9 }
     case 'tablet':
-      return { ...base, name: t('tablet'), kind, color: '#00b894', rotation: [0, -15, 0] }
+      return { ...base, name: t('tablet'), kind, color: '#5aa151', rotation: [0, -15, 0] }
     case 'shape':
       return { ...base, name: t('shape'), kind, color: '#ffb86c', shape: 'rounded', shapeWidth: 2, shapeHeight: 1.2 }
     case 'image':

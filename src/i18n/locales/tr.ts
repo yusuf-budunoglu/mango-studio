@@ -461,7 +461,7 @@ const tr: Translation = {
   },
   credits: {
     title: 'Katkılar ve lisanslar',
-    intro: 'Motion Studio, başkalarının paylaştığı emeklerle yapıldı. Teşekkürler!',
+    intro: 'Mango Studio, başkalarının paylaştığı emeklerle yapıldı. Teşekkürler!',
     models: '3D cihaz modelleri',
     fonts: 'Yazı tipleri',
     by: 'hazırlayan:',
