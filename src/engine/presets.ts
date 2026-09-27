@@ -100,7 +100,25 @@ export const PRESETS: Record<string, Preset> = {
   },
   typewriter: {
     target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
-    apply: (s, e) => { s.textReveal = Math.min(s.textReveal, e) },
+    // trail: son yazılan harfler bu tonda belirip metnin rengine döner (0 = kapalı)
+    params: [{ key: 'trail', default: 0, min: 0, max: 12, step: 1 }, { key: 'trailHue', default: 18, min: 0, max: 360, step: 1 }],
+    apply: (s, e, p, { trail, trailHue }) => {
+      s.textReveal = Math.min(s.textReveal, e)
+      // iz yalnızca yazarken; bitince bütün metin kendi renginde
+      if (trail > 0 && p > 0 && p < 1) {
+        s.trail = trail
+        s.trailHue = trailHue
+      }
+    },
+  },
+  caret: {
+    // Yazı imleci: blok boyunca metnin sonunda "|" görünür; blink > 0 ise saniyede o kadar yanıp söner.
+    target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.5,
+    params: [{ key: 'blink', default: 1, min: 0, max: 4, step: 0.5 }],
+    apply: (s, _e, p, { blink }, duration) => {
+      if (p <= 0 || p >= 1) return
+      s.caret = blink <= 0 || Math.floor(p * duration * blink * 2) % 2 === 0
+    },
   },
   move: {
     // Anahtar kare gibi: bulunduğu yerden (öncekilerin bıraktığı yerden) hedefe gider ve orada kalır.
@@ -271,6 +289,22 @@ export const PRESETS: Record<string, Preset> = {
     target: 'camera', category: 'lens', defaultEasing: 'linear', defaultDuration: 1.2,
     params: [{ key: 'intensity', default: 1.2, min: 0, max: 3, step: 0.1 }],
     apply: (s, _e, p, { intensity }) => { s.leak = Math.max(s.leak, intensity * bell(p)) },
+  },
+  'camera-move': {
+    // Anahtar kare gibi: kamera (ve baktığı nokta) kayar, z=0 düzlemindeki görüntü `zoom` katına büyür.
+    target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 1,
+    params: [
+      { key: 'dx', default: 0, min: -20, max: 20, step: 0.05 },
+      { key: 'dy', default: 0, min: -20, max: 20, step: 0.05 },
+      { key: 'zoom', default: 1, min: 0.1, max: 10, step: 0.01 },
+    ],
+    apply: (s, e, _p, { dx, dy, zoom }) => {
+      s.x += dx * e
+      s.y += dy * e
+      s.targetX += dx * e
+      s.targetY += dy * e
+      s.z /= 1 + (zoom - 1) * e
+    },
   },
   'camera-pan': {
     target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,

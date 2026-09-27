@@ -49,6 +49,9 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Şablonlar bloklarıyla videoya göre yazılır; `fitClip` klibi katmanın göründüğü aralığa oturtur ve kenardaki 0 sn belirme/kaybolma bloklarını atar. Test (`buildUnfitted`) her şablonun eski haliyle aynı göründüğünü kontrol eder.
 - Video katmanında eski `mediaStart` yok; video klibin başında başlar.
 
+- `ai-search-ad` şablonu (`src/project/aiSearchAd.ts`) dikey (1080×1920, 60 kare/sn), 30 kare/sn'lik bir referans reklamdan kare kare ölçüldü; kare numaraları 60 fps'e göre, ölçüler referans pikselinde (720×1280, 1 birim = 195.4 px). Kamera `camera-move` bloklarıyla referanstan ölçülen ölçek/kaydırma eğrilerini izler (`camTo` mutlak hedef verir, farkı kendisi hesaplar; 408'deki kesmede sıfırlanır). Başlıklar kelime kelime ayrı katman: genişlikler `WORD_EM` tablosunda (Inter 700, fontTools ile ölçüldü) — yeni kelime/dil eklenirse tabloya ekle. Görseller `node scripts/build-ai-visibility-assets.mjs` (HTML → başsız Chrome → `public/templates/ai-visibility`). Yalnızca ChatGPT/OpenAI adı ve logosu gerçek (kullanıcı kararı); marka Sunrank.ai, rakipler ve dashboard hayali — başka gerçek marka ekleme.
+- Üst üste binen düz katmanlar (görsel + metin) aynı z'de z-fighting yapar: saydam PNG pikselleri de derinliğe yazıyor, metin şerit şerit kaybolur. Öndeki katmana biraz daha büyük z ver (0.01) ve listede de önde olsun (liste sırası `renderOrder`; sıra ile z çelişirse arkadaki çizilmez).
+
 ## Proje formatı sürümleri
 - `Project.version` ve `PROJECT_VERSION` (`src/engine/types.ts`). Formatı değiştirirken sürümü artır ve `src/engine/migrate.ts`'e bir adım ekle; eski adımları değiştirme. Kayıttan yükleme ve dosyadan içe aktarma `migrateProject`'ten geçer.
 - Blok ayarları preset'te tanımlı (`params: ParamSpec[]`); motor `resolveParams` ile varsayılanları doldurur, panel hepsini gösterir.
@@ -85,6 +88,8 @@ Boşluk oynat/durdur · Ctrl+Z / Ctrl+Y · Ctrl+C / Ctrl+V (oynatma kafasına) �
 - Lens bükülmesi/renk kayması kendi `EffectPass`'inde (`LensPass`): aynı geçişte postprocessing efektleri özelliklerine göre sıralıyor, lens alan derinliğinin önüne geçip siliniyordu.
 - Zincirde hangi efektlerin olduğu `EffectComposer` `key`'ine girer: alan derinliği açıkken geçiş eklenip çıkınca çizim donuyor.
 - Preset `apply`'ın 5. argümanı blok süresi (zamana bağlı bloklar için).
+- `typewriter` ayarları `trail`/`trailHue`: son yazılan harfler o tonda belirip metnin rengine döner (troika `colorRanges`, `src/render/textTrail.ts`). `caret`: blok boyunca metnin sonunda "|" (blink = saniyede yanıp sönme, 0 = sabit).
+- `camera-move` (kamera satırı): kamera ve baktığı nokta birlikte kayar (dx, dy), `zoom` z=0 düzlemindeki görüntüyü o kat büyütür (mesafeyi böler); anahtar kare gibi birikir. Kamerayı kaydırmak için `position` değiştirmek yetmez (hedef yerinde kalır, görüntü döner).
 
 ## 3D cihaz modelleri
 - `public/models/{phone,tablet,laptop}.glb`, `node scripts/process-models.mjs` ile `models-src/*.glb`'den (git'e girmez, Sketchfab indirmeleri) üretilir: logo/marka yazıları, klavye kılıfı/kalem ve duvar kağıtları çıkarılır; parça adları genelleştirilir; ekran +z'ye döndürülür, ölçü procedural maketlerle aynı; meshopt sıkıştırma.

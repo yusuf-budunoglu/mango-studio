@@ -160,6 +160,12 @@ export interface LayerState {
   revealSoftness: number
   /** harf aralığına eklenen (tracking-in) */
   letterSpacing: number
+  /** metnin sonunda yazı imleci (|) görünsün mü */
+  caret: boolean
+  /** daktiloda son yazılan kaç harf renkli (0 = yok) */
+  trail: number
+  /** renkli izin tonu (0..360°) */
+  trailHue: number
 }
 
 export interface CameraState {

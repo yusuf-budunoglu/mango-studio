@@ -59,6 +59,26 @@ describe('evaluate', () => {
     expect(displayText(counter, evaluateLayer(counter, 0.5))).toBe('100')
   })
 
+  it('yazı imleci blok boyunca metnin sonunda yanıp söner', () => {
+    const typed = layer([
+      { id: 'b', preset: 'typewriter', start: 0, duration: 1, easing: 'linear' },
+      { id: 'c', preset: 'caret', start: 0, duration: 2, params: { blink: 0 } },
+    ])
+    expect(displayText(typed, evaluateLayer(typed, 0.5))).toBe('Merh|')
+    expect(displayText(typed, evaluateLayer(typed, 3))).toBe('Merhaba')
+    const blinking = layer([{ id: 'c', preset: 'caret', start: 0, duration: 2, params: { blink: 1 } }])
+    expect(evaluateLayer(blinking, 0.2).caret).toBe(true)
+    expect(evaluateLayer(blinking, 0.7).caret).toBe(false)
+    expect(evaluateLayer(blinking, 1.2).caret).toBe(true)
+  })
+
+  it('daktilonun renkli izi yalnızca yazarken vardır', () => {
+    const typed = layer([{ id: 'b', preset: 'typewriter', start: 0, duration: 1, easing: 'linear', params: { trail: 3, trailHue: 20 } }])
+    expect(evaluateLayer(typed, 0.5).trail).toBe(3)
+    expect(evaluateLayer(typed, 0.5).trailHue).toBe(20)
+    expect(evaluateLayer(typed, 2).trail).toBe(0)
+  })
+
   it('kelime kelime belirme, soldan açılma ve harf aralığı', () => {
     const words = layer([{ id: 'b', preset: 'word-reveal', start: 0, duration: 1, easing: 'linear' }], { text: 'bir iki üç dört' })
     expect(displayText(words, evaluateLayer(words, 0))).toBe('')

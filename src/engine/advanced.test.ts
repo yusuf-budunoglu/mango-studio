@@ -102,3 +102,23 @@ describe('lens blokları', () => {
     expect(at('light-leak', 3).s.leak).toBe(0)
   })
 })
+
+describe('kamera hareketi', () => {
+  it('kamerayı ve baktığı noktayı kaydırır, yakınlaşmada mesafeyi böler', () => {
+    const project = TEMPLATES[0].build()
+    project.camera.position = [0, 0, 9]
+    project.camera.blocks = [
+      { id: 'a', preset: 'camera-move', start: 0, duration: 1, easing: 'linear', params: { dx: 1, dy: -2, zoom: 1.5 } },
+      { id: 'b', preset: 'camera-move', start: 2, duration: 1, easing: 'linear', params: { zoom: 0.5 } },
+    ]
+    const mid = evaluateCamera(project, 0.5)
+    expect(mid.x).toBeCloseTo(0.5)
+    expect(mid.targetY).toBeCloseTo(-1)
+    expect(mid.z).toBeCloseTo(9 / 1.25)
+    const held = evaluateCamera(project, 1.5)
+    expect(held).toMatchObject({ x: 1, y: -2, targetX: 1, targetY: -2 })
+    expect(held.z).toBeCloseTo(6)
+    // ikinci blok ilkinin bıraktığı yerden devam eder: 1.5 × 0.5 = 0.75 kat
+    expect(evaluateCamera(project, 4).z).toBeCloseTo(12)
+  })
+})

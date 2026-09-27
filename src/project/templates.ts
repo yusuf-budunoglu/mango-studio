@@ -1,6 +1,7 @@
 import { evaluateLayer } from '../engine/evaluate'
 import { newId } from '../engine/ids'
 import { PRESETS } from '../engine/presets'
+import { buildAiSearchAd } from './aiSearchAd'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -473,6 +474,11 @@ export const TEMPLATES: Template[] = [
         },
       }
     },
+  },
+  {
+    id: 'ai-search-ad',
+    accent: '#E65324',
+    build: () => buildAiSearchAd({ t, b, layer, camera, project }),
   },
 ]
 

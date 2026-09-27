@@ -4,6 +4,7 @@ import { MeshBasicMaterial, type Group, type Mesh } from 'three'
 import { displayText } from '../../engine/evaluate'
 import { pendingTextSyncs } from '../../export/bridge'
 import { useTextFontUrl } from '../../render/fontFaces'
+import { trailColorRanges } from '../../render/textTrail'
 import { applyTransform, selectOnClick, type LayerProps } from './shared'
 
 // troika-three-text'in (drei <Text>) tipleri yok; kullandığımız alanları tanımlıyoruz.
@@ -12,6 +13,7 @@ interface TroikaText extends Mesh {
   fillOpacity: number
   letterSpacing: number
   clipRect: [number, number, number, number] | null
+  colorRanges: Record<number, number> | null
   textRenderInfo?: { blockBounds: [number, number, number, number] }
   sync: (callback?: () => void) => void
 }
@@ -71,6 +73,12 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
       const spacing = (layer.letterSpacing ?? 0) + s.letterSpacing
       if (Math.abs(mesh.letterSpacing - spacing) > 1e-4) {
         mesh.letterSpacing = spacing
+        needsSync = true
+      }
+      // renkli iz: yalnızca değişince güncellenir (her karede yeni nesne yeniden dizilime yol açar)
+      const ranges = trailColorRanges(str, layer.color, s.trail, s.trailHue)
+      if (JSON.stringify(ranges) !== JSON.stringify(mesh.colorRanges ?? null)) {
+        mesh.colorRanges = ranges
         needsSync = true
       }
       if (needsSync) syncText(mesh)

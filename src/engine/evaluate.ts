@@ -38,6 +38,9 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     softReveal: 1,
     revealSoftness: 0.3,
     letterSpacing: 0,
+    caret: false,
+    trail: 0,
+    trailHue: 18,
   }
   // Klibin dışında katman çizilmez; bloklar klibin başından itibaren zamanlanır.
   if (!inClip(layer, time)) s.opacity = 0
@@ -100,6 +103,6 @@ export function displayText(layer: Layer, state: LayerState, numberLocale = 'en-
     const words = base.match(/\S+\s*/g) ?? []
     base = words.slice(0, Math.round(words.length * state.wordReveal)).join('').trimEnd()
   }
-  if (state.textReveal >= 1) return base
-  return base.slice(0, Math.round(base.length * state.textReveal))
+  const shown = state.textReveal >= 1 ? base : base.slice(0, Math.round(base.length * state.textReveal))
+  return state.caret ? `${shown}|` : shown
 }
