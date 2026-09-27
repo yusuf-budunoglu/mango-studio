@@ -31,8 +31,7 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - `src/project/templates.ts` — kendi şablonlarımız (sadece metin/şekil/telefon, dış asset yok). Her `build()` yeni id'ler üretir.
 - `src/persistence/repository.ts` — proje kaydı (şimdilik IndexedDB, `idb-keyval`). Supabase'e geçişte aynı arayüz korunacak. `parseProjectFile` içe aktarılan JSON'u doğrular.
 - `src/layout/` — `AppShell` (sol menü + üst çubuk: arama, dil seçici). Editör hariç tüm sayfalar bunun içinde.
-- `src/screens/` — `Home` (sohbet kutusu + tanıtım bandı + şablonlar), `Videos` (projelerim), `Templates`, `ComingSoon`, `Editor` (800 ms gecikmeli otomatik kayıt). Yönlendirme `src/router.ts`: `#/`, `#/videos`, `#/templates`, `#/soon/<özellik>`, `#/p/<id>`.
-- `src/components/ChatBox.tsx` — metinden video sohbeti; yapay zekâ henüz bağlı değil, cevap sabit bir bilgi mesajı.
+- `src/screens/` — `Home` (girişte akan şablon şeridi — arama yapılınca ızgara —, tanıtım bandı, Claude MCP tanıtımı: arka plan `public/brand/claude-horizon.jpg`), `Videos` (projelerim), `Templates`, `ComingSoon`, `Editor` (800 ms gecikmeli otomatik kayıt). Yönlendirme `src/router.ts`: `#/`, `#/videos`, `#/templates`, `#/soon/<özellik>`, `#/p/<id>`.
 - `public/templates/<id>.jpg` — şablon kartı önizlemeleri, uygulamadan render edilip kaydedildi. Şablon değişirse yeniden üretilmeli.
 - Geri alma: zundo `handleSet` 600 ms içindeki ardışık değişiklikleri tek adımda birleştirir; `loadProject` geçmişi sıfırlar.
 

@@ -50,7 +50,24 @@ function LoopCard({ template, hidden }: { template: Template; hidden?: boolean }
   )
 }
 
-/** Ana sayfadaki "Claude ile Mango Studio MCP" tanıtımı; altında şablonlar sürekli akar. */
+/** Ana sayfanın girişindeki şablon şeridi: şablonların döngü videoları sürekli akar. */
+export function TemplateMarquee() {
+  const { t } = useTranslation()
+  return (
+    <div className="marquee" role="group" aria-label={t('templatesPage.title')}>
+      <div className="marquee-track">
+        {TEMPLATES.map((tpl) => (
+          <LoopCard key={tpl.id} template={tpl} />
+        ))}
+        {TEMPLATES.map((tpl) => (
+          <LoopCard key={`copy-${tpl.id}`} template={tpl} hidden />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Ana sayfadaki "Claude ile Mango Studio MCP" tanıtımı; arka planı ufuk fotoğrafı. */
 export function McpPromo() {
   const { t } = useTranslation()
   return (
@@ -66,16 +83,6 @@ export function McpPromo() {
         <img src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" />
         {t('mcp.install')}
       </a>
-      <div className="marquee" role="group" aria-label={t('mcp.marquee')}>
-        <div className="marquee-track">
-          {TEMPLATES.map((tpl) => (
-            <LoopCard key={tpl.id} template={tpl} />
-          ))}
-          {TEMPLATES.map((tpl) => (
-            <LoopCard key={`copy-${tpl.id}`} template={tpl} hidden />
-          ))}
-        </div>
-      </div>
     </section>
   )
 }

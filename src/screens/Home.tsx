@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ChatBox } from '../components/ChatBox'
-import { McpPromo } from '../components/McpPromo'
+import { McpPromo, TemplateMarquee } from '../components/McpPromo'
 import { TemplateCard } from '../components/TemplateCard'
 import { AppShell } from '../layout/AppShell'
 import { TEMPLATES, templateDescription, templateName } from '../project/templates'
@@ -15,7 +14,24 @@ export function Home() {
   return (
     <AppShell current={{ screen: 'home' }} title={t('nav.home')}>
       <div className="home-column">
-        <ChatBox />
+        <section className="section">
+          <div className="section-head">
+            <h2>{t('templatesPage.title')}</h2>
+            <a href={routeToHash({ screen: 'templates' })}>{t('templatesPage.viewAll')}</a>
+          </div>
+          {/* Arama yokken şablonlar akan şeritte; arama yapılınca eşleşenler ızgarada */}
+          {!search.trim() ? (
+            <TemplateMarquee />
+          ) : templates.length === 0 ? (
+            <p className="hint">{t('search.noResults', { query: search })}</p>
+          ) : (
+            <div className="tile-grid">
+              {templates.map((tpl) => (
+                <TemplateCard key={tpl.id} template={tpl} />
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="banner">
           <h2>{t('banner.title')}</h2>
@@ -31,22 +47,6 @@ export function Home() {
         </section>
 
         <McpPromo />
-
-        <section className="section">
-          <div className="section-head">
-            <h2>{t('templatesPage.title')}</h2>
-            <a href={routeToHash({ screen: 'templates' })}>{t('templatesPage.viewAll')}</a>
-          </div>
-          {templates.length === 0 ? (
-            <p className="hint">{t('search.noResults', { query: search })}</p>
-          ) : (
-            <div className="tile-grid">
-              {templates.map((tpl) => (
-                <TemplateCard key={tpl.id} template={tpl} />
-              ))}
-            </div>
-          )}
-        </section>
       </div>
     </AppShell>
   )
