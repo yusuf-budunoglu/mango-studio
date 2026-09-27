@@ -534,6 +534,16 @@ const en = {
   templatesPage: {
     title: 'Templates',
     viewAll: 'View all',
+    subtitle: 'Motion videos ready to go. Pick one, swap in your text and images, export.',
+    filters: { all: 'All', landscape: 'Landscape', vertical: 'Vertical', favorites: 'Favorites' },
+    count_one: '{{count}} template',
+    count_other: '{{count}} templates',
+    free: 'Free',
+    seconds: '{{value}} s',
+    use: 'Start a video from {{name}}',
+    favorite: 'Add {{name}} to favorites',
+    unfavorite: 'Remove {{name}} from favorites',
+    noFavorites: 'No favorites yet. Tap the heart on a template to keep it here.',
   },
   soon: {
     title: '{{feature}} is coming soon',

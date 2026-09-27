@@ -1,6 +1,16 @@
 import { create } from 'zustand'
 
 const SIDEBAR_KEY = 'motion-studio.sidebar-collapsed'
+const FAVORITES_KEY = 'motion-studio.favorite-templates'
+
+function readFavorites(): string[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
 
 function readCollapsed() {
   try {
@@ -16,6 +26,9 @@ interface UiStore {
   setSearch: (q: string) => void
   sidebarCollapsed: boolean
   toggleSidebar: () => void
+  /** Kalple işaretlenen şablonlar (yalnızca bu tarayıcıda). */
+  favorites: string[]
+  toggleFavorite: (templateId: string) => void
 }
 
 export const useUiStore = create<UiStore>()((set) => ({
@@ -30,6 +43,17 @@ export const useUiStore = create<UiStore>()((set) => ({
         // tercih kaydedilemese de bu oturumda çalışır
       }
       return { sidebarCollapsed: !s.sidebarCollapsed }
+    }),
+  favorites: readFavorites(),
+  toggleFavorite: (templateId) =>
+    set((s) => {
+      const favorites = s.favorites.includes(templateId) ? s.favorites.filter((id) => id !== templateId) : [...s.favorites, templateId]
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
+      } catch {
+        // kaydedilemese de bu oturumda çalışır
+      }
+      return { favorites }
     }),
 }))
 

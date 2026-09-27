@@ -98,6 +98,10 @@ export function fitClip(layer: Layer, total: number): Layer {
 
 export interface Template {
   id: string
+  /** kart önizlemesinin oranı (proje boyutuyla aynı; test kontrol eder) */
+  format: '16:9' | '9:16'
+  /** kartta gösterilen süre (sn, bir ondalık; test kontrol eder) */
+  seconds: number
   /** kütüphane kartında gösterilecek renk */
   accent: string
   build: () => Project
@@ -106,6 +110,8 @@ export interface Template {
 export const TEMPLATES: Template[] = [
   {
     id: 'app-launch',
+    format: '16:9',
+    seconds: 8,
     accent: '#6c5ce7',
     build: () =>
       project(
@@ -123,6 +129,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'feature-tour',
+    format: '16:9',
+    seconds: 9,
     accent: '#00b894',
     build: () =>
       project(
@@ -141,6 +149,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'stats',
+    format: '16:9',
+    seconds: 7,
     accent: '#fdcb6e',
     build: () => {
       const columns = [
@@ -166,6 +176,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'logo-reveal',
+    format: '16:9',
+    seconds: 5,
     accent: '#e17055',
     build: () =>
       project(
@@ -183,6 +195,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'fintech',
+    format: '16:9',
+    seconds: 19.3,
     accent: '#72e83f',
     build: () => {
       // Sinematik ürün tanıtımı: siyah fon, sert kesmelerle ayrılan yakın çekimler, alan derinliği.
@@ -295,6 +309,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'wallet-promo',
+    format: '9:16',
+    seconds: 19.1,
     accent: '#f2553f',
     build: () => {
       // Dikey (9:16) cüzdan uygulaması tanıtımı. 60 kare/sn'lik bir referans videodan kare kare ölçüldü;
@@ -477,6 +493,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'ai-search-ad',
+    format: '9:16',
+    seconds: 21.8,
     accent: '#E65324',
     build: () => buildAiSearchAd({ t, b, layer, camera, project }),
   },

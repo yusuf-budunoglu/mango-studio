@@ -535,6 +535,16 @@ const tr: Translation = {
   templatesPage: {
     title: 'Şablonlar',
     viewAll: 'Tümünü gör',
+    subtitle: 'Hazır hareketli videolar. Birini seç, yazını ve görsellerini koy, dışa aktar.',
+    filters: { all: 'Tümü', landscape: 'Yatay', vertical: 'Dikey', favorites: 'Favoriler' },
+    count_one: '{{count}} şablon',
+    count_other: '{{count}} şablon',
+    free: 'Ücretsiz',
+    seconds: '{{value}} sn',
+    use: '{{name}} şablonuyla video başlat',
+    favorite: '{{name}} şablonunu favorilere ekle',
+    unfavorite: '{{name}} şablonunu favorilerden çıkar',
+    noFavorites: 'Henüz favori yok. Bir şablondaki kalbe dokunursan burada durur.',
   },
   soon: {
     title: '{{feature}} yakında geliyor',

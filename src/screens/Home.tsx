@@ -25,7 +25,7 @@ export function Home() {
           ) : templates.length === 0 ? (
             <p className="hint">{t('search.noResults', { query: search })}</p>
           ) : (
-            <div className="tile-grid">
+            <div className="tcard-grid">
               {templates.map((tpl) => (
                 <TemplateCard key={tpl.id} template={tpl} />
               ))}
