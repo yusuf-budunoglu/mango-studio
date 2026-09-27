@@ -1,7 +1,7 @@
 export type Page = 'home' | 'videos' | 'templates' | 'assets'
 
 /** Henüz yapılmamış araçlar; menüde "yakında" etiketiyle görünür. */
-export const COMING_SOON = ['music', 'voiceover', 'sound-effects'] as const
+export const COMING_SOON = ['music', 'voiceover', 'sound-effects', 'mcp'] as const
 export type ComingSoonFeature = (typeof COMING_SOON)[number]
 
 export type Route =

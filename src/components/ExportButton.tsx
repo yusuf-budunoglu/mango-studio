@@ -105,7 +105,7 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
               </select>
             </div>
           </div>
-          <p className="hint">{t('exportVideo.summary', { width: size.width, height: size.height, seconds: project.duration, audio: project.audio?.length ? t('exportVideo.withAudio') : t('exportVideo.noAudio') })}</p>
+          <p className="hint">{t('exportVideo.summary', { width: size.width, height: size.height, seconds: Math.round(project.duration * 10) / 10, audio: project.audio?.length ? t('exportVideo.withAudio') : t('exportVideo.noAudio') })}</p>
           {status.kind === 'running' ? (
             <>
               <div className="export-progress" role="progressbar" aria-valuenow={Math.round(status.progress * 100)} aria-valuemin={0} aria-valuemax={100}>

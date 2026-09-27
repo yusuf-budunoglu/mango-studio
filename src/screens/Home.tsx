@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ChatBox } from '../components/ChatBox'
+import { McpPromo } from '../components/McpPromo'
 import { TemplateCard } from '../components/TemplateCard'
 import { AppShell } from '../layout/AppShell'
 import { TEMPLATES, templateDescription, templateName } from '../project/templates'
@@ -28,6 +29,8 @@ export function Home() {
             </a>
           </div>
         </section>
+
+        <McpPromo />
 
         <section className="section">
           <div className="section-head">

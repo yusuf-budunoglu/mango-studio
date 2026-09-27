@@ -1,3 +1,9 @@
+/* Arayüz yazıları: Mango UI = Inter, Mango Display = Space Grotesk (ikisi de OFL, dosyalar pakette) */
+@font-face { font-family: 'Mango UI'; font-weight: 100 900; font-display: swap; src: url('./assets/fonts/ui/inter-latin-wght-normal.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Mango UI'; font-weight: 100 900; font-display: swap; src: url('./assets/fonts/ui/inter-latin-ext-wght-normal.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: 'Mango Display'; font-weight: 300 700; font-display: swap; src: url('./assets/fonts/ui/space-grotesk-latin-wght-normal.woff2') format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Mango Display'; font-weight: 300 700; font-display: swap; src: url('./assets/fonts/ui/space-grotesk-latin-ext-wght-normal.woff2') format('woff2'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+
 :root {
   /* Mango Studio: arayüzün çoğu siyah; vurgular logodaki mango renklerinden (src/styles/brand.md) */
   --bg: #0a0a0b;
@@ -6,15 +12,15 @@
   --line: #28262a;
   --ink: #f4efe7;
   --muted: #9c968c;
-  --accent: #f0922b;        /* mango turuncusu: ana vurgu */
-  --accent-ink: #1c1206;    /* turuncu zemin üstündeki yazı */
-  --accent-soft: rgba(240, 146, 43, 0.14);
-  --gold: #e8b63c;          /* altın sarısı: ikincil vurgu */
-  --leaf: #5aa151;          /* yaprak yeşili: olumlu durumlar */
-  --tangerine: #e9642e;
-  --mango-red: #cd3d24;
-  --danger: #e0513a;
-  --brand-gradient: linear-gradient(115deg, #cd3d24 0%, #e9642e 26%, #ec9a31 50%, #e0c445 76%, #99aa3d 100%);
+  --accent: #d9711c;        /* mango turuncusu: ana vurgu */
+  --accent-ink: #140b03;    /* turuncu zemin üstündeki yazı */
+  --accent-soft: rgba(217, 113, 28, 0.14);
+  --gold: #c99324;          /* altın sarısı: ikincil vurgu */
+  --leaf: #3f8c3c;          /* yaprak yeşili: olumlu durumlar */
+  --tangerine: #c4501e;
+  --mango-red: #a3301b;
+  --danger: #d84f3a;
+  --brand-gradient: linear-gradient(115deg, #a3301b 0%, #c4501e 26%, #d27a1e 50%, #c2a02c 76%, #6d8a2c 100%);
   /* timeline blok kategorileri: mango ailesi, birbirinden ayırt edilebilir */
   --c-giris: #3d8a4c;
   --c-cikis: #b24a2a;
@@ -24,8 +30,11 @@
   --c-move: #c0722a;
   --c-transition: #9b2f2f;
   --c-lens: #b88a2e;
+  --font-ui: 'Mango UI', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Mango Display', 'Mango UI', 'Segoe UI', sans-serif;
   color-scheme: dark;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-ui);
+  font-feature-settings: 'cv11', 'ss01';
   font-size: 14px;
   color: var(--ink);
   background: var(--bg);
@@ -49,10 +58,8 @@ button, select, input, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
-@font-face { font-family: 'Mango Display'; font-weight: 700; src: url('./assets/fonts/sora-700.woff') format('woff'); }
-@font-face { font-family: 'Mango Display'; font-weight: 400; src: url('./assets/fonts/sora-400.woff') format('woff'); }
-.brand { display: inline-flex; align-items: center; gap: 8px; font-family: 'Mango Display', 'Segoe UI', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; }
-.brand span { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 400; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.brand span { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 500; }
 .brand-logo { width: 22px; height: 22px; object-fit: contain; flex: none; }
 .project-name { color: var(--muted); }
 .controls { margin-left: auto; display: flex; gap: 8px; }
@@ -214,7 +221,7 @@ button.danger { color: var(--danger); }
   gap: 8px;
   overflow: hidden;
   white-space: nowrap;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-ui);
   font-size: 12px;
   color: #fff;
   cursor: grab;
@@ -240,7 +247,7 @@ button.danger { color: var(--danger); }
 .timeline-wrap { position: relative; min-width: 0; height: 100%; overflow: hidden; }
 .timeline-end {
   position: absolute; top: 0; bottom: 0; right: -100vw; pointer-events: none; z-index: 1;
-  border-left: 2px solid rgba(224, 81, 58, 0.8); background: rgba(0, 0, 0, 0.45);
+  border-left: 2px solid rgba(216, 79, 58, 0.8); background: rgba(0, 0, 0, 0.45);
 }
 .timeline-end span { position: absolute; top: 8px; left: 6px; font-size: 11px; color: var(--danger); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 
@@ -276,7 +283,7 @@ button.danger { color: var(--danger); }
 .safe-guides { position: absolute; inset: 0; pointer-events: none; }
 .safe-action, .safe-title { position: absolute; border: 1px dashed rgba(255, 255, 255, 0.35); }
 .safe-action { inset: 5%; }
-.safe-title { inset: 10%; border-color: rgba(232, 182, 60, 0.55); }
+.safe-title { inset: 10%; border-color: rgba(201, 147, 36, 0.55); }
 .safe-center::before, .safe-center::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.35); }
 .safe-center::before { left: 50%; top: calc(50% - 12px); width: 1px; height: 24px; }
 .safe-center::after { top: 50%; left: calc(50% - 12px); height: 1px; width: 24px; }
@@ -420,7 +427,7 @@ button.danger { color: var(--danger); }
 .clip {
   position: relative; height: calc(100% - 6px); margin-top: 3px; border-radius: 6px; overflow: hidden;
   display: flex; flex-direction: column; justify-content: center; padding: 0 8px 4px;
-  color: #fff; font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; cursor: grab; background: #4a4035; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #fff; font-family: var(--font-ui); font-size: 12px; cursor: grab; background: #4a4035; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .clip--text { background: #8a5a1c; }
 .clip--phone, .clip--tablet, .clip--laptop { background: #2f6b3f; }

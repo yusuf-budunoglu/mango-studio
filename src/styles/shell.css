@@ -37,7 +37,6 @@
 }
 .icon-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; background: transparent; border-color: transparent; }
 .icon-button:hover { background: var(--panel-2); }
-.shell-title { margin: 0; font-size: 14px; font-weight: 600; }
 .shell-search {
   justify-self: center; display: flex; align-items: center; gap: 8px; width: min(380px, 100%);
   padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted);
@@ -70,7 +69,7 @@
 .chat-message { display: grid; gap: 2px; max-width: 85%; }
 .chat-message p { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 1.45; }
 .chat-message--user { justify-self: end; }
-.chat-message--user p { background: rgba(240, 146, 43, 0.16); }
+.chat-message--user p { background: rgba(217, 113, 28, 0.16); }
 .chat-message--assistant p { background: var(--panel-2); color: #e3ddd3; }
 .chat-author { font-size: 11px; color: var(--muted); padding: 0 4px; }
 .chat-message--user .chat-author { text-align: right; }
@@ -79,8 +78,8 @@
   display: grid; justify-items: center; gap: 10px; text-align: center;
   padding: 44px 24px; border-radius: 16px; overflow: hidden;
   background:
-    radial-gradient(120% 140% at 15% 20%, rgba(236, 154, 49, 0.5), transparent 55%),
-    radial-gradient(120% 140% at 90% 90%, rgba(205, 61, 36, 0.5), transparent 60%),
+    radial-gradient(120% 140% at 15% 20%, rgba(210, 122, 30, 0.5), transparent 55%),
+    radial-gradient(120% 140% at 90% 90%, rgba(163, 48, 27, 0.5), transparent 60%),
     #120d09;
   border: 1px solid #3a2a18;
 }
@@ -118,7 +117,7 @@
   .sidebar { width: 60px; flex-basis: 60px; }
   .sidebar .nav-label, .sidebar .nav-badge { display: none; }
   .shell-topbar { grid-template-columns: auto 1fr auto; }
-  .shell-title { display: none; }
+  .topnav { display: none; }
   .shell-content { padding: 24px 16px 48px; }
 }
 
@@ -134,3 +133,92 @@
 .credits ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .credits li { display: grid; gap: 3px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font-size: 13px; }
 .credits a { color: var(--accent); }
+
+/* ───────── Üst menü: yazı üstünde süzülen ışık ───────── */
+.shell-topbar > * { animation: topbar-reveal 0.3s ease-out both; }
+@keyframes topbar-reveal { from { opacity: 0; transform: translateY(-8px); } }
+.topnav { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.topnav-item {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px;
+  color: #a8a39b; font-size: 13.5px; font-weight: 500; text-decoration: none; white-space: nowrap;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.topnav-item:hover { background: rgba(255, 255, 255, 0.06); color: var(--ink); }
+.topnav-item.is-active { color: var(--accent); }
+.topnav-divider { width: 1px; height: 16px; margin: 0 6px; background: var(--line); flex: none; }
+.topnav-badge { padding: 1px 6px; border-radius: 5px; background: var(--leaf); color: #07140a; font-size: 10.5px; font-weight: 700; line-height: 15px; }
+
+/* Işık, yazının kopyası (data-text) üzerinde soldan sağa kayan dar bir degrade */
+.shimmer-text { position: relative; display: inline-block; }
+.shimmer-text::after {
+  content: attr(data-text); position: absolute; inset: 0; pointer-events: none;
+  color: transparent; -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(90deg, transparent 0%, transparent 40%, var(--shimmer-highlight, rgba(244, 239, 231, 0.9)) 50%, transparent 60%, transparent 100%);
+  background-size: 400% 100%; background-position: 100% 0; -webkit-background-clip: text; background-clip: text;
+  animation: shimmer-sweep var(--shimmer-duration, 2.4s) linear infinite;
+}
+.topnav-item.is-active .shimmer-text::after { --shimmer-highlight: #ffd29a; }
+.shimmer-text--gold {
+  background: linear-gradient(90deg, #8a5a17 0%, #f2c46b 50%, #8a5a17 100%); -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent; font-weight: 600;
+  --shimmer-highlight: #ffe3a3;
+}
+@keyframes shimmer-sweep { to { background-position: 0 0; } }
+
+/* ───────── Başlık yazısı: Space Grotesk ───────── */
+.banner h2, .section-head h2, .soon h2, .credits h2, .mcp-title {
+  font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: -0.02em;
+}
+
+/* ───────── Claude + Mango Studio MCP tanıtımı ───────── */
+.mcp {
+  position: relative; display: grid; justify-items: center; gap: 14px; text-align: center;
+  padding: 40px 0 0; border-radius: 16px; overflow: hidden; isolation: isolate;
+  border: 1px solid #2a1c12;
+  background:
+    radial-gradient(90% 55% at 50% 58%, rgba(196, 80, 30, 0.55), transparent 70%),
+    linear-gradient(180deg, #0d0a09 0%, #1a0f0a 38%, #6b2412 55%, #a3441a 60%, #3b1a12 70%, #0e0c10 100%);
+}
+.mcp::before { /* ufuk çizgisindeki ince, parlak şerit */
+  content: ''; position: absolute; left: 0; right: 0; top: 58%; height: 2px; z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(255, 190, 120, 0.7), transparent); filter: blur(1px);
+}
+.mcp-lead { margin: 0; color: #d9d2c6; font-size: 15px; font-weight: 500; }
+.mcp-title { margin: 0; display: flex; align-items: center; gap: 0.18em; font-size: clamp(40px, 7vw, 72px); line-height: 1; }
+.mcp-title span { background: linear-gradient(90deg, #b8562c, #e0875c 45%, #b8562c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mcp-spark { width: 0.8em; height: 0.8em; flex: none; color: #d57a4e; animation: mcp-spin 14s linear infinite; }
+@keyframes mcp-spin { to { transform: rotate(360deg); } }
+.mcp-body { margin: 0; max-width: 44ch; color: #e8e1d6; font-size: 14.5px; line-height: 1.45; text-wrap: balance; }
+.mcp-install {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 10px 18px; border-radius: 10px;
+  background: #f4efe7; color: #0a0a0b; font-weight: 600; font-size: 14px; text-decoration: none;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 10px 30px rgba(0, 0, 0, 0.35); transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.mcp-install:hover { transform: translateY(-1px); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 14px 34px rgba(0, 0, 0, 0.4); }
+.mcp-install img { width: 18px; height: 18px; }
+
+/* Şablon şeridi: iki kopya yan yana, yarısı kadar kayınca başa sarar */
+.marquee {
+  width: 100%; margin-top: 26px; padding: 0 0 22px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.marquee-track { display: flex; gap: 14px; width: max-content; animation: marquee-scroll var(--marquee-duration, 40s) linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee-scroll { to { transform: translateX(calc(-50% - 7px)); } }
+.marquee-card {
+  position: relative; flex: none; display: block; height: 200px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px; overflow: hidden; background: #0e0c0b; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.marquee-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.marquee-card video, .marquee-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.marquee-label {
+  position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px;
+  background: rgba(10, 10, 11, 0.72); backdrop-filter: blur(6px); color: var(--ink); font-size: 12px; font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-topbar > *, .shimmer-text::after, .mcp-spark, .marquee-track { animation: none; }
+  .marquee { overflow-x: auto; }
+}
