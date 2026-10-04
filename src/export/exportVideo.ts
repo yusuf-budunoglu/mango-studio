@@ -10,6 +10,7 @@ import {
   WebMOutputFormat,
 } from 'mediabunny'
 import { renderAudioMix } from '../audio/engine'
+import type { Fps, Resolution } from '../billing/plans'
 import { resolveEffects } from '../engine/effects'
 import type { Project } from '../engine/types'
 import i18n from '../i18n'
@@ -19,9 +20,9 @@ import { exportBridge, pendingModelLoads, pendingTextSyncs, prepareFrameHooks, r
 const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
 
 export interface ExportOptions {
-  /** çıktının kısa kenarı: 720, 1080 ya da 2160 (4K) */
-  resolution: 720 | 1080 | 2160
-  fps: 30 | 60
+  /** çıktının kısa kenarı: 720, 1080, 1440 (2K) ya da 2160 (4K); plana göre sınırlı (`src/billing/plans.ts`) */
+  resolution: Resolution
+  fps: Fps
   container: 'mp4' | 'webm'
 }
 

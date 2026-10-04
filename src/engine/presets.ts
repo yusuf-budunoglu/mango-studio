@@ -94,9 +94,49 @@ export const PRESETS: Record<string, Preset> = {
     params: [{ key: 'amount', default: 0.12, min: 0, max: 3, step: 0.02 }, { key: 'cycles', default: 1, min: 0.5, max: 20, step: 0.5 }],
     apply: (s, _e, p, { amount, cycles }) => { s.y += Math.sin(p * Math.PI * 2 * cycles) * amount },
   },
+  sway: {
+    // Rüzgârda sallanma: katman kendi merkezi etrafında sağa sola eğilir (çiçek/çimen görsellerinde sapın dibi
+    // görselin ortasında olduğundan dibinden sallanır). Blok dışında eğim yok; tam sayı tekrarda başı ve sonu aynı eğimde (döngü dikişsiz).
+    target: 'layer', category: 'emphasis', defaultEasing: 'linear', defaultDuration: 4,
+    // phase: salınımın başladığı an (0..1 tur); yan yana çiçekler aynı anda eğilmesin diye
+    params: [
+      { key: 'angle', default: 4, min: 0, max: 45, step: 0.5 },
+      { key: 'cycles', default: 2, min: 0.5, max: 20, step: 0.5 },
+      { key: 'phase', default: 0, min: 0, max: 1, step: 0.05 },
+    ],
+    apply: (s, _e, p, { angle, cycles, phase }) => {
+      if (p <= 0 || p >= 1) return
+      const w = (p * cycles + phase) * Math.PI * 2
+      s.rotZ += (0.8 * Math.sin(w) + 0.2 * Math.sin(2 * w)) * angle * DEG
+    },
+  },
   spin: {
     target: 'layer', category: 'emphasis', defaultEasing: 'ease-in-out', defaultDuration: 1.5,
     apply: (s, e) => { s.rotY += e * Math.PI * 2 },
+  },
+  'light-sweep': {
+    // Görsel katmanında (çerçeve, kutu kenarı) kenar yolu boyunca dönen ışıklar: görsel yalnızca ışıkların
+    // olduğu yerlerde parlak görünür, ışıklar yuvarlatılmış kutunun çevresinde eşit hızla turlar (neon kenar).
+    // Blok başlayınca açılır ve bitince son konumda kalır; başlamadan önce görsel olduğu gibi görünür.
+    target: 'layer', category: 'emphasis', defaultEasing: 'linear', defaultDuration: 3,
+    params: [
+      { key: 'turns', default: 1, min: -10, max: 10, step: 0.05 },
+      { key: 'count', default: 2, min: 1, max: 4, step: 1 },
+      { key: 'width', default: 0.1, min: 0.01, max: 0.5, step: 0.01 },
+      { key: 'floor', default: 0, min: 0, max: 1, step: 0.05 },
+      { key: 'phase', default: 0, min: 0, max: 1, step: 0.05 },
+      { key: 'radius', default: 0.5, min: 0, max: 0.5, step: 0.01 },
+      { key: 'inset', default: 0, min: 0, max: 0.45, step: 0.01 },
+    ],
+    apply: (s, e, p, { turns, count, width, floor, phase, radius, inset }) => {
+      if (p <= 0) return
+      s.sweep = phase + e * turns
+      s.sweepCount = Math.max(1, Math.round(count))
+      s.sweepWidth = width
+      s.sweepFloor = floor
+      s.sweepRadius = radius
+      s.sweepInset = inset
+    },
   },
   typewriter: {
     target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 1.2,
@@ -156,10 +196,36 @@ export const PRESETS: Record<string, Preset> = {
     params: [{ key: 'softness', default: 0.3, min: 0.02, max: 1, step: 0.02 }],
     apply: (s, e, _p, { softness }) => { s.softReveal = Math.min(s.softReveal, e); s.revealSoftness = softness },
   },
+  'glow-sweep': {
+    // Metnin üstünden soldan sağa geçen ışık dalgası: harfler önce beyaza yakın, sonra `glowHue` tonunda parlar ve
+    // etraflarına yumuşak ışıma yayar; dalga geçince harfler yumuşakça kendi renklerine döner. Yalnızca blok sürerken.
+    target: 'layer', category: 'text', defaultEasing: 'linear', defaultDuration: 0.8,
+    params: [
+      { key: 'glowHue', default: 160, min: 0, max: 360, step: 1 },
+      { key: 'glowWidth', default: 1.9, min: 0, max: 4, step: 0.05 },
+      { key: 'softness', default: 0.3, min: 0.02, max: 1, step: 0.02 },
+      { key: 'halo', default: 1, min: 0, max: 2, step: 0.05 },
+    ],
+    apply: (s, e, p, { glowHue, glowWidth, softness, halo }) => {
+      if (p <= 0 || p >= 1) return
+      s.glow = e
+      s.glowHue = glowHue
+      s.glowWidth = glowWidth
+      s.glowSoftness = softness
+      s.glowHalo = halo
+    },
+  },
   'tracking-in': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.2,
     params: [{ key: 'amount', default: 0.4, min: 0, max: 2, step: 0.05 }],
     apply: (s, e, _p, { amount }) => { s.letterSpacing += (1 - e) * amount; s.opacity *= Math.min(1, e * 1.5) },
+  },
+  'tracking-out': {
+    // Harfler birbirinin içine sıkışarak kaybolur (tracking-in'in tersi); amount negatifse sola toplanır.
+    // Son %15'te söner.
+    target: 'layer', category: 'text', defaultEasing: 'ease-in', defaultDuration: 0.4,
+    params: [{ key: 'amount', default: -0.5, min: -2, max: 2, step: 0.05 }],
+    apply: (s, e, _p, { amount }) => { s.letterSpacing += e * amount; s.opacity *= Math.min(1, (1 - e) / 0.15) },
   },
   'count-up': {
     target: 'layer', category: 'text', defaultEasing: 'ease-out-expo', defaultDuration: 1.5,
@@ -304,6 +370,18 @@ export const PRESETS: Record<string, Preset> = {
       s.targetX += dx * e
       s.targetY += dy * e
       s.z /= 1 + (zoom - 1) * e
+    },
+  },
+  'camera-spin': {
+    // camera-orbit gibi hedefin etrafında döner ama mevcut açının ÜSTÜNE ekler: art arda bloklar birikir
+    // (silindir/atlıkarınca sahneleri için; camera-orbit her blokta açıyı sıfırdan verir).
+    target: 'camera', category: 'camera', defaultEasing: 'ease-in-out', defaultDuration: 3,
+    params: [{ key: 'angle', default: 90, min: -720, max: 720, step: 5 }],
+    apply: (s, e, _p, { angle }) => {
+      const r = Math.hypot(s.x - s.targetX, s.z)
+      const a = Math.atan2(s.x - s.targetX, s.z) + e * angle * DEG
+      s.x = s.targetX + Math.sin(a) * r
+      s.z = Math.cos(a) * r
     },
   },
   'camera-pan': {

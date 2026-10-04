@@ -41,6 +41,17 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     caret: false,
     trail: 0,
     trailHue: 18,
+    glow: null,
+    glowHue: 160,
+    glowWidth: 1.9,
+    glowSoftness: 0.3,
+    glowHalo: 1,
+    sweep: null,
+    sweepCount: 2,
+    sweepWidth: 0.1,
+    sweepFloor: 0,
+    sweepRadius: 0.5,
+    sweepInset: 0,
   }
   // Klibin dışında katman çizilmez; bloklar klibin başından itibaren zamanlanır.
   if (!inClip(layer, time)) s.opacity = 0

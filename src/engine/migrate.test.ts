@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createRepository, parseProjectFile, type KeyValue } from '../persistence/repository'
-import { buildUnfitted, TEMPLATES } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
+import { buildUnfitted } from '../project/templates'
 import { evaluateLayer } from './evaluate'
 import { migrateProject, NewerProjectVersionError } from './migrate'
 import { PRESETS, resolveParams } from './presets'
@@ -11,7 +12,7 @@ import { PROJECT_VERSION, type Layer } from './types'
  * zamanları videoya göre.
  */
 function legacyProject() {
-  const { version: _drop, ...rest } = buildUnfitted(TEMPLATES[0])
+  const { version: _drop, ...rest } = buildUnfitted(SAMPLE_TEMPLATE)
   return { ...rest, layers: rest.layers.map(({ start: _s, duration: _d, ...l }) => l) }
 }
 
@@ -20,7 +21,7 @@ describe('sürüm geçişi', () => {
     const old = legacyProject()
     const migrated = migrateProject(old)
     expect(migrated.version).toBe(PROJECT_VERSION)
-    const original = TEMPLATES[0].build()
+    const original = SAMPLE_TEMPLATE.build()
     // Aynı şablonun yeni hali ile taşınmış eski hali her anda aynı kareyi vermeli.
     for (let i = 0; i < original.duration * 4; i++) {
       const t = i / 4
@@ -42,13 +43,13 @@ describe('sürüm geçişi', () => {
   })
 
   it('güncel projeyi olduğu gibi bırakır', () => {
-    const project = TEMPLATES[1].build()
+    const project = SAMPLE_TEMPLATE.build()
     expect(migrateProject(project)).toEqual(project)
   })
 
   it('daha yeni sürümü reddeder', () => {
-    expect(() => migrateProject({ ...TEMPLATES[0].build(), version: PROJECT_VERSION + 1 })).toThrow(NewerProjectVersionError)
-    expect(() => parseProjectFile(JSON.stringify({ ...TEMPLATES[0].build(), version: 99 }))).toThrow(/newer version/)
+    expect(() => migrateProject({ ...SAMPLE_TEMPLATE.build(), version: PROJECT_VERSION + 1 })).toThrow(NewerProjectVersionError)
+    expect(() => parseProjectFile(JSON.stringify({ ...SAMPLE_TEMPLATE.build(), version: 99 }))).toThrow(/newer version/)
   })
 
   it('kayıttan ve dosyadan açılan eski projeler güncellenir', async () => {

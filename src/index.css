@@ -6,21 +6,23 @@
 
 :root {
   /* Mango Studio: arayüzün çoğu siyah; vurgular logodaki mango renklerinden (src/styles/brand.md) */
-  --bg: #0a0a0b;
-  --panel: #111113;
-  --panel-2: #18181b;
-  --line: #28262a;
-  --ink: #f4efe7;
-  --muted: #9c968c;
-  --accent: #d9711c;        /* mango turuncusu: ana vurgu */
-  --accent-ink: #140b03;    /* turuncu zemin üstündeki yazı */
-  --accent-soft: rgba(217, 113, 28, 0.14);
-  --gold: #c99324;          /* altın sarısı: ikincil vurgu */
-  --leaf: #3f8c3c;          /* yaprak yeşili: olumlu durumlar */
-  --tangerine: #c4501e;
-  --mango-red: #a3301b;
-  --danger: #d84f3a;
-  --brand-gradient: linear-gradient(115deg, #a3301b 0%, #c4501e 26%, #d27a1e 50%, #c2a02c 76%, #6d8a2c 100%);
+  --bg: #000000;            /* sayfa zemini: simsiyah */
+  --panel: #0d0d0f;
+  --panel-2: #16161a;
+  --line: #232327;
+  --ink: #f5f2ec;
+  --muted: #98948c;
+  --accent: #ff7a00;        /* mango turuncusu: doygun, sarıya yakın; Claude'un mercan turuncusundan ayrışır */
+  --accent-ink: #160900;    /* turuncu zemin üstündeki yazı */
+  --accent-soft: rgba(255, 122, 0, 0.14);
+  --gold: #ffb21e;          /* mango sarısı: ikincil vurgu */
+  --leaf: #46a83f;          /* yaprak yeşili: olumlu durumlar */
+  --tangerine: #ff5a1f;
+  --mango-red: #e2361b;
+  --danger: #f04e37;
+  --select: #2b7fff;        /* editörde seçim kutusu ve tutamaçlar: belirgin mavi */
+  --claude: #d97757;        /* yalnızca Claude adının/simgesinin yanında */
+  --brand-gradient: linear-gradient(115deg, #e2361b 0%, #ff5a1f 24%, #ff7a00 48%, #ffb21e 74%, #8cc63f 100%);
   /* timeline blok kategorileri: mango ailesi, birbirinden ayırt edilebilir */
   --c-giris: #3d8a4c;
   --c-cikis: #b24a2a;
@@ -116,7 +118,7 @@ button.danger { color: var(--danger); }
 /* İnce koyu kenar bandı: alan derinliği bulanıklığının kadraj arka planından dışarı taşan birkaç
    pikselini örter (aksi halde kadrajın çevresinde açık bir hale görünüyor). */
 .stage.is-overscan .stage-frame {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 7px rgba(10, 10, 11, 0.96), 0 0 0 100vmax rgba(10, 10, 11, 0.62);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 7px rgba(0, 0, 0, 0.96), 0 0 0 100vmax rgba(0, 0, 0, 0.62);
 }
 .transport { display: flex; align-items: center; gap: 8px; }
 .transport .play { width: 44px; }
@@ -164,6 +166,8 @@ button.danger { color: var(--danger); }
 .block--audio .block-name { position: relative; z-index: 1; }
 .waveform { position: absolute; inset: 2px 0; width: 100%; height: calc(100% - 4px); pointer-events: none; }
 .waveform polygon { fill: rgba(240, 190, 110, 0.5); }
+.export-upgrade { display: inline-flex; align-items: center; gap: 5px; color: var(--gold); font-size: 12px; font-weight: 600; text-decoration: none; }
+.export-upgrade:hover { text-decoration: underline; }
 .export-error { color: var(--danger); font-size: 12px; max-width: 260px; }
 .inspector .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }
@@ -212,17 +216,17 @@ button.danger { color: var(--danger); }
 .timeline-editor { background: #111113 !important; }
 .timeline-editor-action { background: transparent !important; }
 .block {
-  height: calc(100% - 6px);
-  margin-top: 3px;
-  border-radius: 5px;
-  padding: 0 10px;
+  height: calc(100% - 4px);
+  margin-top: 2px;
+  border-radius: 4px;
+  padding: 0 8px;
   display: flex;
   align-items: center;
   gap: 8px;
   overflow: hidden;
   white-space: nowrap;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 11px;
   color: #fff;
   cursor: grab;
 }
@@ -270,8 +274,6 @@ button.danger { color: var(--danger); }
 .card-actions button { padding: 4px 10px; font-size: 13px; }
 
 /* Dil seçici */
-.language-select { display: flex; align-items: center; gap: 6px; font-size: 13px; }
-.language-select select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Önizleme araçları ve güvenli alan kılavuzları */
@@ -283,7 +285,7 @@ button.danger { color: var(--danger); }
 .safe-guides { position: absolute; inset: 0; pointer-events: none; }
 .safe-action, .safe-title { position: absolute; border: 1px dashed rgba(255, 255, 255, 0.35); }
 .safe-action { inset: 5%; }
-.safe-title { inset: 10%; border-color: rgba(201, 147, 36, 0.55); }
+.safe-title { inset: 10%; border-color: rgba(255, 178, 30, 0.55); }
 .safe-center::before, .safe-center::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.35); }
 .safe-center::before { left: 50%; top: calc(50% - 12px); width: 1px; height: 24px; }
 .safe-center::after { top: 50%; left: calc(50% - 12px); height: 1px; width: 24px; }
@@ -425,9 +427,9 @@ button.danger { color: var(--danger); }
 .track-sub { padding: 4px 0 0 22px; margin-left: 20px; font-size: 11px; color: #6b665f; border-left: 2px solid #2c2a27; }
 .timeline-editor-edit-row.row-lane { background: #131315; }
 .clip {
-  position: relative; height: calc(100% - 6px); margin-top: 3px; border-radius: 6px; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center; padding: 0 8px 4px;
-  color: #fff; font-family: var(--font-ui); font-size: 12px; cursor: grab; background: #4a4035; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  position: relative; height: calc(100% - 4px); margin-top: 2px; border-radius: 5px; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center; padding: 0 8px 3px;
+  color: #fff; font-family: var(--font-ui); font-size: 11.5px; cursor: grab; background: #4a4035; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .clip--text { background: #8a5a1c; }
 .clip--phone, .clip--tablet, .clip--laptop { background: #2f6b3f; }
@@ -444,8 +446,8 @@ button.danger { color: var(--danger); }
 .clip-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .clip-sub { opacity: 0.7; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .clip-count { margin-left: auto; padding: 0 6px; border-radius: 99px; background: rgba(0, 0, 0, 0.25); font-size: 10px; }
-.clip-marks { position: absolute; left: 0; right: 0; bottom: 3px; height: 4px; }
-.clip-mark { position: absolute; height: 4px; min-width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.6); }
+.clip-marks { position: absolute; left: 0; right: 0; bottom: 2px; height: 3px; }
+.clip-mark { position: absolute; height: 3px; min-width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.6); }
 .clip-mark--emphasis { background: #f4d06f; }
 .clip-mark--move { background: #ffb05a; }
 .clip-mark--text { background: #ffd66b; }
@@ -455,3 +457,38 @@ button.danger { color: var(--danger); }
 /* Timeline oynatma kafası: kütüphanenin mavisi yerine mango turuncusu */
 .timeline-editor-cursor { border-left-color: var(--accent) !important; border-right-color: var(--accent) !important; }
 .timeline-editor-cursor-top path, .timeline-editor-cursor-top rect { fill: var(--accent) !important; }
+
+/* ───────── Önizlemede seçim kutusu (mavi): taşı, köşeden ölçekle, sağ üstte yapay zekâ ───────── */
+.sel-box {
+  position: absolute; left: 0; top: 0; z-index: 4; visibility: hidden; box-sizing: border-box;
+  border: 2px solid var(--select); box-shadow: 0 0 0 1px rgba(43, 127, 255, 0.3); cursor: move; touch-action: none;
+}
+.sel-handle {
+  position: absolute; width: 9px; height: 9px; border-radius: 2px; background: #fff; border: 1.5px solid var(--select);
+  box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.sel-handle--nw { left: -5px; top: -5px; cursor: nwse-resize; }
+.sel-handle--ne { right: -5px; top: -5px; cursor: nesw-resize; }
+.sel-handle--sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.sel-handle--se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.sel-ai { position: absolute; left: calc(100% + 8px); top: -4px; cursor: default; }
+.sel-box.is-tight .sel-ai { left: auto; right: 8px; top: 8px; }
+.sel-box.is-tight .sel-ai-chat { left: auto; right: calc(100% + 6px); }
+.sel-ai-btn {
+  display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px;
+  background: var(--select); color: #fff; box-shadow: 0 2px 8px rgba(43, 127, 255, 0.5); cursor: pointer;
+}
+.sel-ai-btn:hover, .sel-ai-btn.is-on { background: #5a9bff; }
+.sel-ai-chat {
+  position: absolute; left: calc(100% + 6px); top: 0; width: 300px; display: grid; gap: 6px; padding: 6px;
+  border-radius: 10px; border: 1px solid rgba(43, 127, 255, 0.6); background: rgba(12, 12, 14, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55); backdrop-filter: blur(8px);
+}
+.sel-ai.is-flipped .sel-ai-chat { left: auto; right: calc(100% + 6px); }
+.sel-ai-row { display: flex; align-items: center; gap: 6px; }
+.sel-ai-row > svg { flex: none; color: var(--select); margin-left: 4px; }
+.sel-ai-row input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 13px; color: var(--ink); padding: 4px 0; }
+.sel-ai-send { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: var(--select); color: #fff; flex: none; }
+.sel-ai-send:disabled { opacity: 0.4; }
+.sel-ai-note { margin: 0; padding: 4px 6px 2px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.sel-ai-note a { color: var(--accent); font-weight: 600; }

@@ -7,7 +7,7 @@ import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react
 import { CanvasTexture, Color, DoubleSide, PMREMGenerator, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
 import { lensFrame, lensPasses, resolveEffects, type ProjectEffects } from '../engine/effects'
 import { evaluate } from '../engine/evaluate'
-import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
+import { manualTransformPatch } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
 import * as bridgeModule from '../export/bridge'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
@@ -15,17 +15,20 @@ import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorSt
 import { overscanFov, previewLayout, previewView } from '../editor/previewFrame'
 import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
 import { LayerNode } from './layers/LayerNode'
+import { SelectionOverlay, SelectionTracker } from './SelectionOverlay'
 import { applyLayerOrder, type Applier, type Register } from './layers/shared'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
-const SNAP_THRESHOLD = 0.12
 /** Tutamaç ve kılavuzların toplandığı grup; tek karelik yakalamalarda gizlenir. */
 const EDITOR_HELPERS = 'editor-helpers'
 const GUIDE_COLOR = '#ff4fd8'
+/** Döndürme tutamacının rengi: seçim kutusuyla aynı belirgin mavi (beyaz/renkli eksenler önizlemede kayboluyordu). */
+const GIZMO_BLUE = '#2b7fff'
 
 /**
- * Seçili katmana taşı / döndür / ölçekle tutamacı. Bırakınca sonuç, animasyon etkisi
- * korunarak katmanın temel değerlerine yazılır (manualTransformPatch).
+ * Seçili katmanı döndürme tutamacı (E). Taşıma ve ölçekleme önizlemenin üstündeki mavi seçim kutusuyla
+ * yapılır (SelectionOverlay). Bırakınca sonuç, animasyon etkisi korunarak katmanın temel değerlerine
+ * yazılır (manualTransformPatch).
  */
 function LayerGizmo({ project }: { project: Project }) {
   const selectedId = useProjectStore((s) => s.selectedTrackId)
@@ -40,6 +43,7 @@ function LayerGizmo({ project }: { project: Project }) {
   const [guides, setGuides] = useState<{ x: number | null; y: number | null; z: number } | null>(null)
   const drag = useRef<{ layer: Layer; evaluated: LayerState; candidates: { x: number[]; y: number[] } } | null>(null)
   const layer = project.layers.find((l) => l.id === selectedId)
+  const controls = useRef<Object3D | null>(null)
 
   // Katmanın three.js nesnesi React çiziminden sonra oluşur; o yüzden efektte bulunur.
   useEffect(() => {
@@ -47,7 +51,17 @@ function LayerGizmo({ project }: { project: Project }) {
     setTarget(layer ? (scene.getObjectByName(`layer:${layer.id}`) ?? null) : null)
   }, [layer, scene])
 
-  if (!layer || !target || clean || isPlaying || layer.locked || layer.hidden) return null
+  // Tutamacın eksen ve halkaları mavi; three.js üzerine gelinince rengini `_color`'dan geri yüklediği için ikisi de yazılır.
+  useEffect(() => {
+    controls.current?.traverse((o) => {
+      const material = (o as Mesh).material as (MeshBasicMaterial & { _color?: Color }) | undefined
+      if (!material || !('color' in material) || o.name === 'picker' || o.parent?.name === 'picker') return
+      material.color.set(GIZMO_BLUE)
+      material._color?.set(GIZMO_BLUE)
+    })
+  })
+
+  if (!layer || !target || clean || isPlaying || layer.locked || layer.hidden || mode !== 'rotate') return null
 
   const onStart = () => {
     const frame = evaluate(project, usePlaybackStore.getState().time)
@@ -59,19 +73,6 @@ function LayerGizmo({ project }: { project: Project }) {
       candidates: { x: [0, ...others.map((o) => o.x)], y: [0, ...others.map((o) => o.y)] },
     }
     manualDrag.layerId = layer.id
-  }
-
-  const onChange = () => {
-    const d = drag.current
-    const obj = object()
-    if (!d || !obj) return
-    if (mode === 'scale') obj.scale.setScalar(Math.max(0.01, obj.scale.x))
-    if (mode === 'translate' && snapping) {
-      const snapped = snapToGuides(obj.position.x, obj.position.y, d.candidates, SNAP_THRESHOLD)
-      obj.position.x = snapped.x
-      obj.position.y = snapped.y
-      setGuides(snapped.guideX !== null || snapped.guideY !== null ? { x: snapped.guideX, y: snapped.guideY, z: obj.position.z } : null)
-    }
   }
 
   const onEnd = () => {
@@ -93,14 +94,12 @@ function LayerGizmo({ project }: { project: Project }) {
   return (
     <group name={EDITOR_HELPERS}>
       <TransformControls
+        ref={controls as never}
         object={target}
         mode={mode}
         size={0.8}
         rotationSnap={snapping ? Math.PI / 12 : null}
-        showY={mode !== 'scale'}
-        showZ={mode !== 'scale'}
         onMouseDown={onStart}
-        onObjectChange={onChange}
         onMouseUp={onEnd}
       />
       {guides?.x != null && <Line points={[[guides.x, -20, guides.z], [guides.x, 20, guides.z]]} color={GUIDE_COLOR} lineWidth={1} dashed dashSize={0.1} gapSize={0.06} />}
@@ -423,6 +422,7 @@ function Scene({ project }: { project: Project }) {
       </group>
       <SceneEffects effects={effects} passes={passes} dofRef={dofRef} lensRef={lensRef} flareRef={flareRef} sweepRef={sweepRef} leakRef={leakRef} />
       <LayerGizmo project={project} />
+      <SelectionTracker />
       <ExportBridge />
     </>
   )
@@ -470,6 +470,7 @@ export function Stage() {
       >
         <Scene project={project} />
       </Canvas>
+      <SelectionOverlay />
       {/* Video kadrajı: dışındaki şerit karartılır. HTML katmanı, videoya girmez. */}
       <div className="stage-frame" style={{ left: frame.x, top: frame.y, width: frame.w, height: frame.h }} aria-hidden="true">
         {showGuides && (

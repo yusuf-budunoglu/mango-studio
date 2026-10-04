@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TEMPLATES } from '../project/templates'
+import { blankProject, TEMPLATES } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { findBlock, useProjectStore } from './projectStore'
 
 const store = () => useProjectStore.getState()
@@ -14,7 +15,7 @@ beforeEach(() => {
   // Her test bir öncekinden bir dakika sonra başlar; geri alma birleştirme penceresi karışmasın.
   clock += 60_000
   vi.setSystemTime(clock)
-  store().loadProject(TEMPLATES[0].build())
+  store().loadProject(SAMPLE_TEMPLATE.build())
 })
 
 afterEach(() => vi.useRealTimers())
@@ -157,7 +158,7 @@ describe('geri alma', () => {
 
   it('proje açınca geçmiş sıfırlanır', () => {
     store().updateProject({ name: 'değişti' })
-    store().loadProject(TEMPLATES[1].build())
+    store().loadProject(SAMPLE_TEMPLATE.build())
     expect(useProjectStore.temporal.getState().pastStates).toHaveLength(0)
   })
 })
@@ -243,5 +244,35 @@ describe('klipler', () => {
     const layer = store().project.layers.find((l) => l.id === id)!
     expect(layer.duration).toBe(5)
     expect(layer.start + layer.duration).toBeLessThanOrEqual(total)
+  })
+})
+
+describe('tasarım modu', () => {
+  it('yeni katman tüm tuvali kaplar, giriş animasyonu olmaz', () => {
+    store().loadProject(blankProject({ name: 'Poster', width: 1080, height: 1350, mode: 'design' }))
+    const id = store().addLayer('phone', 0.7)
+    const layer = store().project.layers.find((l) => l.id === id)!
+    expect(layer).toMatchObject({ start: 0, duration: store().project.duration, blocks: [] })
+  })
+})
+
+describe('ses parçaları', () => {
+  const clip = { id: 'a1', name: 'Müzik', asset: 'asset:x', start: 0, offset: 0, duration: 4, sourceDuration: 4, volume: 1, fadeIn: 0, fadeOut: 0 }
+  const audio = () => store().project.audio![0]
+  beforeEach(() => store().loadProject({ ...SAMPLE_TEMPLATE.build(), audio: [{ ...clip }] }))
+
+  it('kaynağın tamamını çalan parça timeline’da sağa sola taşınır', () => {
+    store().setAudioTimes({ a1: { start: 2, end: 6 } })
+    expect(audio()).toMatchObject({ start: 2, offset: 0, duration: 4 })
+    store().setAudioTimes({ a1: { start: 0.5, end: 4.5 } })
+    expect(audio()).toMatchObject({ start: 0.5, offset: 0, duration: 4 })
+  })
+
+  it('soldan kırpma kaynağın başını geçemez, sağdan kırpma sonunu', () => {
+    store().setAudioTimes({ a1: { start: 2, end: 6 } })
+    store().setAudioTimes({ a1: { start: 1, end: 6 } })
+    expect(audio()).toMatchObject({ start: 2, offset: 0, duration: 4 })
+    store().setAudioTimes({ a1: { start: 2, end: 9 } })
+    expect(audio()).toMatchObject({ start: 2, offset: 0, duration: 4 })
   })
 })

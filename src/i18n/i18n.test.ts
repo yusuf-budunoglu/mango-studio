@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { EASINGS } from '../engine/easing'
 import { displayText, evaluateLayer } from '../engine/evaluate'
 import { PRESETS } from '../engine/presets'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { TEMPLATES } from '../project/templates'
 import i18n, { DEFAULT_LANGUAGE, LANGUAGES } from '.'
 import en from './locales/en'
@@ -55,21 +56,22 @@ describe('çeviriler', () => {
 describe('şablonlar dil seçimine uyar', () => {
   it('İngilizce seçiliyken İngilizce içerik ve sayı biçimi', () => {
     const project = TEMPLATES[0].build()
-    expect(project.name).toBe('App launch')
-    expect(project.layers[1].text).toBe('Make your videos in minutes')
+    expect(project.name).toBe('Fintech app')
+    expect(project.layers.map((l) => l.text)).toContain('Pay anyone')
     expect(project.numberLocale).toBe('en-US')
   })
 
   it('Türkçe seçiliyken Türkçe içerik ve sayı biçimi', async () => {
     await i18n.changeLanguage('tr')
     const project = TEMPLATES[0].build()
-    expect(project.name).toBe('Uygulama lansmanı')
+    expect(project.name).toBe('Fintech uygulaması')
+    expect(project.layers.map((l) => l.text)).toContain('Saniyeler içinde')
     expect(project.camera.name).toBe('Kamera')
     expect(project.numberLocale).toBe('tr-TR')
   })
 
   it('sayaç, projenin sayı biçimini kullanır', () => {
-    const layer = { ...TEMPLATES[0].build().layers[2] }
+    const layer = { ...SAMPLE_TEMPLATE.build().layers[2] }
     const state = evaluateLayer(layer, 10)
     expect(displayText(layer, state, 'en-US')).toBe('10,000')
     expect(displayText(layer, state, 'tr-TR')).toBe('10.000')

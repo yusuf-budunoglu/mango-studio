@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { exportSize, subframeTimes, supersampleFactor } from '../export/exportVideo'
-import { TEMPLATES } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { DEFAULT_EFFECTS, lensFrame, lensPasses, resolveEffects } from './effects'
 import { evaluateCamera } from './evaluate'
 
@@ -16,7 +16,7 @@ describe('efektler', () => {
   })
 
   it('odak kaydırma netlik düzlemini hareket ettirir', () => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     project.camera.blocks = [{ id: 'f', preset: 'focus-pull', start: 0, duration: 1, easing: 'linear', params: { from: -4, to: 0 } }]
     expect(evaluateCamera(project, 0).focusZ).toBe(-4)
     expect(evaluateCamera(project, 0.5).focusZ).toBeCloseTo(-2)
@@ -29,7 +29,7 @@ describe('efektler', () => {
   })
 
   it('art arda odak blokları: başlamamış blok önceki çekimin odağını ezmez', () => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     const at = (start: number, z: number) => ({ id: `f${start}`, preset: 'focus-pull', start, duration: 0, params: { from: z, to: z } })
     project.camera.blocks = [at(1, 3.6), at(3, 1.2), at(8, 4), at(11, 0)]
     // ilk blok başlamadan önce onun değeri tutulur
@@ -68,7 +68,7 @@ describe('dışa aktarma boyutu', () => {
 
 describe('lens efektleri', () => {
   it('kapalı ayarlar ve bloksuz kamera hiçbir lens geçişi eklemez', () => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     project.camera.blocks = []
     expect(lensPasses(resolveEffects(undefined), project)).toEqual({ lens: false, flare: false, sweep: false, leak: false })
     project.camera.blocks = [{ id: 'p', preset: 'lens-punch', start: 0, duration: 0.4 }]
@@ -76,7 +76,7 @@ describe('lens efektleri', () => {
   })
   it('proje ayarı ve blok değerleri toplanır', () => {
     const fx = resolveEffects({ chromatic: { enabled: true, amount: 0.5 }, lightLeak: { enabled: true, intensity: 0.3 } })
-    const camera = { ...evaluateCamera(TEMPLATES[0].build(), 0), aberration: 1, leak: 0.2 }
+    const camera = { ...evaluateCamera(SAMPLE_TEMPLATE.build(), 0), aberration: 1, leak: 0.2 }
     const lens = lensFrame(fx, camera, 2)
     expect(lens.aberration).toBeCloseTo(1.5)
     expect(lens.leak).toEqual({ time: 2, intensity: 0.5 })

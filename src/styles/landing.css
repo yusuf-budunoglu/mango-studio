@@ -1,0 +1,114 @@
+/* ───────── Karşılama sayfası (hesabı olmayan ziyaretçi) ───────── */
+.landing { min-height: 100vh; background: var(--bg); color: var(--ink); }
+.landing :where(h1, h2, h3, p) { margin: 0; }
+.landing h1, .landing h2 { font-family: var(--font-display); text-wrap: balance; letter-spacing: -0.03em; }
+.landing main { display: grid; }
+
+/* Üst çubuk */
+.landing-bar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 20px;
+  padding: 12px max(16px, calc((100vw - 1120px) / 2));
+  background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.landing-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; font-weight: 700; letter-spacing: -0.02em; font-size: 14px; }
+.landing-brand em { font-style: normal; color: var(--accent); font-weight: 600; }
+.landing-links { display: flex; gap: 4px; margin-right: auto; }
+.landing-links button { padding: 6px 12px; border: 0; border-radius: 7px; background: transparent; color: #d6d0c6; font-size: 13.5px; cursor: pointer; }
+.landing-links button:hover { background: var(--panel-2); color: var(--ink); }
+.landing-bar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.landing-links + .landing-bar-actions { margin-left: 0; }
+
+/* Düğmeler */
+.landing-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 20px; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--panel-2); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.landing-btn:hover { border-color: #3a3730; background: #1f1e22; }
+.landing-btn--primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.landing-btn--primary:hover { background: #e47d26; border-color: transparent; }
+.landing-btn--small { padding: 7px 14px; font-size: 13px; border-radius: 7px; }
+.landing :where(a, button, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Giriş */
+.landing-hero {
+  display: grid; justify-items: center; gap: 18px; text-align: center;
+  padding: 72px 16px 56px; overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 0%, rgba(255, 122, 0, 0.22), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 85% 35%, rgba(63, 140, 60, 0.1), transparent 70%);
+}
+.landing-eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.landing-hero h1 { font-size: clamp(40px, 8vw, 88px); line-height: 0.98; font-weight: 700; text-transform: uppercase; max-width: 14ch; }
+.landing-lead { max-width: 56ch; font-size: clamp(15.5px, 2vw, 18px); line-height: 1.55; color: #d9d3c9; text-wrap: balance; }
+.landing-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 6px; }
+.landing-note { font-size: 13px; color: var(--muted); }
+.landing-shots { --h: clamp(130px, 28vw, 360px); display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 2vw, 24px); margin-top: 28px; max-width: 100%; }
+.landing-shot { position: relative; height: var(--h); margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7); }
+.landing-shot:nth-child(2) { height: calc(var(--h) * 0.92); }
+.landing-shot img, .landing-shot video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Bölümler */
+.landing-section { width: min(1120px, 100% - 32px); margin: 0 auto; padding: 72px 0 8px; display: grid; gap: 28px; scroll-margin-top: 64px; }
+.landing-section--narrow { width: min(760px, 100% - 32px); }
+.landing-section h2 { font-size: clamp(26px, 4vw, 40px); line-height: 1.05; font-weight: 700; text-transform: uppercase; }
+.landing-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.landing-section-head a { color: var(--muted); font-size: 13.5px; text-decoration: none; }
+.landing-section-head a:hover { color: var(--ink); text-decoration: underline; }
+.landing-section-head--center { display: grid; justify-content: center; justify-items: center; text-align: center; gap: 10px; }
+.landing-section-head--center p { max-width: 48ch; color: var(--muted); font-size: 14.5px; }
+
+/* Özellikler */
+.landing-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.landing-feature { display: grid; gap: 8px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.landing-feature-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.landing-feature h3 { font-size: 16px; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.landing-feature p { font-size: 13.5px; line-height: 1.55; color: #c2bcb1; }
+.landing-soon { font-style: normal; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--gold); }
+
+/* Adımlar */
+.landing-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; counter-reset: step; }
+.landing-steps li { counter-increment: step; display: grid; gap: 6px; padding: 18px 20px; border-left: 2px solid var(--accent); }
+.landing-steps li::before { content: counter(step); font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--accent); }
+.landing-steps h3 { font-size: 16px; font-weight: 600; }
+.landing-steps p { font-size: 13.5px; line-height: 1.55; color: #c2bcb1; }
+
+/* Fiyatlar */
+.landing .plan-grid { margin-top: 4px; }
+.landing-notice { justify-self: center; }
+
+/* Sık sorulanlar */
+.landing-faq { display: grid; }
+.landing-faq details { border-top: 1px solid var(--line); }
+.landing-faq details:last-child { border-bottom: 1px solid var(--line); }
+.landing-faq summary { padding: 16px 4px; cursor: pointer; font-weight: 600; font-size: 15px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.landing-faq summary::-webkit-details-marker { display: none; }
+.landing-faq summary::after { content: '+'; color: var(--accent); font-size: 20px; line-height: 1; }
+.landing-faq details[open] summary::after { content: '–'; }
+.landing-faq details p { padding: 0 4px 18px; max-width: 62ch; font-size: 14px; line-height: 1.6; color: #c2bcb1; }
+
+/* Kapanış ve alt bilgi */
+.landing-final { display: grid; justify-items: center; gap: 20px; text-align: center; margin: 72px 16px 0; padding: 56px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--brand-gradient); }
+.landing-final h2 { font-size: clamp(26px, 4vw, 40px); text-transform: uppercase; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35); }
+.landing-final .landing-btn--primary { background: #fff; color: #000000; }
+.landing-final .landing-btn--primary:hover { background: #f1ece3; }
+.landing-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; padding: 40px 16px 48px; font-size: 13px; color: var(--muted); }
+.landing-foot a { color: var(--muted); }
+.landing-foot a:hover { color: var(--ink); }
+
+@media (max-width: 900px) {
+  .landing-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-steps { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .landing-links { display: none; }
+  .landing-bar { gap: 10px; }
+  .landing-bar-actions { margin-left: auto; gap: 8px; }
+  .landing-hero { padding-top: 48px; }
+  .landing-section { padding-top: 56px; }
+}
+@media (max-width: 560px) {
+  .landing-features { grid-template-columns: 1fr; }
+}

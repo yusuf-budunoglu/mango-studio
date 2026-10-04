@@ -1,24 +1,40 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TemplateCard } from '../components/TemplateCard'
 import { AppShell } from '../layout/AppShell'
+import { listPublished, type PublishedTemplate } from '../project/publishedTemplates'
 import { TEMPLATES, templateDescription, templateName, type Template } from '../project/templates'
 import { matchesSearch, useUiStore } from '../store/uiStore'
 
 type Filter = 'all' | 'landscape' | 'vertical' | 'favorites'
 const FILTERS: Filter[] = ['all', 'landscape', 'vertical', 'favorites']
 
+type AnyTemplate = Template | PublishedTemplate
+
+const isBuiltIn = (tpl: AnyTemplate): tpl is Template => 'build' in tpl
+const orientation = (tpl: AnyTemplate) => (isBuiltIn(tpl) ? (tpl.format === '9:16' ? 'vertical' : 'landscape') : tpl.height > tpl.width ? 'vertical' : 'landscape')
+const searchText = (tpl: AnyTemplate) =>
+  isBuiltIn(tpl) ? `${templateName(tpl.id)} ${templateDescription(tpl.id)}` : `${tpl.name} ${tpl.description} ${tpl.tags.join(' ')}`
+
+/** Şablonlar: kodla yazılan kendi şablonlarımız + yöneticinin Studio'dan yayınladıkları (en yenisi önde). */
 export function Templates() {
   const { t } = useTranslation()
   const search = useUiStore((s) => s.search)
   const favorites = useUiStore((s) => s.favorites)
   const [filter, setFilter] = useState<Filter>('all')
-  const passes = (tpl: Template) =>
-    filter === 'all' ||
-    (filter === 'landscape' && tpl.format === '16:9') ||
-    (filter === 'vertical' && tpl.format === '9:16') ||
-    (filter === 'favorites' && favorites.includes(tpl.id))
-  const visible = TEMPLATES.filter((tpl) => passes(tpl) && matchesSearch(`${templateName(tpl.id)} ${templateDescription(tpl.id)}`, search))
+  const [published, setPublished] = useState<PublishedTemplate[]>([])
+
+  useEffect(() => {
+    let alive = true
+    void listPublished().then((list) => alive && setPublished(list))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const passes = (tpl: AnyTemplate) =>
+    filter === 'all' || (filter === 'favorites' ? favorites.includes(tpl.id) : orientation(tpl) === filter)
+  const visible = [...published, ...TEMPLATES].filter((tpl) => passes(tpl) && matchesSearch(searchText(tpl), search))
 
   return (
     <AppShell current={{ screen: 'templates' }} title={t('templatesPage.title')}>

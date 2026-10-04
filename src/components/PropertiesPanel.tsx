@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_BEZIER, EASINGS, easingFor } from '../engine/easing'
+import { isDesign } from '../engine/design'
 import { PRESETS } from '../engine/presets'
 import type { Block, CameraTrack, Layer } from '../engine/types'
 import { categoryLabel, easingLabel, paramLabel, presetLabel } from '../i18n/labels'
@@ -153,6 +154,14 @@ export function PropertiesPanel() {
     content = <AudioPanel key={audioClip.id} clip={audioClip} />
   } else if (found) {
     content = <BlockPanel key={found.block.id} block={found.block} track={found.track} count={selectedBlockIds.length} />
+  } else if (layer && isDesign(project)) {
+    // tasarımda animasyon ve klip zamanı yok: yalnızca içerik ve konum
+    content = (
+      <section key={layer.id}>
+        <h2>{layer.name}</h2>
+        <LayerFields layer={layer} />
+      </section>
+    )
   } else if (layer) {
     content = (
       <>
@@ -190,7 +199,8 @@ export function PropertiesPanel() {
         {projectTab === 'project' ? (
           <>
             <ProjectSettings />
-            {selectedTrackId === 'camera' && (
+            {/* tasarımdaki kamera blokları yalnızca kareyi sabitlemek için (tasarım olarak kaydet); düzenlenmez */}
+            {selectedTrackId === 'camera' && !isDesign(project) && (
               <section>
                 <h2>{t('props.cameraBlocks')}</h2>
                 <BlockList track={project.camera} />

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { isDesign } from '../engine/design'
 import { useProjectStore } from '../store/projectStore'
 
 /** Video formatları: en-boy oranı → 1080 tabanlı boyut. */
@@ -13,6 +14,11 @@ export function ProjectSettings() {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
   const updateProject = useProjectStore((s) => s.updateProject)
+  const design = isDesign(project)
+  // tasarım boyutu piksel olarak girilir (GPU sınırı 4096)
+  const setSize = (key: 'width' | 'height', value: number) => {
+    if (Number.isInteger(value) && value >= 64 && value <= 4096) updateProject({ [key]: value })
+  }
 
   return (
     <section>
@@ -20,18 +26,31 @@ export function ProjectSettings() {
       <label htmlFor="project-name">{t('project.name')}</label>
       <input id="project-name" value={project.name} onChange={(e) => updateProject({ name: e.target.value })} />
       <div className="row">
-        <div>
-          <label htmlFor="project-duration">{t('project.duration')}</label>
-          <input
-            id="project-duration"
-            type="number"
-            min={1}
-            max={120}
-            step={0.5}
-            value={project.duration}
-            onChange={(e) => updateProject({ duration: Number(e.target.value) })}
-          />
-        </div>
+        {design ? (
+          <>
+            <div>
+              <label htmlFor="project-width">{t('design.width')}</label>
+              <input id="project-width" type="number" min={64} max={4096} step={1} defaultValue={project.width} key={`w${project.width}`} onBlur={(e) => setSize('width', Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+            </div>
+            <div>
+              <label htmlFor="project-height">{t('design.height')}</label>
+              <input id="project-height" type="number" min={64} max={4096} step={1} defaultValue={project.height} key={`h${project.height}`} onBlur={(e) => setSize('height', Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
+            </div>
+          </>
+        ) : (
+          <div>
+            <label htmlFor="project-duration">{t('project.duration')}</label>
+            <input
+              id="project-duration"
+              type="number"
+              min={1}
+              max={120}
+              step={0.5}
+              value={project.duration}
+              onChange={(e) => updateProject({ duration: Number(e.target.value) })}
+            />
+          </div>
+        )}
         <div>
           <label htmlFor="project-bg">{t('project.background')}</label>
           <input id="project-bg" type="color" value={project.background} onChange={(e) => updateProject({ background: e.target.value })} />
@@ -93,7 +112,7 @@ export function ProjectSettings() {
         <option value="en-US">{t('project.numberFormatEn')}</option>
         <option value="tr-TR">{t('project.numberFormatTr')}</option>
       </select>
-      <p className="hint">{t('project.meta', { width: project.width, height: project.height, fps: project.fps })}</p>
+      <p className="hint">{design ? t('design.meta', { width: project.width, height: project.height }) : t('project.meta', { width: project.width, height: project.height, fps: project.fps })}</p>
     </section>
   )
 }

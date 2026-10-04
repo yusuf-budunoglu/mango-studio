@@ -3,21 +3,20 @@ import {
   Clapperboard,
   Crown,
   FolderOpen,
-  Hash,
   House,
   LayoutTemplate,
-  Layers,
   Mic,
   Music,
   PlugZap,
-  Rocket,
-  Sparkles,
   Type,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { createFromTemplate } from '../project/actions'
-import { routeToHash, type Route } from '../router'
+import { routeToPath, type Route } from '../router'
+import { supabase } from '../cloud/client'
+import { useAuthStore } from '../store/authStore'
+import { usePlan } from '../store/planStore'
 import { useUiStore } from '../store/uiStore'
 
 interface NavItem {
@@ -30,26 +29,25 @@ interface NavItem {
 
 const MAIN: NavItem[] = [
   { labelKey: 'nav.home', icon: House, route: { screen: 'home' } },
-  { labelKey: 'nav.videos', icon: Clapperboard, route: { screen: 'videos' } },
+  { labelKey: 'nav.studio', icon: Clapperboard, route: { screen: 'studio' } },
   { labelKey: 'nav.templates', icon: LayoutTemplate, route: { screen: 'templates' } },
   { labelKey: 'nav.assets', icon: FolderOpen, route: { screen: 'assets' } },
+  { labelKey: 'nav.profile', icon: UserRound, route: { screen: 'profile' } },
 ]
 
 const PINNED: NavItem[] = [
-  { labelKey: 'nav.textToVideo', icon: Type, route: { screen: 'home' } },
-  { labelKey: 'nav.launch', icon: Rocket, onClick: () => void createFromTemplate('app-launch') },
-  { labelKey: 'nav.featureTour', icon: Layers, onClick: () => void createFromTemplate('feature-tour') },
-  { labelKey: 'nav.stats', icon: Hash, onClick: () => void createFromTemplate('stats') },
-  { labelKey: 'nav.logoReveal', icon: Sparkles, onClick: () => void createFromTemplate('logo-reveal') },
+  { labelKey: 'nav.textToVideo', icon: Type, route: { screen: 'soon', feature: 'text-to-video' }, soon: true },
   { labelKey: 'nav.music', icon: Music, route: { screen: 'soon', feature: 'music' }, soon: true },
   { labelKey: 'nav.voiceover', icon: Mic, route: { screen: 'soon', feature: 'voiceover' }, soon: true },
   { labelKey: 'nav.soundEffects', icon: AudioLines, route: { screen: 'soon', feature: 'sound-effects' }, soon: true },
 ]
 
 function isActive(item: NavItem, current: Route) {
-  if (!item.route || item.labelKey === 'nav.textToVideo') return false
+  if (!item.route) return false
   if (item.route.screen === 'soon' && current.screen === 'soon') return item.route.feature === current.feature
-  return item.route.screen === current.screen
+  // şablon önizlemesi Şablonlar'ın, yeni proje Studio'nun altında sayılır
+  const screen = current.screen === 'template' ? 'templates' : current.screen === 'new' ? 'studio' : current.screen
+  return item.route.screen === screen
 }
 
 function NavLink({ item, current }: { item: NavItem; current: Route }) {
@@ -65,7 +63,7 @@ function NavLink({ item, current }: { item: NavItem; current: Route }) {
   const className = `nav-item ${isActive(item, current) ? 'is-active' : ''}`
   if (item.route) {
     return (
-      <a className={className} href={routeToHash(item.route)} aria-current={isActive(item, current) ? 'page' : undefined} title={t(item.labelKey)}>
+      <a className={className} href={routeToPath(item.route)} aria-current={isActive(item, current) ? 'page' : undefined} title={t(item.labelKey)}>
         {content}
       </a>
     )
@@ -80,10 +78,14 @@ function NavLink({ item, current }: { item: NavItem; current: Route }) {
 export function Sidebar({ current }: { current: Route }) {
   const { t } = useTranslation()
   const collapsed = useUiStore((s) => s.sidebarCollapsed)
+  const { plan, left } = usePlan()
+  const planName = t(`pricing.plans.${plan.id}`)
+  const guest = useAuthStore((s) => !!supabase && s.status === 'out')
+  const openSignIn = useAuthStore((s) => s.openSignIn)
 
   return (
     <aside className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}>
-      <a className="sidebar-brand" href="#/">
+      <a className="sidebar-brand" href="/">
         <span className="brand-mark" aria-hidden="true">
           <img src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" />
         </span>
@@ -111,11 +113,41 @@ export function Sidebar({ current }: { current: Route }) {
           <strong>{t('nav.cardTitle')}</strong>
           <span>{t('nav.cardBody')}</span>
         </div>
-        <button type="button" className="upgrade" title={t('nav.upgrade')}>
-          <Crown size={15} strokeWidth={1.75} aria-hidden="true" />
-          <span className="nav-label">{t('nav.upgrade')}</span>
-        </button>
-        <a className="sidebar-credits nav-label" href={routeToHash({ screen: 'credits' })}>
+        {guest ? (
+          <div className="sidebar-join nav-label">
+            <strong>{t('nav.joinTitle')}</strong>
+            <span>{t('nav.joinBody')}</span>
+            <a className="sidebar-join-primary" href={routeToPath({ screen: 'signup' })}>
+              {t('account.signUp')}
+            </a>
+            <button type="button" className="sidebar-join-secondary" onClick={openSignIn}>
+              {t('account.signIn')}
+            </button>
+          </div>
+        ) : (
+          <a className={`upgrade ${current.screen === 'pricing' ? 'is-active' : ''}`} href={routeToPath({ screen: 'pricing' })} title={t('nav.upgrade')}>
+            <Crown size={15} strokeWidth={1.75} aria-hidden="true" />
+            <span className="nav-label upgrade-text">
+              <strong>
+                {t('plan.label', { plan: planName })}
+                {plan.id !== 'unlimited' && <em>{t('nav.upgrade')}</em>}
+              </strong>
+              {plan.aiCredits !== 0 && (
+                <span>
+                  {plan.aiCredits === null
+                    ? t('plan.creditsUnlimited')
+                    : t('plan.credits', { left, total: plan.aiCredits })}
+                </span>
+              )}
+            </span>
+            {plan.aiCredits !== null && plan.aiCredits > 0 && (
+              <span className="upgrade-meter nav-label" aria-hidden="true">
+                <span style={{ width: `${(left / plan.aiCredits) * 100}%` }} />
+              </span>
+            )}
+          </a>
+        )}
+        <a className="sidebar-credits nav-label" href={routeToPath({ screen: 'credits' })}>
           {t('nav.credits')}
         </a>
       </div>

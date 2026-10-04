@@ -1,71 +1,55 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createFromTemplate } from '../project/actions'
-import { templateName, type Template } from '../project/templates'
+import type { PublishedTemplate } from '../project/publishedTemplates'
+import type { Template } from '../project/templates'
+import { routeToPath } from '../router'
 import { useUiStore } from '../store/uiStore'
-
-const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+import { cardInfo } from './cardInfo'
+import { useAutoplay } from './useAutoplay'
 
 /**
- * Şablon kartı: önizleme şablonun kendi oranında (`public/templates/posters/<id>.jpg`); üstüne gelince
- * döngü videosu (`public/templates/loops/<id>.mp4`) oynar. Altında ad, "Ücretsiz · oran · süre" ve favori kalbi.
+ * Şablon kartı: önizleme şablonun kendi oranında (kapak görseli); ekranda görünürken döngü videosu (varsa)
+ * kendiliğinden oynar; tıklayınca şablonun önizleme sayfası açılır. Altında ad, "Ücretsiz · oran · süre" ve favori kalbi.
  */
-export function TemplateCard({ template }: { template: Template }) {
+export function TemplateCard({ template }: { template: Template | PublishedTemplate }) {
   const { t, i18n } = useTranslation()
   const video = useRef<HTMLVideoElement>(null)
-  const [posterFailed, setPosterFailed] = useState(false)
-  const [playing, setPlaying] = useState(false)
-  const favorite = useUiStore((s) => s.favorites.includes(template.id))
+  const card = cardInfo(template)
+  const [posterFailed, setPosterFailed] = useState(!card.posterUrl)
+  const favorite = useUiStore((s) => s.favorites.includes(card.id))
   const toggleFavorite = useUiStore((s) => s.toggleFavorite)
-  const base = import.meta.env.BASE_URL
-  const name = templateName(template.id)
-  const [w, h] = template.format.split(':').map(Number)
-  const seconds = template.seconds.toLocaleString(i18n.language, { maximumFractionDigits: 1 })
+  const seconds = card.seconds.toLocaleString(i18n.language, { maximumFractionDigits: 1 })
 
-  const play = () => {
-    const v = video.current
-    if (!v || reducedMotion()) return
-    v.currentTime = 0
-    void v.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
-  }
-  const stop = () => {
-    video.current?.pause()
-    setPlaying(false)
-  }
+  const playing = useAutoplay(video)
 
   return (
     <article className="tcard">
-      <button
-        type="button"
+      <a
         className={`tcard-media${playing ? ' is-playing' : ''}`}
-        style={{ aspectRatio: `${w} / ${h}` }}
-        onClick={() => void createFromTemplate(template.id)}
-        onMouseEnter={play}
-        onMouseLeave={stop}
-        onFocus={play}
-        onBlur={stop}
-        aria-label={t('templatesPage.use', { name })}
+        style={{ aspectRatio: `${card.ratio[0]} / ${card.ratio[1]}` }}
+        href={routeToPath({ screen: 'template', templateId: card.id })}
+        aria-label={t('templatesPage.open', { name: card.name })}
       >
         {posterFailed ? (
-          <span className="tcard-fallback" style={{ background: `radial-gradient(circle at 30% 30%, ${template.accent}, #0a0a0b 75%)` }} />
+          <span className="tcard-fallback" style={{ background: `radial-gradient(circle at 30% 30%, ${card.accent}, #0a0a0b 75%)` }} />
         ) : (
-          <img src={`${base}templates/posters/${template.id}.jpg`} alt="" loading="lazy" onError={() => setPosterFailed(true)} />
+          <img src={card.posterUrl} alt="" loading="lazy" onError={() => setPosterFailed(true)} />
         )}
-        <video ref={video} src={`${base}templates/loops/${template.id}.mp4`} muted loop playsInline preload="none" aria-hidden="true" />
-      </button>
+        {card.loopUrl && <video ref={video} src={card.loopUrl} muted loop playsInline preload="none" aria-hidden="true" disablePictureInPicture />}
+      </a>
       <div className="tcard-info">
         <div className="tcard-text">
-          <span className="tcard-title">{name}</span>
+          <span className="tcard-title">{card.name}</span>
           <span className="tcard-meta">
-            {t('templatesPage.free')} · {template.format} · {t('templatesPage.seconds', { value: seconds })}
+            {t('templatesPage.free')} · {card.format} · {t('templatesPage.seconds', { value: seconds })}
           </span>
         </div>
         <button
           type="button"
           className={`tcard-fav${favorite ? ' is-on' : ''}`}
           aria-pressed={favorite}
-          aria-label={t(favorite ? 'templatesPage.unfavorite' : 'templatesPage.favorite', { name })}
-          onClick={() => toggleFavorite(template.id)}
+          aria-label={t(favorite ? 'templatesPage.unfavorite' : 'templatesPage.favorite', { name: card.name })}
+          onClick={() => toggleFavorite(card.id)}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <path d="M12 20.5s-7.5-4.6-9.2-9.3C1.7 8 3.9 4.5 7.4 4.5c2 0 3.4 1.1 4.6 2.7 1.2-1.6 2.6-2.7 4.6-2.7 3.5 0 5.7 3.5 4.6 6.7-1.7 4.7-9.2 9.3-9.2 9.3z" />

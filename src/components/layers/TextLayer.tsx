@@ -1,6 +1,6 @@
 import { Text } from '@react-three/drei'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { MeshBasicMaterial, type Group, type Mesh } from 'three'
+import { Color, MeshBasicMaterial, type Group, type Mesh } from 'three'
 import { displayText } from '../../engine/evaluate'
 import { pendingTextSyncs } from '../../export/bridge'
 import { useTextFontUrl } from '../../render/fontFaces'
@@ -14,6 +14,8 @@ interface TroikaText extends Mesh {
   letterSpacing: number
   clipRect: [number, number, number, number] | null
   colorRanges: Record<number, number> | null
+  outlineBlur: number | string
+  outlineWidth: number | string
   textRenderInfo?: { blockBounds: [number, number, number, number] }
   sync: (callback?: () => void) => void
 }
@@ -30,20 +32,48 @@ function syncText(mesh: TroikaText) {
 }
 
 /**
- * soft-reveal için temel malzeme: troika bunun onBeforeCompile'ını kendi shader'ından önce
+ * soft-reveal ve glow-sweep için temel malzeme: troika bunun onBeforeCompile'ını kendi shader'ından önce
  * çalıştırır. Harfin yerel x'i ile görünürlük kenarı arasındaki mesafe opaklığı belirler.
+ * glow-sweep: ön (uGlowFront) ve arka (uGlowTail) kenar arasındaki harflerin içi beyaza yakın, nane tonlu olur (ön kenarda daha beyaz);
+ * yaklaşır. Troika'nın kontur geçişi (bulanık kontur, uTroikaBlurRadius > 0) aynı bölgede ışıma olarak çizilir.
  */
+const GLOW_FRAGMENT = `#include <opaque_fragment>
+if (uGlowOn > 0.5) {
+  float glowAmt = clamp((uGlowFront - vRevealX) / uGlowSoft, 0.0, 1.0) * clamp((vRevealX - uGlowTail) / uGlowSoft, 0.0, 1.0);
+  if (uTroikaBlurRadius > 0.0) {
+    gl_FragColor.rgb = uGlowEdge;
+    gl_FragColor.a *= 1.5 * glowAmt * uGlowHalo; // kenara yakın ışıma dolsun (troika bulanık konturu kenarda ~%50)
+  } else {
+    float front = clamp(1.0 - (uGlowFront - vRevealX) / (2.0 * uGlowSoft), 0.0, 1.0);
+    vec3 lit = mix(uGlowColor, vec3(1.0), 0.6 + 0.3 * front);
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, lit, glowAmt);
+  }
+}`
+
 function useRevealMaterial() {
-  const uniforms = useMemo(() => ({ uRevealEdge: { value: 1e6 }, uRevealSoft: { value: 1e-3 } }), [])
+  const uniforms = useMemo(
+    () => ({
+      uRevealEdge: { value: 1e6 },
+      uRevealSoft: { value: 1e-3 },
+      uGlowOn: { value: 0 },
+      uGlowFront: { value: 0 },
+      uGlowTail: { value: 0 },
+      uGlowSoft: { value: 1 },
+      uGlowHalo: { value: 1 },
+      uGlowColor: { value: new Color() },
+      uGlowEdge: { value: new Color() },
+    }),
+    [],
+  )
   const material = useMemo(() => {
     const m = new MeshBasicMaterial({ transparent: true })
     m.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms)
       shader.vertexShader = `varying float vRevealX;\n${shader.vertexShader}`.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRevealX = transformed.x;')
-      shader.fragmentShader = `uniform float uRevealEdge;\nuniform float uRevealSoft;\nvarying float vRevealX;\n${shader.fragmentShader}`.replace(
-        '#include <dithering_fragment>',
-        '#include <dithering_fragment>\ngl_FragColor.a *= clamp((uRevealEdge - vRevealX) / uRevealSoft, 0.0, 1.0);',
-      )
+      const defs = 'uniform float uRevealEdge;\nuniform float uRevealSoft;\nuniform float uGlowOn;\nuniform float uGlowFront;\nuniform float uGlowTail;\nuniform float uGlowSoft;\nuniform float uGlowHalo;\nuniform vec3 uGlowColor;\nuniform vec3 uGlowEdge;\nvarying float vRevealX;\n'
+      shader.fragmentShader = `${defs}${shader.fragmentShader}`
+        .replace('#include <opaque_fragment>', GLOW_FRAGMENT)
+        .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= clamp((uRevealEdge - vRevealX) / uRevealSoft, 0.0, 1.0);')
     }
     return m
   }, [uniforms])
@@ -98,6 +128,31 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
         reveal.uniforms.uRevealSoft.value = soft
       } else {
         reveal.uniforms.uRevealEdge.value = 1e6
+      }
+      // glow-sweep: ön ve arka kenar metin genişliğine göre; ışıma troika'nın bulanık konturuyla (yalnızca dalga sürerken)
+      const glowing = s.glow !== null && !!bounds
+      if (glowing && bounds) {
+        const [minX, , maxX] = bounds
+        const width = Math.max(1e-3, maxX - minX)
+        const soft = Math.max(1e-3, s.glowSoftness)
+        const front = -soft + (s.glow ?? 0) * (1 + s.glowWidth + 2 * soft)
+        const u = reveal.uniforms
+        u.uGlowOn.value = 1
+        u.uGlowFront.value = minX + front * width
+        u.uGlowTail.value = minX + (front - s.glowWidth - soft) * width
+        u.uGlowSoft.value = soft * width
+        u.uGlowHalo.value = s.glowHalo
+        u.uGlowColor.value.setHSL(s.glowHue / 360, 0.82, 0.64)
+        // ışıma tam doygun: harf kenarındaki yumuşatılmış beyazla karışınca soluklaşıyordu
+        u.uGlowEdge.value.setHSL(s.glowHue / 360, 1, 0.62)
+      } else {
+        reveal.uniforms.uGlowOn.value = 0
+      }
+      // harfin etrafında yumuşak ışıma (kontur genişliği 0: kalın kontur harfleri lekeye, ince kontur çizgiye çeviriyordu)
+      const blur = glowing ? '12%' : 0
+      if (mesh.outlineBlur !== blur) {
+        mesh.outlineBlur = blur
+        mesh.outlineWidth = 0
       }
     })
   })

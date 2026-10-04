@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TEMPLATE } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { EASINGS } from './easing'
 import { displayText, evaluate, evaluateLayer } from './evaluate'
 import type { Layer } from './types'
@@ -20,7 +20,7 @@ const layer = (blocks: Layer['blocks'], extra: Partial<Layer> = {}): Layer => ({
   ...extra,
 })
 
-const sampleProject = DEFAULT_TEMPLATE.build()
+const sampleProject = SAMPLE_TEMPLATE.build()
 
 describe('evaluate', () => {
   it('aynı zaman için her seferinde aynı sonucu verir', () => {
@@ -48,6 +48,46 @@ describe('evaluate', () => {
     expect(end.x).toBe(1)
     expect(end.y).toBeCloseTo(2)
     expect(evaluateLayer(l, 0).y).toBeLessThan(2)
+  })
+
+  it('sway katmanı sağa sola eğer, blok başında ve sonunda eğim sıfır', () => {
+    const l = layer([{ id: 'b', preset: 'sway', start: 0, duration: 4, params: { angle: 10, cycles: 2 } }])
+    expect(evaluateLayer(l, 0).rotZ).toBeCloseTo(0)
+    expect(evaluateLayer(l, 4).rotZ).toBeCloseTo(0)
+    const tilts = [0.5, 1.5].map((t) => evaluateLayer(l, t).rotZ)
+    expect(tilts[0]).toBeGreaterThan(0)
+    expect(tilts[1]).toBeLessThan(0)
+    expect(Math.abs(tilts[0])).toBeLessThanOrEqual((10 * Math.PI) / 180)
+  })
+
+  it('light-sweep başlayınca ışık konumunu verir, bitince son konumda kalır', () => {
+    const l = layer([{ id: 'b', preset: 'light-sweep', start: 1, duration: 2, easing: 'linear', params: { turns: 0.5, phase: 0.1, count: 2, floor: 0.2 } }])
+    expect(evaluateLayer(l, 0.5).sweep).toBeNull()
+    expect(evaluateLayer(l, 2).sweep).toBeCloseTo(0.35)
+    expect(evaluateLayer(l, 5).sweep).toBeCloseTo(0.6)
+    expect(evaluateLayer(l, 2).sweepCount).toBe(2)
+    expect(evaluateLayer(l, 2).sweepFloor).toBe(0.2)
+  })
+
+  it('tracking-out harf aralığını daraltır, sonunda metni gizler', () => {
+    const l = layer([{ id: 'b', preset: 'tracking-out', start: 1, duration: 1, easing: 'linear', params: { amount: -0.5 } }])
+    expect(evaluateLayer(l, 0.5).letterSpacing).toBe(0)
+    expect(evaluateLayer(l, 1.5).letterSpacing).toBeCloseTo(-0.25)
+    expect(evaluateLayer(l, 1.5).opacity).toBe(1)
+    expect(evaluateLayer(l, 2).opacity).toBe(0)
+  })
+
+  it('camera-spin açıyı biriktirir: iki 90° blok kamerayı arkaya götürür', () => {
+    const project = { ...sampleProject, layers: [], camera: { ...sampleProject.camera, position: [0, 0, 9] as [number, number, number], blocks: [
+      { id: 'a', preset: 'camera-spin', start: 0, duration: 1, easing: 'linear', params: { angle: 90 } },
+      { id: 'b', preset: 'camera-spin', start: 1, duration: 1, easing: 'linear', params: { angle: 90 } },
+    ] } }
+    const mid = evaluate(project, 1).camera
+    expect(mid.x).toBeCloseTo(9)
+    expect(mid.z).toBeCloseTo(0)
+    const end = evaluate(project, 2).camera
+    expect(end.x).toBeCloseTo(0)
+    expect(end.z).toBeCloseTo(-9)
   })
 
   it('typewriter metni zamanla açar, count-up sayıyı sayar', () => {
@@ -94,6 +134,16 @@ describe('evaluate', () => {
     expect(evaluateLayer(soft, 0.5).revealSoftness).toBe(0.5)
     expect(evaluateLayer(soft, 2).softReveal).toBe(1)
 
+    const glow = layer([{ id: 'b', preset: 'glow-sweep', start: 0, duration: 1, easing: 'linear', params: { glowHue: 120, glowWidth: 1, softness: 0.2, halo: 0.5 } }])
+    expect(evaluateLayer(glow, -0.5).glow).toBeNull()
+    expect(evaluateLayer(glow, 0.25).glow).toBeCloseTo(0.25)
+    expect(evaluateLayer(glow, 0.25).glowHue).toBe(120)
+    expect(evaluateLayer(glow, 0.25).glowWidth).toBe(1)
+    expect(evaluateLayer(glow, 0.25).glowSoftness).toBe(0.2)
+    expect(evaluateLayer(glow, 0.25).glowHalo).toBe(0.5)
+    // dalga geçince metin kendi renginde kalır
+    expect(evaluateLayer(glow, 1.5).glow).toBeNull()
+
     const tracking = layer([{ id: 'b', preset: 'tracking-in', start: 0, duration: 1, easing: 'linear' }])
     expect(evaluateLayer(tracking, 0).letterSpacing).toBeCloseTo(0.4)
     expect(evaluateLayer(tracking, 1).letterSpacing).toBeCloseTo(0)
@@ -138,7 +188,7 @@ describe('şablon klipleri', () => {
 
 describe('videonun sonu', () => {
   it('sona kadar süren klip, oynatma kafası tam sondayken de görünür', () => {
-    const base = DEFAULT_TEMPLATE.build()
+    const base = SAMPLE_TEMPLATE.build()
     const last = { ...layer([]), start: 2, duration: base.duration - 2 }
     const project = { ...base, layers: [last] }
     expect(evaluate(project, project.duration - 0.01).layers[last.id].opacity).toBe(1)

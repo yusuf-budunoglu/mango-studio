@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
 import type { EffectsPatch } from '../engine/effects'
+import { isDesign } from '../engine/design'
 import { newId } from '../engine/ids'
 import i18n from '../i18n'
 import { PRESETS } from '../engine/presets'
@@ -272,15 +273,18 @@ export const useProjectStore = create<ProjectStore>()(
         }),
       addLayer: (kind, time) => {
         // Yeni klip oynatma kafasından başlar, 5 sn sürer; videonun sonuna sığmazsa geri çekilir.
-        const total = get().project.duration
-        const duration = round(Math.min(5, total))
-        const start = round(Math.min(Math.max(0, time), total - duration))
+        // Tasarımda (tek kare) klip tüm projeyi kaplar ve giriş animasyonu yoktur.
+        const { project } = get()
+        const total = project.duration
+        const design = isDesign(project)
+        const duration = design ? total : round(Math.min(5, total))
+        const start = design ? 0 : round(Math.min(Math.max(0, time), total - duration))
         const layer: Layer = {
           ...layerDefaults(kind),
           id: newId('l'),
           start,
           duration,
-          blocks: [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: 0, duration: 0.8 }],
+          blocks: design ? [] : [{ id: newId('b'), preset: kind === 'text' ? 'slide-up' : 'scale-in', start: 0, duration: 0.8 }],
         }
         // CapCut'taki gibi yeni katman en üste (en öne) eklenir.
         set((s) => ({ project: { ...s.project, layers: [layer, ...s.project.layers] }, selectedTrackId: layer.id }))
@@ -444,12 +448,12 @@ export const useProjectStore = create<ProjectStore>()(
             clips.map((c) => {
               const next = times[c.id]
               if (!next) return c
-              const start = round(Math.max(0, next.start))
               const end = round(next.end)
               const oldEnd = round(c.start + c.duration)
+              // Sadece sol kenar değiştiyse kırpmadır: kaynakta da o kadar ileri/geri git, kaynağın başını geçme.
+              const trimmedLeft = end === oldEnd && round(next.start) !== c.start
+              const start = round(Math.max(0, trimmedLeft ? Math.max(next.start, c.start - c.offset) : next.start))
               if (start === c.start && end === oldEnd) return c
-              // Sadece sol kenar değiştiyse kırpmadır: kaynakta da o kadar ileri/geri git.
-              const trimmedLeft = end === oldEnd && start !== c.start
               const offset = trimmedLeft ? round(Math.max(0, c.offset + (start - c.start))) : c.offset
               const duration = round(Math.max(0.05, Math.min(end - start, c.sourceDuration - offset)))
               return { ...c, start, offset, duration }

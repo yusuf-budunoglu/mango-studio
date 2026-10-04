@@ -14,17 +14,19 @@ async function storeImage(file: File, maxSize = 2048): Promise<AssetMeta> {
   return assets.put(blob, { name: file.name, kind: 'image' })
 }
 
-/** Videonun süresini tarayıcının oynatıcısıyla okur. */
-function readVideoDuration(file: Blob): Promise<number> {
+/** Videonun / sesin süresini tarayıcının oynatıcısıyla okur. */
+function readMediaDuration(file: Blob, tag: 'video' | 'audio' = 'video'): Promise<number> {
   return new Promise((resolve) => {
-    const video = document.createElement('video')
+    const video = document.createElement(tag)
     const url = URL.createObjectURL(file)
     video.preload = 'metadata'
     video.onloadedmetadata = () => {
-      resolve(video.duration)
+      resolve(Number.isFinite(video.duration) ? video.duration : 0)
       URL.revokeObjectURL(url)
     }
     video.onerror = () => resolve(0)
+    // meta veri hiç gelmezse (arka plandaki sekme, bozuk dosya) yükleme beklemede kalmasın
+    setTimeout(() => resolve(0), 5000)
     video.src = url
   })
 }
@@ -32,6 +34,6 @@ function readVideoDuration(file: Blob): Promise<number> {
 /** Dosyayı türüne göre hazırlayıp depoya koyar. */
 export async function storeFile(file: File, kind: AssetKind): Promise<AssetMeta> {
   if (kind === 'image') return storeImage(file)
-  if (kind === 'video') return assets.put(file, { name: file.name, kind, duration: await readVideoDuration(file) })
+  if (kind === 'video' || kind === 'audio') return assets.put(file, { name: file.name, kind, duration: (await readMediaDuration(file, kind)) || undefined })
   return assets.put(file, { name: file.name, kind })
 }

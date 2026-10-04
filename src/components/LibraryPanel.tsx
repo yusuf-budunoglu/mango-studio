@@ -2,12 +2,14 @@ import { ArrowLeftRight, Box, Film, Image, Laptop, Music, PenTool, Smartphone, S
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { readAudioDuration } from '../audio/engine'
+import { isDesign } from '../engine/design'
 import { PRESETS } from '../engine/presets'
 import type { Layer, LayerKind } from '../engine/types'
 import { presetLabel } from '../i18n/labels'
 import { assetRef, assets } from '../persistence/assets'
 import { useEditorStore, type LibraryTab } from '../store/editorStore'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
+import { DesignLayers } from './DesignLayers'
 
 const TABS: { id: LibraryTab; icon: LucideIcon }[] = [
   { id: 'text', icon: Type },
@@ -19,6 +21,8 @@ const TABS: { id: LibraryTab; icon: LucideIcon }[] = [
   { id: 'transitions', icon: ArrowLeftRight },
   { id: 'camera', icon: Video },
 ]
+/** Tasarımda (tek kare) zamana bağlı sekmeler (ses, efekt, geçiş, kamera hareketi) yok. */
+const DESIGN_TABS: LibraryTab[] = ['text', 'devices', 'media', 'shapes']
 
 interface LayerItem {
   id: string
@@ -72,7 +76,8 @@ function addLayerItem(item: LayerItem, label: string) {
     patch.text ??= label
   }
   store.updateLayer(id, patch)
-  if (item.preset) store.addBlock(id, item.preset, playhead())
+  // ek animasyon (ör. sayacın saymaya başlaması) tasarımda yok: sayaç düz metin olarak gelir
+  if (item.preset && !isDesign(store.project)) store.addBlock(id, item.preset, playhead())
   store.selectBlock(null)
 }
 
@@ -145,8 +150,12 @@ function AudioUpload() {
 /** Sol panel: eklenebilecek her şey. Tıklanan öğe oynatma kafasına eklenir. */
 export function LibraryPanel() {
   const { t } = useTranslation()
-  const tab = useEditorStore((s) => s.libraryTab)
+  const design = useProjectStore((s) => isDesign(s.project))
+  const selectedTab = useEditorStore((s) => s.libraryTab)
   const setTab = useEditorStore((s) => s.setLibraryTab)
+  const tabs = design ? TABS.filter((tab) => DESIGN_TABS.includes(tab.id)) : TABS
+  // videoda seçilen sekme tasarımda yoksa ilk sekme gösterilir (tercih değişmez)
+  const tab = tabs.some((x) => x.id === selectedTab) ? selectedTab : tabs[0].id
 
   const body = (() => {
     switch (tab) {
@@ -184,9 +193,9 @@ export function LibraryPanel() {
   })()
 
   return (
-    <aside className="library">
+    <aside className={`library${design ? ' library--design' : ''}`}>
       <nav className="lib-tabs" role="tablist" aria-label={t('library.label')}>
-        {TABS.map(({ id, icon: Icon }) => (
+        {tabs.map(({ id, icon: Icon }) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>
             <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
             <span>{t(`library.tabs.${id}`)}</span>
@@ -195,9 +204,10 @@ export function LibraryPanel() {
       </nav>
       <div className="lib-body">
         <h2>{t(`library.tabs.${tab}`)}</h2>
-        <p className="hint">{t(`library.hints.${tab}`)}</p>
+        <p className="hint">{design && tab === 'text' ? t('design.textHint') : t(`library.hints.${tab}`)}</p>
         {body}
       </div>
+      {design && <DesignLayers />}
     </aside>
   )
 }

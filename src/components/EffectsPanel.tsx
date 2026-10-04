@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { isDesign } from '../engine/design'
 import { resolveEffects, type ProjectEffects } from '../engine/effects'
 import { useProjectStore } from '../store/projectStore'
 
@@ -19,6 +20,7 @@ function Slider({ id, label, value, min, max, step, onChange }: { id: string; la
 export function EffectsPanel() {
   const { t } = useTranslation()
   const effects = resolveEffects(useProjectStore((s) => s.project.effects))
+  const design = useProjectStore((s) => isDesign(s.project))
   const update = useProjectStore((s) => s.updateEffects)
   const toggle = (group: Exclude<Group, 'color'>) => (
     <input
@@ -68,10 +70,13 @@ export function EffectsPanel() {
         <Slider id="fx-vignette-darkness" label={t('effects.darkness')} value={effects.vignette.darkness} min={0} max={1} step={0.01} onChange={(v) => update({ vignette: { darkness: v } })} />
       )}
 
-      <label className="fx-toggle" htmlFor="fx-motionBlur">
-        {toggle('motionBlur')} {t('effects.motionBlur')}
-      </label>
-      {effects.motionBlur.enabled && (
+      {/* hareket bulanıklığı tek karede (tasarım) anlamsız */}
+      {!design && (
+        <label className="fx-toggle" htmlFor="fx-motionBlur">
+          {toggle('motionBlur')} {t('effects.motionBlur')}
+        </label>
+      )}
+      {!design && effects.motionBlur.enabled && (
         <>
           <Slider id="fx-mb-samples" label={t('effects.samples')} value={effects.motionBlur.samples} min={2} max={16} step={1} onChange={(v) => update({ motionBlur: { samples: v } })} />
           <Slider id="fx-mb-shutter" label={t('effects.shutter')} value={effects.motionBlur.shutter} min={0.1} max={1} step={0.05} onChange={(v) => update({ motionBlur: { shutter: v } })} />

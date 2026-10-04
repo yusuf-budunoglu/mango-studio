@@ -1,22 +1,92 @@
 import { RoundedBox } from '@react-three/drei'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, DoubleSide, ExtrudeGeometry, ShapeGeometry, Vector3, type BufferGeometry } from 'three'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js'
 import { resolveAssetUrl } from '../../persistence/assets'
 import { roundedRect } from './geometry'
+import type { LayerState } from '../../engine/types'
 import { useImageTexture, useLayerNode, type LayerProps } from './shared'
 
+// light-sweep: görselin yerel konumu (yükseklik birimiyle) yuvarlatılmış kutunun çevresindeki yere (0..1) çevrilir;
+// saatin yönünde, üst kenarın solundan başlar. Işıklar bu yol boyunca eşit hızla ilerler.
+const SWEEP_GLSL = /* glsl */ `
+uniform float uSweep; uniform float uSweepOn; uniform float uSweepCount; uniform float uSweepWidth; uniform float uSweepFloor;
+uniform float uSweepRadius; uniform float uSweepInset; uniform float uSweepAspect;
+varying vec2 vSweepPos;
+float sweepPerimeter(vec2 q, float hw, float hh, float r) {
+  float a = max(hw - r, 0.0); float b = max(hh - r, 0.0);
+  vec2 c = clamp(q, vec2(-a, -b), vec2(a, b));
+  vec2 v = q - c;
+  if (abs(v.x) < 1e-5 && abs(v.y) < 1e-5) { if (abs(q.y) * hw >= abs(q.x) * hh) v.y = sign(q.y + 1e-6) * 1e-5; else v.x = sign(q.x) * 1e-5; }
+  float hp = 1.5707963 * r;
+  float d;
+  if (v.y > 0.0 && abs(v.x) < 1e-5) d = c.x + a;
+  else if (v.x > 0.0 && v.y > 0.0) d = 2.0 * a + atan(v.x, v.y) * r;
+  else if (v.x > 0.0 && abs(v.y) < 1e-5) d = 2.0 * a + hp + (b - c.y);
+  else if (v.x > 0.0) d = 2.0 * a + 2.0 * b + hp + atan(-v.y, v.x) * r;
+  else if (v.y < 0.0 && abs(v.x) < 1e-5) d = 2.0 * a + 2.0 * b + 2.0 * hp + (a - c.x);
+  else if (v.y < 0.0) d = 4.0 * a + 2.0 * b + 2.0 * hp + atan(-v.x, -v.y) * r;
+  else if (abs(v.y) < 1e-5) d = 4.0 * a + 2.0 * b + 3.0 * hp + (c.y + b);
+  else d = 4.0 * a + 4.0 * b + 3.0 * hp + atan(v.y, -v.x) * r;
+  return d / (4.0 * a + 4.0 * b + 4.0 * hp);
+}
+float sweepMask() {
+  float hw = uSweepAspect * 0.5 - uSweepInset; float hh = 0.5 - uSweepInset;
+  float u = sweepPerimeter(vSweepPos, hw, hh, min(uSweepRadius, min(hw, hh)));
+  float m = 0.0;
+  for (int k = 0; k < 4; k++) {
+    if (float(k) >= uSweepCount) break;
+    float d = fract(u - uSweep - float(k) / uSweepCount + 0.5) - 0.5;
+    m = max(m, exp(-(d * d) / (uSweepWidth * uSweepWidth)));
+  }
+  return uSweepFloor + (1.0 - uSweepFloor) * m;
+}
+`
+
+/** light-sweep uniform'ları ve görsel malzemesine eklenen shader parçası */
+function useSweep() {
+  // uniform'lar ref'te: her karede değerleri değişir (React durumu değil)
+  const ref = useRef({
+    uSweep: { value: 0 }, uSweepOn: { value: 0 }, uSweepCount: { value: 2 }, uSweepWidth: { value: 0.1 }, uSweepFloor: { value: 0 },
+    uSweepRadius: { value: 0.5 }, uSweepInset: { value: 0 }, uSweepAspect: { value: 1 }, uSweepHeight: { value: 1 },
+  })
+  const onBeforeCompile = useCallback((shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }) => {
+    Object.assign(shader.uniforms, ref.current)
+    shader.vertexShader = `uniform float uSweepHeight;\nvarying vec2 vSweepPos;\n${shader.vertexShader}`.replace('#include <begin_vertex>', '#include <begin_vertex>\nvSweepPos = transformed.xy / uSweepHeight;')
+    shader.fragmentShader = `${SWEEP_GLSL}\n${shader.fragmentShader}`.replace(
+      '#include <dithering_fragment>',
+      '#include <dithering_fragment>\nif (uSweepOn > 0.5) gl_FragColor.a *= sweepMask();',
+    )
+  }, [])
+  const update = useCallback((s: LayerState, aspect: number, height: number) => {
+    const u = ref.current
+    u.uSweepAspect.value = aspect
+    u.uSweepHeight.value = height
+    u.uSweepOn.value = s.sweep === null ? 0 : 1
+    u.uSweep.value = s.sweep ?? 0
+    u.uSweepCount.value = s.sweepCount
+    u.uSweepWidth.value = Math.max(1e-3, s.sweepWidth)
+    u.uSweepFloor.value = s.sweepFloor
+    u.uSweepRadius.value = s.sweepRadius
+    u.uSweepInset.value = s.sweepInset
+  }, [])
+  return { onBeforeCompile, update }
+}
+
 export function ImageLayer({ layer, register }: LayerProps) {
-  const node = useLayerNode(layer, register)
   const image = useImageTexture(layer.image)
   const width = 3
   const height = image ? width / image.aspect : width * 0.6
+  const sweep = useSweep()
+  const node = useLayerNode(layer, register, (_g, s) => sweep.update(s, width / height, height))
   return (
     <group {...node}>
       <mesh>
         <planeGeometry args={[width, height]} />
-        {/* saydam PNG'ler (logo, gölgeli etiket) kenarlarıyla karışsın; opak görsellerde fark yok */}
-        {image ? <meshBasicMaterial key={image.url} map={image.texture} transparent toneMapped={false} /> : <meshBasicMaterial color="#2a303a" />}
+        {/* saydam PNG'ler (logo, gölgeli etiket) kenarlarıyla karışsın; opak görsellerde fark yok.
+            `tint`: görsel katman rengiyle çarpılır (beyaz çizilmiş ışık/çerçeve görselleri istenen renge boyanır)
+            light-sweep bloğu varsa görsel yalnızca kenar yolunda dönen ışıkların olduğu yerde görünür */}
+        {image ? <meshBasicMaterial key={image.url} map={image.texture} color={layer.tint ? layer.color : '#ffffff'} transparent toneMapped={false} onBeforeCompile={sweep.onBeforeCompile} /> : <meshBasicMaterial color="#2a303a" />}
       </mesh>
     </group>
   )

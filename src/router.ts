@@ -1,44 +1,108 @@
-export type Page = 'home' | 'videos' | 'templates' | 'assets'
-
 /** Henüz yapılmamış araçlar; menüde "yakında" etiketiyle görünür. */
-export const COMING_SOON = ['music', 'voiceover', 'sound-effects', 'mcp'] as const
+export const COMING_SOON = ['text-to-video', 'audio', 'music', 'voiceover', 'sound-effects', 'mcp', 'auto-video'] as const
 export type ComingSoonFeature = (typeof COMING_SOON)[number]
+
+/** Studio'nun bölümleri: Tümü (boş), videolar, görseller (tasarımlar), sesler, kullanıcının şablonları. */
+export const STUDIO_VIEWS = ['videos', 'images', 'sounds', 'templates'] as const
+export type StudioView = (typeof STUDIO_VIEWS)[number]
 
 export type Route =
   | { screen: 'home' }
-  | { screen: 'videos' }
+  /** Hesabı/alışkanlığı olmayan ziyaretçi için tanıtım ve fiyat sayfası */
+  | { screen: 'welcome' }
+  /** Kullanıcının projeleri; `view` bir bölüm, `folderId` bir klasör; ikisi de yoksa "Tümü" */
+  | { screen: 'studio'; folderId?: string; view?: StudioView }
+  /** Bağlantıyla paylaşılan proje (üye olmayan da açar) */
+  | { screen: 'shared'; shareId: string }
+  /** Yeni proje başlatma (hareket / tasarım); oluşturulan proje `folderId` klasörüne girer */
+  | { screen: 'new'; folderId?: string }
   | { screen: 'templates' }
+  /** Şablon önizleme sayfası */
+  | { screen: 'template'; templateId: string }
   | { screen: 'assets' }
   | { screen: 'credits' }
+  | { screen: 'pricing' }
+  /** Hesap: e-posta, plan, kredi, çıkış (girişsizken giriş daveti) */
+  | { screen: 'profile' }
+  /** Üye olma sayfası (sağ üstteki "Üye ol") */
+  | { screen: 'signup' }
   | { screen: 'soon'; feature: ComingSoonFeature }
   | { screen: 'editor'; projectId: string }
 
-export function parseHash(hash: string): Route {
-  const path = hash.replace(/^#/, '')
+/** Adres yolu (`/templates`, `/t/crystal`) → sayfa. Sondaki eğik çizgi yok sayılır; tanınmayan yol ana sayfa. */
+export function parsePath(pathname: string): Route {
+  const path = pathname.replace(/\/+$/, '') || '/'
   const editor = path.match(/^\/p\/([\w-]+)$/)
   if (editor) return { screen: 'editor', projectId: editor[1] }
-  if (path === '/videos') return { screen: 'videos' }
+  // eski "Videolar" adresi Studio'ya açılır
+  if (path === '/studio' || path === '/videos') return { screen: 'studio' }
+  const studio = path.match(/^\/studio\/([\w-]+)$/)
+  if (studio) return (STUDIO_VIEWS as readonly string[]).includes(studio[1]) ? { screen: 'studio', view: studio[1] as StudioView } : { screen: 'studio', folderId: studio[1] }
+  const shared = path.match(/^\/s\/([\w-]+)$/)
+  if (shared) return { screen: 'shared', shareId: shared[1] }
+  if (path === '/new') return { screen: 'new' }
+  const fresh = path.match(/^\/new\/([\w-]+)$/)
+  if (fresh) return { screen: 'new', folderId: fresh[1] }
+  const template = path.match(/^\/t\/([\w-]+)$/)
+  if (template) return { screen: 'template', templateId: template[1] }
+  if (path === '/welcome') return { screen: 'welcome' }
   if (path === '/templates') return { screen: 'templates' }
   if (path === '/assets') return { screen: 'assets' }
   if (path === '/credits') return { screen: 'credits' }
+  if (path === '/pricing') return { screen: 'pricing' }
+  if (path === '/profile') return { screen: 'profile' }
+  if (path === '/signup') return { screen: 'signup' }
   const soon = path.match(/^\/soon\/([\w-]+)$/)
   if (soon && (COMING_SOON as readonly string[]).includes(soon[1])) return { screen: 'soon', feature: soon[1] as ComingSoonFeature }
   return { screen: 'home' }
 }
 
-export function routeToHash(route: Route): string {
+export function routeToPath(route: Route): string {
   switch (route.screen) {
     case 'editor':
-      return `#/p/${route.projectId}`
+      return `/p/${route.projectId}`
     case 'soon':
-      return `#/soon/${route.feature}`
+      return `/soon/${route.feature}`
+    case 'shared':
+      return `/s/${route.shareId}`
+    case 'studio':
+      if (route.view) return `/studio/${route.view}`
+      return route.folderId ? `/studio/${route.folderId}` : '/studio'
+    case 'new':
+      return route.folderId ? `/${route.screen}/${route.folderId}` : `/${route.screen}`
+    case 'template':
+      return `/t/${route.templateId}`
     case 'home':
-      return '#/'
+      return '/'
     default:
-      return `#/${route.screen}`
+      return `/${route.screen}`
   }
 }
 
+/** Eski `#/...` adresinin (yer imleri, paylaşılmış bağlantılar) yeni yolu; eski biçimde değilse `undefined`. */
+export function legacyHashPath(hash: string): string | undefined {
+  return hash.startsWith('#/') ? hash.slice(1) : undefined
+}
+
+/** Sayfayı yeniden yüklemeden adresi değiştirir; `App` `popstate` ile yeni sayfayı çizer. */
+export function goTo(path: string) {
+  if (path !== window.location.pathname) window.history.pushState(null, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
 export function navigate(route: Route) {
-  window.location.hash = routeToHash(route).slice(1)
+  goTo(routeToPath(route))
+}
+
+/**
+ * Site içi bağlantı tıklaması için gidilecek yol; tarayıcıya bırakılması gereken tıklamada `undefined`
+ * (yeni sekme / indirme, başka site, dosya adresi, aynı sayfadaki `#bölüm` bağlantısı).
+ */
+export function internalLinkPath(anchor: HTMLAnchorElement, current: Location = window.location): string | undefined {
+  if ((anchor.target && anchor.target !== '_self') || anchor.hasAttribute('download')) return undefined
+  const url = new URL(anchor.href, current.href)
+  if (url.origin !== current.origin) return undefined
+  if (/\.[a-z0-9]+$/i.test(url.pathname)) return undefined
+  if (url.hash && url.pathname === current.pathname) return undefined
+  return url.pathname
 }

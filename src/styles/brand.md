@@ -21,19 +21,20 @@ Arayüzün çoğu siyah; vurgular logodaki mango renklerinden. Değerler `src/in
 
 | Rol | Token | Değer | Kullanım |
 |---|---|---|---|
-| Zemin | `--bg` | `#0A0A0B` | sayfa, önizleme dışı |
-| Panel | `--panel` / `--panel-2` | `#111113` / `#18181B` | yan paneller, kartlar |
-| Çizgi | `--line` | `#28262A` | ayraçlar, kenarlar |
-| Yazı | `--ink` / `--muted` | `#F4EFE7` / `#9C968C` | sıcak beyaz / ikincil |
-| Mango turuncusu | `--accent` | `#d9711c` | ana vurgu: birincil düğme, seçili sekme, oynatma kafası |
-| Turuncu üstü yazı | `--accent-ink` | `#140b03` | birincil düğme yazısı |
-| Altın sarısı | `--gold` | `#c99324` | ikincil vurgu: odak, varsayılan yıldızı, bekleyen durum |
-| Yaprak yeşili | `--leaf` | `#3f8c3c` | olumlu: kaydedildi, başarı |
-| Mandalina / kırmızı | `--tangerine` / `--mango-red` | `#c4501e` / `#a3301b` | grafik, tanıtım |
-| Hata | `--danger` | `#d84f3a` | hata, silme |
+| Zemin | `--bg` | `#000000` | sayfa: simsiyah (2026-10-01) |
+| Panel | `--panel` / `--panel-2` | `#0D0D0F` / `#16161A` | yan paneller, kartlar |
+| Çizgi | `--line` | `#232327` | ayraçlar, kenarlar |
+| Yazı | `--ink` / `--muted` | `#F5F2EC` / `#98948C` | sıcak beyaz / ikincil |
+| Mango turuncusu | `--accent` | `#ff7a00` | ana vurgu: birincil düğme, seçili sekme, başlıklar |
+| Turuncu üstü yazı | `--accent-ink` | `#160900` | birincil düğme yazısı |
+| Mango sarısı | `--gold` | `#ffb21e` | ikincil vurgu |
+| Yaprak yeşili | `--leaf` | `#46a83f` | olumlu: kaydedildi, başarı, canlı noktası |
+| Mandalina / kırmızı | `--tangerine` / `--mango-red` | `#ff5a1f` / `#e2361b` | grafik, tanıtım, "Popüler" rozeti |
+| Hata | `--danger` | `#f04e37` | hata, silme |
+| Claude | `--claude` | `#d97757` | yalnızca Claude adı ve simgesinin yanında |
 | Marka degradesi | `--brand-gradient` | kırmızı → mandalina → turuncu → sarı → limon | yalnızca wordmark ve tanıtım bandı |
 
-Palet logodaki bantların koyulaştırılmış hali (2026-09-27: ilk açık tonlar fazla parlak bulundu). Degrade durakları: kırmızı `#a3301b`, mandalina `#c4501e`, turuncu `#d27a1e`, sarı `#c2a02c`, limon `#6d8a2c`. Yazı olarak kullanılan vurgular siyah zeminde en az 4.5:1 kontrast verir (turuncu 6.0, altın 7.2, yeşil 4.7, hata 4.8).
+2026-10-01: turuncu, Claude'un mercan turuncusundan (`#d97757`) ayrışsın diye doygun ve sarıya yakın `#ff7a00` oldu (kullanıcı: "Claude turuncusu olmasın, daha ayırt edici"). Pastel değil, doygun: eski "çok açık" uyarısı pastel tonlar içindi. Claude rengi yalnızca Claude'a ait öğelerde kullanılır, böylece iki turuncu yan yana karışmaz.
 
 ## Kurallar
 - Turuncu ana vurgudur; bir ekranda birden çok birincil turuncu düğme olmasın.

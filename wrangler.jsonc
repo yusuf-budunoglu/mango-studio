@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mango-studio",
+  "compatibility_date": "2026-09-30",
+  "assets": {
+    "directory": "./dist",
+    // /templates, /t/<şablon> gibi sayfa adresleri dosya değil: hepsi index.html'e düşer, yönlendirme tarayıcıda.
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "mangostudio.design", "custom_domain": true },
+    { "pattern": "www.mangostudio.design", "custom_domain": true }
+  ]
+}

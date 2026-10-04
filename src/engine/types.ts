@@ -54,7 +54,7 @@ export interface Layer {
   media?: string
   /** video: kaynakta nereden başladığı (sn) */
   mediaOffset?: number
-  /** SVG: orijinal renkler yerine katman rengiyle boya */
+  /** SVG: orijinal renkler yerine katman rengiyle boya; görsel: katman rengiyle çarp (beyaz görseller renge boyanır) */
   tint?: boolean
   /** SVG: 3D kalınlık (0 = düz) */
   extrude?: number
@@ -134,6 +134,11 @@ export interface Project {
   audio?: AudioClip[]
   /** görüntü efektleri; boşsa varsayılanlar (bloom + kenar karartma) */
   effects?: EffectsPatch
+  /**
+   * 'design': tek karelik sabit boyutlu tuval (timeline yok, PNG/JPG çıktısı; katmanların klibi tüm projeyi
+   * kaplar, sahne hep 0. saniyede çizilir). Boşsa 'motion' (video).
+   */
+  mode?: 'motion' | 'design'
 }
 
 /** Motorun belirli bir anda bir katman için hesapladığı değerler. */
@@ -166,6 +171,23 @@ export interface LayerState {
   trail: number
   /** renkli izin tonu (0..360°) */
   trailHue: number
+  /** glow-sweep: ışık dalgasının ilerlemesi (0..1; null = kapalı). Dalga soldan sağa geçer: önde beyaza yakın kenar,
+   *  ardından `glowHue` tonunda parlayan harfler ve yumuşak ışıma, arkasından harfler kendi rengine döner. */
+  glow: number | null
+  glowHue: number
+  /** parlayan bölümün uzunluğu ve kenar yumuşaklığı (metin genişliğine oranla), ışıma (hale) gücü */
+  glowWidth: number
+  glowSoftness: number
+  glowHalo: number
+  /** light-sweep: görselin kenar yolu boyunca dönen ışıkların konumu (tur; null = kapalı, görsel tam görünür) */
+  sweep: number | null
+  /** light-sweep ayarları: ışık sayısı, genişliği (çevrenin oranı), sönük kısımların parlaklığı, kutunun köşe
+   *  yarıçapı ve kenar boşluğu (görsel yüksekliğine oranla) */
+  sweepCount: number
+  sweepWidth: number
+  sweepFloor: number
+  sweepRadius: number
+  sweepInset: number
 }
 
 export interface CameraState {

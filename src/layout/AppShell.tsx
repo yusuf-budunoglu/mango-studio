@@ -1,15 +1,16 @@
 import { PanelLeft, Search } from 'lucide-react'
 import type { MouseEvent, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LanguageSelect } from '../components/LanguageSelect'
-import { navigate, routeToHash, type Route } from '../router'
+import { AccountButton } from '../components/AccountButton'
+import { navigate, routeToPath, type Route } from '../router'
 import { useUiStore } from '../store/uiStore'
 import { Sidebar } from './Sidebar'
 
 const TOP_LINKS: { labelKey: string; route: Route }[] = [
   { labelKey: 'nav.explore', route: { screen: 'home' } },
   { labelKey: 'nav.templates', route: { screen: 'templates' } },
-  { labelKey: 'nav.videos', route: { screen: 'videos' } },
+  { labelKey: 'nav.audio', route: { screen: 'soon', feature: 'audio' } },
+  { labelKey: 'nav.studio', route: { screen: 'studio' } },
   { labelKey: 'nav.assets', route: { screen: 'assets' } },
 ]
 
@@ -32,10 +33,12 @@ function TopNav({ current }: { current: Route }) {
   return (
     <nav className="topnav" aria-label={t('nav.topNav')}>
       {TOP_LINKS.map((link) => {
-        const active = link.route.screen === current.screen
+        const screen = current.screen === 'template' ? 'templates' : current.screen
+        const active =
+          link.route.screen === 'soon' ? current.screen === 'soon' && current.feature === link.route.feature : link.route.screen === screen
         const label = t(link.labelKey)
         return (
-          <a key={link.labelKey} className={`topnav-item ${active ? 'is-active' : ''}`} href={routeToHash(link.route)} aria-current={active ? 'page' : undefined}>
+          <a key={link.labelKey} className={`topnav-item ${active ? 'is-active' : ''}`} href={routeToPath(link.route)} aria-current={active ? 'page' : undefined}>
             <span className="shimmer-text" data-text={label}>
               {label}
             </span>
@@ -43,7 +46,7 @@ function TopNav({ current }: { current: Route }) {
         )
       })}
       <span className="topnav-divider" aria-hidden="true" />
-      <a className="topnav-item topnav-item--gold" href={routeToHash({ screen: 'home' })} onClick={goToMcp}>
+      <a className="topnav-item topnav-item--gold" href={routeToPath({ screen: 'home' })} onClick={goToMcp}>
         <span className="shimmer-text shimmer-text--gold" data-text={t('nav.mcp')}>
           {t('nav.mcp')}
         </span>
@@ -53,21 +56,33 @@ function TopNav({ current }: { current: Route }) {
   )
 }
 
-/** Sol menü + üst çubuk + içerik. Editör hariç tüm sayfalar bunu kullanır. */
-export function AppShell({ current, title, children }: { current: Route; title: string; children: ReactNode }) {
+/**
+ * Sol menü + üst çubuk + içerik. Editör hariç tüm sayfalar bunu kullanır.
+ * `bare`: sol menü yok, marka üst çubukta (giriş yapmamış ziyaretçinin ana sayfası, Higgsfield gibi).
+ */
+export function AppShell({ current, title, bare = false, children }: { current: Route; title: string; bare?: boolean; children: ReactNode }) {
   const { t } = useTranslation()
   const search = useUiStore((s) => s.search)
   const setSearch = useUiStore((s) => s.setSearch)
   const toggleSidebar = useUiStore((s) => s.toggleSidebar)
 
   return (
-    <div className="shell">
-      <Sidebar current={current} />
+    <div className={`shell${bare ? ' shell--bare' : ''}`}>
+      {!bare && <Sidebar current={current} />}
       <div className="shell-main">
         <header className="shell-topbar">
-          <button type="button" className="icon-button" onClick={toggleSidebar} aria-label={t('nav.toggleSidebar')} title={t('nav.toggleSidebar')}>
-            <PanelLeft size={16} strokeWidth={1.75} />
-          </button>
+          {bare ? (
+            <a className="topbar-brand" href={routeToPath({ screen: 'home' })} aria-label="Mango Studio">
+              <img src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" width={26} height={26} />
+              <span className="brand">
+                Mango <span>Studio</span>
+              </span>
+            </a>
+          ) : (
+            <button type="button" className="icon-button" onClick={toggleSidebar} aria-label={t('nav.toggleSidebar')} title={t('nav.toggleSidebar')}>
+              <PanelLeft size={16} strokeWidth={1.75} />
+            </button>
+          )}
           <h1 className="visually-hidden">{title}</h1>
           <TopNav current={current} />
           <label className="shell-search">
@@ -82,7 +97,7 @@ export function AppShell({ current, title, children }: { current: Route; title: 
             />
           </label>
           <div className="shell-actions">
-            <LanguageSelect />
+            <AccountButton />
           </div>
         </header>
         <main className="shell-content">{children}</main>

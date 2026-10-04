@@ -1,12 +1,16 @@
-import { Download } from 'lucide-react'
+import { Download, Lock } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { cheapestPlanFor, clampExport, RESOLUTION_LABEL, RESOLUTIONS, type Fps } from '../billing/plans'
 import { DEFAULT_EXPORT, ExportCanceledError, exportSize, exportVideo, type ExportOptions } from '../export/exportVideo'
 import { safeFileName } from '../persistence/thumbnail'
+import { routeToPath } from '../router'
+import { usePlan } from '../store/planStore'
 import { useProjectStore } from '../store/projectStore'
 
 type Status = { kind: 'idle' } | { kind: 'running'; progress: number } | { kind: 'error'; message: string }
 
+const FPS_OPTIONS: Fps[] = [30, 60]
 const OPTIONS_KEY = 'motion-studio.export-options'
 
 function readOptions(): ExportOptions {
@@ -17,10 +21,14 @@ function readOptions(): ExportOptions {
   }
 }
 
-/** "Dışa aktar" düğmesi ve seçenek penceresi: çözünürlük, kare hızı, format; ilerleme ve iptal. */
+/**
+ * "Dışa aktar" düğmesi ve seçenek penceresi: çözünürlük, kare hızı, format; ilerleme ve iptal.
+ * Plan dışındaki çözünürlük ve kare hızları kilitli görünür; kayıtlı tercih plana indirilir.
+ */
 export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
+  const { plan } = usePlan()
   const [open, setOpen] = useState(false)
   // 60 kare/sn tasarlanmış projeler (ör. sinematik şablonlar) varsayılan olarak 60'ta çıksın.
   const [options, setOptions] = useState<ExportOptions>(() => {
@@ -30,7 +38,12 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const abort = useRef<AbortController | null>(null)
   const popover = useRef<HTMLDivElement>(null)
-  const size = exportSize(project, options.resolution)
+  // Kayıtlı tercih korunur (plan yükselince geri gelir); kullanılan ve gösterilen, planın izin verdiği.
+  const effective = clampExport(plan, options)
+  const size = exportSize(project, effective.resolution)
+  const hasLocked = RESOLUTIONS.some((r) => !plan.resolutions.includes(r)) || FPS_OPTIONS.some((f) => !plan.fps.includes(f))
+  const lockedLabel = (label: string, required: ReturnType<typeof cheapestPlanFor>) =>
+    t('exportVideo.locked', { option: label, plan: t(`pricing.plans.${required.id}`) })
 
   useEffect(() => {
     if (!open) return
@@ -57,7 +70,7 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
     setStatus({ kind: 'running', progress: 0 })
     try {
       const current = useProjectStore.getState().project
-      const blob = await exportVideo(current, options, (progress) => setStatus({ kind: 'running', progress }), abort.current.signal)
+      const blob = await exportVideo(current, effective, (progress) => setStatus({ kind: 'running', progress }), abort.current.signal)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -84,27 +97,44 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
         <div className="export-popover" role="dialog" aria-label={t('exportVideo.title')}>
           <h3>{t('exportVideo.title')}</h3>
           <label htmlFor="export-resolution">{t('exportVideo.resolution')}</label>
-          <select id="export-resolution" value={options.resolution} disabled={status.kind === 'running'} onChange={(e) => choose({ resolution: Number(e.target.value) as ExportOptions['resolution'] })}>
-            <option value={720}>720p</option>
-            <option value={1080}>1080p</option>
-            <option value={2160}>4K</option>
+          <select id="export-resolution" value={effective.resolution} disabled={status.kind === 'running'} onChange={(e) => choose({ resolution: Number(e.target.value) as ExportOptions['resolution'] })}>
+            {RESOLUTIONS.map((r) => {
+              const allowed = plan.resolutions.includes(r)
+              return (
+                <option key={r} value={r} disabled={!allowed}>
+                  {allowed ? RESOLUTION_LABEL[r] : lockedLabel(RESOLUTION_LABEL[r], cheapestPlanFor({ resolution: r }))}
+                </option>
+              )
+            })}
           </select>
           <div className="row">
             <div>
               <label htmlFor="export-fps">{t('exportVideo.fps')}</label>
-              <select id="export-fps" value={options.fps} disabled={status.kind === 'running'} onChange={(e) => choose({ fps: Number(e.target.value) as ExportOptions['fps'] })}>
-                <option value={30}>30</option>
-                <option value={60}>60</option>
+              <select id="export-fps" value={effective.fps} disabled={status.kind === 'running'} onChange={(e) => choose({ fps: Number(e.target.value) as ExportOptions['fps'] })}>
+                {FPS_OPTIONS.map((f) => {
+                  const allowed = plan.fps.includes(f)
+                  return (
+                    <option key={f} value={f} disabled={!allowed}>
+                      {allowed ? f : lockedLabel(String(f), cheapestPlanFor({ fps: f }))}
+                    </option>
+                  )
+                })}
               </select>
             </div>
             <div>
               <label htmlFor="export-container">{t('exportVideo.format')}</label>
-              <select id="export-container" value={options.container} disabled={status.kind === 'running'} onChange={(e) => choose({ container: e.target.value as ExportOptions['container'] })}>
+              <select id="export-container" value={effective.container} disabled={status.kind === 'running'} onChange={(e) => choose({ container: e.target.value as ExportOptions['container'] })}>
                 <option value="mp4">MP4</option>
                 <option value="webm">WebM</option>
               </select>
             </div>
           </div>
+          {hasLocked && (
+            <a className="export-upgrade" href={routeToPath({ screen: 'pricing' })}>
+              <Lock size={12} strokeWidth={2} aria-hidden="true" />
+              {t('exportVideo.upgradeHint')}
+            </a>
+          )}
           <p className="hint">{t('exportVideo.summary', { width: size.width, height: size.height, seconds: Math.round(project.duration * 10) / 10, audio: project.audio?.length ? t('exportVideo.withAudio') : t('exportVideo.noAudio') })}</p>
           {status.kind === 'running' ? (
             <>

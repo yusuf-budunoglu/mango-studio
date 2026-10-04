@@ -1,5 +1,6 @@
 import { del, get, set } from 'idb-keyval'
 import { newId } from '../engine/ids'
+import { delegateTo } from './backend'
 import type { KeyValue } from './repository'
 
 /**
@@ -55,10 +56,45 @@ export function createAssetStore(kv: KeyValue) {
 
 export type AssetStore = ReturnType<typeof createAssetStore>
 
-export const assets = createAssetStore({ get, set, del })
+/** Bu tarayıcıdaki dosyalar (giriş yapılmamışken ve bulut kopyalamasının kaynağı). */
+export const localAssets = createAssetStore({ get, set, del })
+
+let cloudAssets: AssetStore | undefined
+/** Paylaşılan bir projeye bakarken onun sahibinin dosyaları (salt okunur); kullanıcının kendi deposunun önüne geçer. */
+let overrideAssets: AssetStore | undefined
 
 // Tarayıcıda gösterilecek adresler: asset referansı için bir kez oluşturulan blob URL'si.
 const urlCache = new Map<string, Promise<string | undefined>>()
+
+/** Giriş yapılınca bulut deposunu, çıkışta `undefined` verip yerel depoyu devreye alır. */
+export function setCloudAssetStore(next: AssetStore | undefined) {
+  cloudAssets = next
+  // Aynı `asset:<id>` iki depoda farklı içerik (ya da hiç içerik) gösterebilir.
+  urlCache.clear()
+}
+
+/**
+ * Paylaşılan projeyi gösteren sayfa, projenin dosyalarını sahibinin deposundan okusun diye bunu kurar;
+ * sayfadan çıkınca `undefined` ile kaldırır.
+ */
+export function setAssetOverride(next: AssetStore | undefined) {
+  overrideAssets = next
+  urlCache.clear()
+}
+
+/** Kullanıcının kendi dosya deposu (paylaşım görünümünden bağımsız): kopyalama hedefi. */
+export const ownAssets: AssetStore = delegateTo(localAssets, () => cloudAssets)
+
+/** Ekranların kullandığı dosya deposu: girişliyse hesap (bulut), değilse bu tarayıcı. */
+export const assets: AssetStore = delegateTo(localAssets, () => overrideAssets ?? cloudAssets)
+
+/** Yükleme planın depolama kotasını aşınca `put` bu hatayı fırlatır. */
+export class StorageQuotaError extends Error {
+  constructor() {
+    super('storage_quota_exceeded')
+    this.name = 'StorageQuotaError'
+  }
+}
 
 /** `asset:<id>` → blob URL; data:/http adreslerini olduğu gibi döndürür. */
 export function resolveAssetUrl(ref: string | undefined): Promise<string | undefined> {

@@ -19,7 +19,8 @@ import { Waveform } from './Waveform'
 type TimelineRow = TimelineEditor['editorData'][number]
 
 /** Satır yükseklikleri: klip satırı belirgin, animasyon şeritleri ince. */
-const ROW = { clip: 44, lane: 26, camera: 30, audio: 40 }
+// İnce satırlar: timeline'a kaydırmadan daha çok katman sığar.
+const ROW = { clip: 30, lane: 20, camera: 24, audio: 28 }
 const START_LEFT = 16
 const ZOOM_MIN = 20
 const ZOOM_MAX = 480
@@ -161,7 +162,7 @@ export function TimelinePanel({ timelineRef }: Props) {
         actions: blockActions(blocks, 0, selectedBlockIds, false, { min: 0, max: project.duration }),
       }),
     )
-    // Ses parçaları: kaynak dosyanın dışına kırpılamaz, videonun sonunu geçemez.
+    // Ses parçaları: timeline'da serbestçe taşınır; kaynak dosyanın dışına kırpılamaz (setAudioTimes).
     if (project.audio?.length)
       audioLanes.forEach((clips, i) =>
         out.push({
@@ -172,8 +173,10 @@ export function TimelinePanel({ timelineRef }: Props) {
             id: c.id,
             start: c.start,
             end: c.start + c.duration,
-            minStart: Math.max(0, c.start - c.offset),
-            maxEnd: Math.max(c.start + c.duration, Math.min(project.duration, c.start + (c.sourceDuration - c.offset))),
+            // Sınırlar taşımayı da kısıtlıyordu (kaynağın başından başlayan parça hiç kıpırdamıyordu); kaynak dışına
+            // kırpmayı setAudioTimes engeller.
+            minStart: 0,
+            maxEnd: Math.max(c.start + c.duration, project.duration),
             effectId: AUDIO_EFFECT,
             selected: selectedBlockIds.includes(c.id),
           })),

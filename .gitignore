@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.wrangler
+__pycache__/
 
 # Editor directories and files
 .vscode/*
@@ -25,3 +28,6 @@ dist-ssr
 
 # Ham 3D modeller (lisans: yalnızca işlenmiş hali public/models altında dağıtılır)
 models-src/
+
+# Bulutsuz (hesap girişi kapalı) yayın derlemesi
+dist-live

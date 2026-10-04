@@ -132,7 +132,13 @@ export function LayerFields({ layer }: { layer: Layer }) {
         </>
       )}
 
-      {layer.kind !== 'image' && layer.kind !== 'video' && (layer.kind !== 'svg' || layer.tint) && (
+      {layer.kind === 'image' && (
+        <label className="fx-toggle" htmlFor="layer-image-tint">
+          <input id="layer-image-tint" type="checkbox" checked={!!layer.tint} onChange={(e) => update({ tint: e.target.checked })} /> {t('layer.tint')}
+        </label>
+      )}
+
+      {layer.kind !== 'video' && (layer.kind !== 'image' || layer.tint) && (layer.kind !== 'svg' || layer.tint) && (
         <>
           <label htmlFor="layer-color">{DEVICE_KINDS.includes(layer.kind) ? t('layer.screenColor') : t('layer.color')}</label>
           <input id="layer-color" type="color" value={layer.color} onChange={(e) => update({ color: e.target.value })} />

@@ -26,6 +26,8 @@ const font = (id: string, label: string, category: FontCategory): FontDef => {
 
 export const FONTS: FontDef[] = [
   font('inter', 'Inter', 'sans'),
+  // Inter Medium: normal = 500, kalın = 600 (SF Pro'ya en yakın ağırlıklar; proje formatı yalnızca 400/700 bilir)
+  { id: 'inter-medium', label: 'Inter Medium', category: 'sans', files: { 400: FILES['../assets/fonts/inter-500.woff'], 700: FILES['../assets/fonts/inter-600.woff'] } },
   font('roboto', 'Roboto', 'sans'),
   font('open-sans', 'Open Sans', 'sans'),
   font('dm-sans', 'DM Sans', 'sans'),

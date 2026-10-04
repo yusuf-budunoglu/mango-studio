@@ -30,6 +30,8 @@ FAMILIES = [
 # Tek kalınlığı olan fontlarda (Bebas Neue, DM Serif Display, Instrument Serif) 700 üretilmez;
 # uygulama kalın için 400 dosyasını kullanır (src/render/fonts.ts).
 WEIGHTS = [400, 700]
+# Ek kalınlıklar: Inter Medium ailesi (normal = 500, kalın = 600; src/render/fonts.ts `inter-medium`)
+EXTRA_WEIGHTS = {'inter': [500, 600]}
 # Ürün videolarında sık kullanılan sembol blokları: oklar, şekiller, çeşitli semboller, dingbat'lar.
 SYMBOL_RANGES = [(0x2190, 0x21FF), (0x25A0, 0x25FF), (0x2600, 0x27BF), (0x2B00, 0x2BFF)]
 # Birleştirmede çakışan ve metin çizimi için gereksiz tablolar: ipucu (hinting) tabloları ve
@@ -83,7 +85,7 @@ def main():
     TMP.mkdir(parents=True, exist_ok=True)
     try:
         for family in FAMILIES:
-            for weight in WEIGHTS:
+            for weight in WEIGHTS + EXTRA_WEIGHTS.get(family, []):
                 if not (SRC / family / 'files' / f'{family}-latin-{weight}-normal.woff2').exists():
                     continue
                 path = build(family, weight)

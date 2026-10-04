@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TEMPLATES } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { easingFor } from './easing'
 import { evaluateCamera, evaluateLayer } from './evaluate'
 import type { Layer } from './types'
@@ -29,7 +29,7 @@ describe('özel hareket', () => {
 
 describe('geçişler', () => {
   const at = (preset: string, t: number) => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     project.camera.blocks = [{ id: 't', preset, start: 1, duration: 1, easing: 'linear' }]
     return evaluateCamera(project, t)
   }
@@ -66,7 +66,7 @@ describe('özel eğri', () => {
 
 describe('lens blokları', () => {
   const at = (preset: string, t: number, params?: Record<string, number>) => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     project.camera.blocks = [{ id: 'l', preset, start: 1, duration: 1, params }]
     return { base: evaluateCamera({ ...project, camera: { ...project.camera, blocks: [] } }, t), s: evaluateCamera(project, t) }
   }
@@ -105,7 +105,7 @@ describe('lens blokları', () => {
 
 describe('kamera hareketi', () => {
   it('kamerayı ve baktığı noktayı kaydırır, yakınlaşmada mesafeyi böler', () => {
-    const project = TEMPLATES[0].build()
+    const project = SAMPLE_TEMPLATE.build()
     project.camera.position = [0, 0, 9]
     project.camera.blocks = [
       { id: 'a', preset: 'camera-move', start: 0, duration: 1, easing: 'linear', params: { dx: 1, dy: -2, zoom: 1.5 } },

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { AudioClip } from '../engine/types'
 import { createAssetStore } from '../persistence/assets'
 import type { KeyValue } from '../persistence/repository'
-import { TEMPLATES } from '../project/templates'
+import { SAMPLE_TEMPLATE } from '../project/sampleTemplate'
 import { findAudio, useProjectStore } from '../store/projectStore'
 import { clipGainAt, computePeaks, planClip } from './schedule'
 
@@ -53,7 +53,7 @@ describe('ses zamanlaması', () => {
 
 describe('ses parçası işlemleri', () => {
   const store = () => useProjectStore.getState()
-  beforeEach(() => store().loadProject(TEMPLATES[0].build()))
+  beforeEach(() => store().loadProject(SAMPLE_TEMPLATE.build()))
 
   it('eklenen parça videoya sığacak kadar kısaltılır', () => {
     const id = store().addAudioClip('asset:a', 'song', 30, 2)

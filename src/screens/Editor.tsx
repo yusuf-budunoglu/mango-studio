@@ -1,20 +1,24 @@
 import type { TimelineState } from '@xzdarcy/react-timeline-editor'
 import { useEffect, useRef, useState } from 'react'
-import { Grid2x2, Magnet, Move, RotateCw, Scaling, Scan } from 'lucide-react'
+import { Grid2x2, ImageDown, Magnet, Move, RotateCw, Scaling, Scan, Share2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { navigate } from '../router'
 import { ExportButton } from '../components/ExportButton'
+import { ExportImageButton } from '../components/ExportImageButton'
 import { LibraryPanel } from '../components/LibraryPanel'
 import { PropertiesPanel } from '../components/PropertiesPanel'
-import { LanguageSelect } from '../components/LanguageSelect'
+import { ShareDialog } from '../components/ShareDialog'
 import { Stage } from '../components/Stage'
 import { TimelinePanel } from '../components/TimelinePanel'
 import { attachAudioPreview } from '../audio/engine'
 import { deleteSelection, duplicateSelection, splitSelection } from '../editor/commands'
+import { freezeFrame, isDesign } from '../engine/design'
 import { NewerProjectVersionError } from '../engine/migrate'
 import { projectToFile } from '../persistence/projectFile'
 import { repository } from '../persistence/repository'
 import { downloadText, renderThumbnail, safeFileName } from '../persistence/thumbnail'
+import { supabase } from '../cloud/client'
+import { useAuthStore } from '../store/authStore'
 import { useEditorStore, type TransformMode } from '../store/editorStore'
 import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
@@ -116,6 +120,9 @@ export function Editor({ projectId }: { projectId: string }) {
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const timelineHeight = useEditorStore((s) => s.timelineHeight)
   const saveStatus = useAutosave(state === 'ready')
+  const design = isDesign(project)
+  const canShare = useAuthStore((s) => !!supabase && s.status === 'in')
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -144,12 +151,25 @@ export function Editor({ projectId }: { projectId: string }) {
   }, [projectId])
 
   // Projelere dönerken kartın küçük resmini son hale getir (kayıt zaten otomatik).
-  const leaveToVideos = async () => {
+  const leaveToStudio = async () => {
     timelineRef.current?.pause()
     const current = useProjectStore.getState().project
     const thumbnail = await renderThumbnail(current).catch(() => undefined)
     if (thumbnail) await repository.setThumbnail(current.id, thumbnail).catch(() => undefined)
-    navigate({ screen: 'videos' })
+    // projenin klasörüne dön
+    const summary = (await repository.list().catch(() => [])).find((p) => p.id === current.id)
+    navigate({ screen: 'studio', folderId: summary?.folderId })
+  }
+
+  // Oynatma kafasındaki kareyi yeni bir tasarım projesi olarak kaydedip onu açar (bu video olduğu gibi kalır).
+  const saveFrameAsDesign = async () => {
+    timelineRef.current?.pause()
+    const current = useProjectStore.getState().project
+    const frozen = freezeFrame(current, usePlaybackStore.getState().time, t('design.fromFrameName', { name: current.name }))
+    await repository.save(frozen)
+    const summary = (await repository.list()).find((p) => p.id === current.id)
+    if (summary?.folderId) await repository.moveToFolder(frozen.id, summary.folderId)
+    navigate({ screen: 'editor', projectId: frozen.id })
   }
 
   const togglePlay = () => {
@@ -182,6 +202,9 @@ export function Editor({ projectId }: { projectId: string }) {
       const mod = e.ctrlKey || e.metaKey
       const key = e.key.toLowerCase()
       const handled = () => e.preventDefault()
+      // tasarımda (tek kare) zamana bağlı kısayollar yok
+      const timed = e.code === 'Space' || (!mod && key === 's') || (mod && (key === 'c' || key === 'v')) || e.key === 'Home' || ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !selected.length)
+      if (isDesign(store.project) && timed) return
 
       if (e.code === 'Space') {
         handled()
@@ -245,18 +268,35 @@ export function Editor({ projectId }: { projectId: string }) {
   if (state === 'loading') return <div className="loading">{t('editor.loading')}</div>
 
   return (
-    <div className="app" style={{ gridTemplateRows: `auto minmax(0, 1fr) ${timelineHeight}px` }}>
+    <div className={`app${design ? ' app--design' : ''}`} style={{ gridTemplateRows: design ? 'auto minmax(0, 1fr)' : `auto minmax(0, 1fr) ${timelineHeight}px` }}>
       <header className="topbar">
-        <button type="button" className="back" onClick={() => void leaveToVideos()} title={t('topbar.backToProjectsTitle')}>
+        <button type="button" className="back" onClick={() => void leaveToStudio()} title={t('topbar.backToProjectsTitle')}>
           {t('topbar.backToProjects')}
         </button>
         <div className="brand">
           <img className="brand-logo" src={`${import.meta.env.BASE_URL}brand/mango-mark-96.png`} alt="" />
           Mango <span>Studio</span>
         </div>
-        <div className="project-name">{project.name}</div>
+        <div className="project-name">
+          {design && <span className="mode-badge">{t('design.badge')}</span>}
+          {project.name}
+        </div>
         <span className={`save-status save-status--${saveStatus}`}>{t(`save.${saveStatus}`)}</span>
         <div className="controls">
+          {canShare && (
+            <button
+              type="button"
+              className="icon-text"
+              onClick={() => {
+                timelineRef.current?.pause()
+                setSharing(true)
+              }}
+              title={t('share.buttonTitle')}
+            >
+              <Share2 size={14} strokeWidth={1.75} aria-hidden="true" />
+              {t('share.button')}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void projectToFile(project).then((text) => downloadText(`${safeFileName(project.name)}.motion.json`, text))}
@@ -264,8 +304,17 @@ export function Editor({ projectId }: { projectId: string }) {
           >
             {t('topbar.saveToFile')}
           </button>
-          <ExportButton beforeExport={() => timelineRef.current?.pause()} />
-          <LanguageSelect />
+          {design ? (
+            <ExportImageButton />
+          ) : (
+            <>
+              <button type="button" className="icon-text" onClick={() => void saveFrameAsDesign()} title={t('design.saveFrameTitle')}>
+                <ImageDown size={14} strokeWidth={1.75} aria-hidden="true" />
+                {t('design.saveFrame')}
+              </button>
+              <ExportButton beforeExport={() => timelineRef.current?.pause()} />
+            </>
+          )}
         </div>
       </header>
 
@@ -275,19 +324,28 @@ export function Editor({ projectId }: { projectId: string }) {
           <Stage />
           <div className="transport">
             <StageTools />
-            <button type="button" onClick={() => seek(0)} title={t('editor.rewind')}>
-              ⏮
-            </button>
-            <button type="button" className="play" onClick={togglePlay} title={t('editor.playPause')}>
-              {isPlaying ? '⏸' : '▶'}
-            </button>
-            <TimeDisplay duration={project.duration} />
+            {design ? (
+              <span className="time">
+                {project.width} × {project.height} px
+              </span>
+            ) : (
+              <>
+                <button type="button" onClick={() => seek(0)} title={t('editor.rewind')}>
+                  ⏮
+                </button>
+                <button type="button" className="play" onClick={togglePlay} title={t('editor.playPause')}>
+                  {isPlaying ? '⏸' : '▶'}
+                </button>
+                <TimeDisplay duration={project.duration} />
+              </>
+            )}
           </div>
         </div>
         <PropertiesPanel />
       </main>
 
-      <TimelinePanel timelineRef={timelineRef} />
+      {!design && <TimelinePanel timelineRef={timelineRef} />}
+      {sharing && <ShareDialog projectId={project.id} name={project.name} onClose={() => setSharing(false)} />}
     </div>
   )
 }
