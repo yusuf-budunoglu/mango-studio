@@ -10,13 +10,17 @@ import {
   PlugZap,
   Type,
   UserRound,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { routeToPath, type Route } from '../router'
 import { supabase } from '../cloud/client'
 import { useAuthStore } from '../store/authStore'
+import { useMembersStore } from '../store/membersStore'
 import { usePlan } from '../store/planStore'
+import { useProfileStore } from '../store/profileStore'
 import { useUiStore } from '../store/uiStore'
 
 interface NavItem {
@@ -50,7 +54,32 @@ function isActive(item: NavItem, current: Route) {
   return item.route.screen === screen
 }
 
-function NavLink({ item, current }: { item: NavItem; current: Route }) {
+const MEMBERS: NavItem = { labelKey: 'nav.members', icon: Users, route: { screen: 'members' } }
+/** Yeni üye sayacının sunucudan yenilenme aralığı (sekme görünürken) */
+const MEMBERS_POLL_MS = 60_000
+
+/** Yalnızca yöneticide: Üyeler bağlantısı ve henüz görülmemiş yeni üye sayısı. */
+function MembersLink({ current }: { current: Route }) {
+  const unseen = useMembersStore((s) => s.unseen)
+  const refreshCounts = useMembersStore((s) => s.refreshCounts)
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void refreshCounts()
+    }
+    refresh()
+    const timer = window.setInterval(refresh, MEMBERS_POLL_MS)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [refreshCounts])
+
+  return <NavLink item={MEMBERS} current={current} count={unseen} />
+}
+
+function NavLink({ item, current, count = 0 }: { item: NavItem; current: Route; count?: number }) {
   const { t } = useTranslation()
   const Icon = item.icon
   const content = (
@@ -58,6 +87,11 @@ function NavLink({ item, current }: { item: NavItem; current: Route }) {
       <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
       <span className="nav-label">{t(item.labelKey)}</span>
       {item.soon && <span className="nav-badge">{t('nav.soon')}</span>}
+      {count > 0 && (
+        <span className="nav-count" aria-label={t('nav.newMembers', { count })}>
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
     </>
   )
   const className = `nav-item ${isActive(item, current) ? 'is-active' : ''}`
@@ -82,6 +116,7 @@ export function Sidebar({ current }: { current: Route }) {
   const planName = t(`pricing.plans.${plan.id}`)
   const guest = useAuthStore((s) => !!supabase && s.status === 'out')
   const openSignIn = useAuthStore((s) => s.openSignIn)
+  const isAdmin = useProfileStore((s) => s.isAdmin)
 
   return (
     <aside className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}>
@@ -98,6 +133,7 @@ export function Sidebar({ current }: { current: Route }) {
         {MAIN.map((item) => (
           <NavLink key={item.labelKey} item={item} current={current} />
         ))}
+        {isAdmin && <MembersLink current={current} />}
       </nav>
 
       <div className="nav-group">

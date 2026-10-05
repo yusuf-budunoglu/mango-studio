@@ -53,6 +53,10 @@ Tarayıcıda çalışan, timeline ile düzenlenebilen hareketli ürün videosu e
 - Parola sıfırlama: e-postadaki bağlantı `/reset-password` (`screens/ResetPassword.tsx`) sayfasını açar; adres Supabase'in izinli listesinde yoksa ana sayfaya düşer, `PASSWORD_RECOVERY` olayı yine o sayfaya götürür. Giriş yapmış herkes aynı sayfadan parola belirleyebilir. En kısa parola `MIN_PASSWORD_LENGTH`.
 - E-posta şablonları (`supabase/templates/*.html`, konu satırları `SUBJECTS.md`) `node scripts/build-email-templates.mjs` ile üretilir ve Supabase paneline (Authentication → Emails) elle yapıştırılır. Gönderen adını/adresini değiştirmek için panelde özel SMTP gerekir.
 
+## Yönetici: üyeler ve yeni üye bildirimi
+- `/members` (`screens/Members.tsx`, `store/membersStore.ts`): yalnızca yöneticiye (`profiles.is_admin`) sol menüde Üyeler bağlantısı ve görülmemiş yeni üye sayacı (`MembersLink`, sekme görünürken 60 sn'de bir yenilenir). Sayfa açılınca liste okunur ve hepsi görüldü sayılır; "yeni" işaretleri sayfa açıkken kalır. Dışarıya (e-posta, Discord) bildirim gitmez.
+- Sunucu (`supabase/migrations/20261005000001_admin_members.sql`): `auth.users` istemciden okunamadığı için liste security definer işlevlerle gelir (`admin_members`, `admin_member_counts`, `admin_mark_members_seen`); yönetici olmayana `not_admin`. Son görülme anı `profiles.members_seen_at` (sunucuda: sayaç her cihazda aynı).
+
 ## MCP sunucusu (Claude Code bağlantısı)
 - Akış: kullanıcı kendi Claude Code'una `claude mcp add --transport http mango-studio https://mangostudio.design/mcp` ile bağlar, örnek videoyu Claude'a verir; Claude projeyi JSON olarak kurup `save_project` ile Studio'ya kaydeder (`source: 'mcp'`, kartta Claude etiketi), kullanıcı editörde açıp render alır. Sunucuda render yok.
 - `src/mcp/` — Cloudflare Worker (`worker.ts`, `wrangler.jsonc` `main`): yalnızca `/mcp` ve `/.well-known/*` Worker'a gelir (`run_worker_first`), gerisi statik site (`ASSETS`). `server.ts` Streamable HTTP'yi durumsuz ve elle yanıtlar (JSON-RPC: `initialize`, `ping`, `tools/list`, `tools/call`; SSE ve oturum yok). SDK bağımlılığı yok.

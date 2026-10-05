@@ -20,6 +20,7 @@ describe('yönlendirme', () => {
     { screen: 'soon', feature: 'auto-video' },
     { screen: 'soon', feature: 'text-to-video' },
     { screen: 'profile' },
+    { screen: 'members' },
     { screen: 'signup' },
     { screen: 'oauth' },
     { screen: 'reset' },

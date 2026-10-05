@@ -6,6 +6,7 @@ import { createCloudAssetStore } from '../persistence/cloudAssets'
 import { createCloudRepository } from '../persistence/cloudRepository'
 import { setCloudRepository } from '../persistence/repository'
 import { goTo, RESET_PASSWORD_PATH } from '../router'
+import { useMembersStore } from './membersStore'
 import { useProfileStore } from './profileStore'
 
 interface AuthStore {
@@ -105,6 +106,7 @@ function applySession(session: Session | null) {
     setCloudRepository(undefined)
     setCloudAssetStore(undefined)
     useProfileStore.getState().reset()
+    useMembersStore.getState().reset()
     useAuthStore.setState({ status: 'out', user: null, version: state.version + 1 })
   }
 }

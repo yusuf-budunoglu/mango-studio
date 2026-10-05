@@ -27,6 +27,8 @@ export type Route =
   | { screen: 'pricing' }
   /** Hesap: e-posta, plan, kredi, çıkış (girişsizken giriş daveti) */
   | { screen: 'profile' }
+  /** Yönetici ekranı: üyeler ve yeni üye bildirimi (yalnızca `profiles.is_admin`) */
+  | { screen: 'members' }
   /** Üye olma sayfası (sağ üstteki "Üye ol") */
   | { screen: 'signup' }
   /** Claude Code (MCP) bağlanırken açılan onay sayfası; istek kimliği adresteki `?authorization_id=` */
@@ -65,6 +67,7 @@ export function parsePath(pathname: string): Route {
   if (path === '/terms') return { screen: 'terms' }
   if (path === '/pricing') return { screen: 'pricing' }
   if (path === '/profile') return { screen: 'profile' }
+  if (path === '/members') return { screen: 'members' }
   if (path === '/signup') return { screen: 'signup' }
   if (path === OAUTH_CONSENT_PATH) return { screen: 'oauth' }
   if (path === RESET_PASSWORD_PATH) return { screen: 'reset' }

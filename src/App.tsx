@@ -9,6 +9,7 @@ import { Editor } from './screens/Editor'
 import { Home } from './screens/Home'
 import { Landing } from './screens/Landing'
 import { Legal } from './screens/Legal'
+import { Members } from './screens/Members'
 import { NewProject } from './screens/NewProject'
 import { OAuthConsent } from './screens/OAuthConsent'
 import { Pricing } from './screens/Pricing'
@@ -79,7 +80,7 @@ export default function App() {
 }
 
 // Üye olmayan ziyaretçi şablonları görür ama kullanamaz: şablon açma, yeni proje, editör, Studio ve Dosyalar üyelik sayfasına gider.
-const MEMBERS_ONLY = new Set<Route['screen']>(['template', 'new', 'editor', 'studio', 'assets', 'oauth'])
+const MEMBERS_ONLY = new Set<Route['screen']>(['template', 'new', 'editor', 'studio', 'assets', 'oauth', 'members'])
 
 function renderScreen(route: Route, guest: boolean) {
   if (guest && MEMBERS_ONLY.has(route.screen)) return <SignUp key={route.screen} route={route} />
@@ -109,6 +110,8 @@ function renderScreen(route: Route, guest: boolean) {
       return <Pricing />
     case 'profile':
       return <Profile />
+    case 'members':
+      return <Members />
     case 'signup':
       return guest ? <SignUp route={route} /> : <Home />
     case 'oauth':
