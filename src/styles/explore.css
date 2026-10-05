@@ -269,22 +269,17 @@
 .signup-perks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; }
 .signup-perks li { display: flex; gap: 8px; align-items: center; }
 .signup-perks svg { color: var(--leaf); flex: none; }
-.signup-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: 100%; margin-top: 4px; }
-.signup-form input { min-width: 0; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: #0b0b0d; font-size: 14px; }
-.signup-form input:focus { outline: none; border-color: var(--accent); }
-.signup-form .x-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
-.signup-sent { display: grid; grid-template-columns: auto 1fr; gap: 10px; width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--leaf); background: rgba(70, 168, 63, 0.08); }
-.signup-sent svg { color: var(--leaf); margin-top: 2px; }
-.signup-sent p { margin: 4px 0 8px; color: #cfc9bf; font-size: 13px; }
-.signup-sent-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.signup-sent-actions button { padding: 5px 10px; border-radius: 7px; font-size: 12.5px; }
-.signup-error { margin: 0; }
 .signup-note { margin: 0; color: var(--muted); font-size: 12.5px; }
 .signup-back { color: var(--muted); font-size: 13px; }
+
+/* Claude bağlantısı onay sayfası (/oauth/consent): üyelik kartının tek sütunlu hali */
+.consent { max-width: 460px; margin: 48px auto 0; }
+.consent-card h1 { margin: 0; }
+.consent-mark { width: 56px; height: 56px; filter: drop-shadow(0 8px 22px rgba(255, 122, 0, 0.45)); }
+.consent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .signup-back:hover { color: var(--ink); }
 @media (max-width: 900px) {
   .signup { grid-template-columns: minmax(0, 1fr); margin-top: 8px; }
   .signup-media { min-height: 0; }
   .signup-shot.is-vertical .x-loop { height: min(420px, 60vh); }
-  .signup-form { grid-template-columns: minmax(0, 1fr); }
 }

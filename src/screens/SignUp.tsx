@@ -1,8 +1,8 @@
-import { Check, Mail } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AuthForm } from '../components/AuthForm'
 import { useAutoplay } from '../components/useAutoplay'
-import { useMagicLink } from '../components/useMagicLink'
 import { AppShell } from '../layout/AppShell'
 import { TEMPLATES, templateName } from '../project/templates'
 import { routeToPath, type Route } from '../router'
@@ -15,6 +15,7 @@ const TITLES: Partial<Record<Route['screen'], string>> = {
   studio: 'signup.titleStudio',
   assets: 'signup.titleAssets',
   signup: 'signup.titleJoin',
+  oauth: 'signup.titleConnect',
 }
 
 /** Seçilen şablonun döngü videosu, kendi oranında. */
@@ -43,9 +44,9 @@ function TemplateLoop({ id }: { id: string }) {
  */
 export function SignUp({ route }: { route: Route }) {
   const { t } = useTranslation()
-  const { email, setEmail, trimmed, state, error, wait, submit, changeEmail } = useMagicLink()
   const templateId = route.screen === 'template' ? route.templateId : undefined
-  const target = routeToPath(route)
+  // Claude bağlantısı onayında istek kimliği adresin sorgu kısmında: girişten sonra onunla dönülmeli.
+  const target = routeToPath(route) + (route.screen === 'oauth' ? window.location.search : '')
 
   // Kendi adresi (#/signup) dışında: girişten sonra ziyaretçinin açmak istediği sayfaya dön.
   useEffect(() => {
@@ -76,51 +77,7 @@ export function SignUp({ route }: { route: Route }) {
             ))}
           </ul>
 
-          {state === 'sent' ? (
-            <div className="signup-sent" role="status">
-              <Mail size={18} strokeWidth={1.75} aria-hidden="true" />
-              <div>
-                <strong>{t('account.linkSentTitle')}</strong>
-                <p>{t('account.linkSentBody', { email: trimmed })}</p>
-                <div className="signup-sent-actions">
-                  <button type="button" onClick={changeEmail}>
-                    {t('account.useOtherEmail')}
-                  </button>
-                  <button type="button" disabled={wait > 0} onClick={() => void submit()}>
-                    {wait > 0 ? t('account.resendIn', { seconds: wait }) : t('account.sendLink')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <form
-              className="signup-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void submit()
-              }}
-            >
-              <input
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={email}
-                placeholder={t('account.emailPlaceholder')}
-                aria-label={t('account.emailLabel')}
-                maxLength={254}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <button type="submit" className="x-btn x-btn--accent" disabled={!trimmed || state === 'sending' || wait > 0}>
-                {state === 'sending' ? t('account.sending') : t('signup.submit')}
-              </button>
-            </form>
-          )}
-          {error && (
-            <p className="modal-error signup-error" role="alert">
-              {error}
-            </p>
-          )}
+          <AuthForm intent="signup" />
           {route.screen !== 'signup' && <p className="signup-note">{templateId ? t('signup.note') : t('signup.noteBack')}</p>}
           <a className="signup-back" href={routeToPath({ screen: 'templates' })}>
             {t('signup.back')}

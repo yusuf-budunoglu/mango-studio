@@ -3,65 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { supabase } from '../cloud/client'
 import { copyLocalToCloud, countLocal, dismissLocalCopy, isLocalCopyDone } from '../cloud/copyLocalToCloud'
 import { useAuthStore } from '../store/authStore'
+import { AuthForm } from './AuthForm'
 import { Dialog } from './Dialog'
-import { useMagicLink } from './useMagicLink'
 
-/** Giriş penceresi: e-postaya tek kullanımlık bağlantı gönderir. */
+/** Giriş penceresi: Google / GitHub, e-posta + parola ya da parolasız giriş bağlantısı (`AuthForm`). */
 function SignInDialog() {
   const { t } = useTranslation()
   const closeSignIn = useAuthStore((s) => s.closeSignIn)
-  const { email, setEmail, trimmed, state, error, wait, submit, changeEmail } = useMagicLink()
 
   return (
-    <Dialog title={state === 'sent' ? t('account.linkSentTitle') : t('account.signInTitle')} onClose={closeSignIn}>
-      {state === 'sent' ? (
-        <>
-          <p className="modal-text">{t('account.linkSentBody', { email: trimmed })}</p>
-          <div className="modal-actions">
-            <button type="button" onClick={changeEmail}>
-              {t('account.useOtherEmail')}
-            </button>
-            <button type="button" className="primary" disabled={wait > 0} onClick={submit}>
-              {wait > 0 ? t('account.resendIn', { seconds: wait }) : t('account.sendLink')}
-            </button>
-          </div>
-        </>
-      ) : (
-        <form
-          className="modal-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            void submit()
-          }}
-        >
-          <p className="modal-text">{t('account.signInBody')}</p>
-          <input
-            className="modal-input"
-            data-autofocus
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            value={email}
-            placeholder={t('account.emailPlaceholder')}
-            aria-label={t('account.emailLabel')}
-            maxLength={254}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          {error && (
-            <p className="modal-text modal-error" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="modal-actions">
-            <button type="button" onClick={closeSignIn}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="primary" disabled={!trimmed || state === 'sending' || wait > 0}>
-              {state === 'sending' ? t('account.sending') : wait > 0 ? t('account.resendIn', { seconds: wait }) : t('account.sendLink')}
-            </button>
-          </div>
-        </form>
-      )}
+    <Dialog title={t('account.signInTitle')} onClose={closeSignIn}>
+      <AuthForm intent="signin" autoFocus />
     </Dialog>
   )
 }

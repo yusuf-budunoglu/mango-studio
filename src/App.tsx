@@ -8,9 +8,12 @@ import { Credits } from './screens/Credits'
 import { Editor } from './screens/Editor'
 import { Home } from './screens/Home'
 import { Landing } from './screens/Landing'
+import { Legal } from './screens/Legal'
 import { NewProject } from './screens/NewProject'
+import { OAuthConsent } from './screens/OAuthConsent'
 import { Pricing } from './screens/Pricing'
 import { Profile } from './screens/Profile'
+import { ResetPassword } from './screens/ResetPassword'
 import { SharedView } from './screens/SharedView'
 import { SignUp } from './screens/SignUp'
 import { Studio } from './screens/Studio'
@@ -76,7 +79,7 @@ export default function App() {
 }
 
 // Üye olmayan ziyaretçi şablonları görür ama kullanamaz: şablon açma, yeni proje, editör, Studio ve Dosyalar üyelik sayfasına gider.
-const MEMBERS_ONLY = new Set<Route['screen']>(['template', 'new', 'editor', 'studio', 'assets'])
+const MEMBERS_ONLY = new Set<Route['screen']>(['template', 'new', 'editor', 'studio', 'assets', 'oauth'])
 
 function renderScreen(route: Route, guest: boolean) {
   if (guest && MEMBERS_ONLY.has(route.screen)) return <SignUp key={route.screen} route={route} />
@@ -99,12 +102,19 @@ function renderScreen(route: Route, guest: boolean) {
       return <Assets />
     case 'credits':
       return <Credits />
+    case 'privacy':
+    case 'terms':
+      return <Legal key={route.screen} doc={route.screen} />
     case 'pricing':
       return <Pricing />
     case 'profile':
       return <Profile />
     case 'signup':
       return guest ? <SignUp route={route} /> : <Home />
+    case 'oauth':
+      return <OAuthConsent />
+    case 'reset':
+      return <ResetPassword />
     case 'soon':
       return <ComingSoon feature={route.feature} />
     default:

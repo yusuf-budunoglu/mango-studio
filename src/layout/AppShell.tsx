@@ -101,6 +101,12 @@ export function AppShell({ current, title, bare = false, children }: { current: 
           </div>
         </header>
         <main className="shell-content">{children}</main>
+        <footer className="shell-foot">
+          <span>© {new Date().getFullYear()} Mango Studio</span>
+          <a href={routeToPath({ screen: 'privacy' })}>{t('legal.footer.privacy')}</a>
+          <a href={routeToPath({ screen: 'terms' })}>{t('legal.footer.terms')}</a>
+          <a href={routeToPath({ screen: 'credits' })}>{t('nav.credits')}</a>
+        </footer>
       </div>
     </div>
   )

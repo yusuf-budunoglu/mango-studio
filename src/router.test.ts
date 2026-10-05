@@ -21,6 +21,10 @@ describe('yönlendirme', () => {
     { screen: 'soon', feature: 'text-to-video' },
     { screen: 'profile' },
     { screen: 'signup' },
+    { screen: 'oauth' },
+    { screen: 'reset' },
+    { screen: 'privacy' },
+    { screen: 'terms' },
   ])('%o adrese çevrilip geri okunur', (route) => {
     expect(parsePath(routeToPath(route))).toEqual(route)
   })

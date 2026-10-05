@@ -21,13 +21,25 @@ export type Route =
   | { screen: 'template'; templateId: string }
   | { screen: 'assets' }
   | { screen: 'credits' }
+  /** Gizlilik politikası ve kullanım koşulları (herkese açık) */
+  | { screen: 'privacy' }
+  | { screen: 'terms' }
   | { screen: 'pricing' }
   /** Hesap: e-posta, plan, kredi, çıkış (girişsizken giriş daveti) */
   | { screen: 'profile' }
   /** Üye olma sayfası (sağ üstteki "Üye ol") */
   | { screen: 'signup' }
+  /** Claude Code (MCP) bağlanırken açılan onay sayfası; istek kimliği adresteki `?authorization_id=` */
+  | { screen: 'oauth' }
+  /** Yeni parola belirleme: e-postadaki sıfırlama bağlantısı buraya getirir */
+  | { screen: 'reset' }
   | { screen: 'soon'; feature: ComingSoonFeature }
   | { screen: 'editor'; projectId: string }
+
+/** Supabase Auth'un (OAuth sunucusu) kullanıcıyı onay için gönderdiği yol; panelindeki "Authorization Path" ile aynı olmalı. */
+export const OAUTH_CONSENT_PATH = '/oauth/consent'
+/** Parola sıfırlama e-postasındaki bağlantının açtığı yol. */
+export const RESET_PASSWORD_PATH = '/reset-password'
 
 /** Adres yolu (`/templates`, `/t/crystal`) → sayfa. Sondaki eğik çizgi yok sayılır; tanınmayan yol ana sayfa. */
 export function parsePath(pathname: string): Route {
@@ -49,9 +61,13 @@ export function parsePath(pathname: string): Route {
   if (path === '/templates') return { screen: 'templates' }
   if (path === '/assets') return { screen: 'assets' }
   if (path === '/credits') return { screen: 'credits' }
+  if (path === '/privacy') return { screen: 'privacy' }
+  if (path === '/terms') return { screen: 'terms' }
   if (path === '/pricing') return { screen: 'pricing' }
   if (path === '/profile') return { screen: 'profile' }
   if (path === '/signup') return { screen: 'signup' }
+  if (path === OAUTH_CONSENT_PATH) return { screen: 'oauth' }
+  if (path === RESET_PASSWORD_PATH) return { screen: 'reset' }
   const soon = path.match(/^\/soon\/([\w-]+)$/)
   if (soon && (COMING_SOON as readonly string[]).includes(soon[1])) return { screen: 'soon', feature: soon[1] as ComingSoonFeature }
   return { screen: 'home' }
@@ -74,6 +90,10 @@ export function routeToPath(route: Route): string {
       return `/t/${route.templateId}`
     case 'home':
       return '/'
+    case 'oauth':
+      return OAUTH_CONSENT_PATH
+    case 'reset':
+      return RESET_PASSWORD_PATH
     default:
       return `/${route.screen}`
   }
