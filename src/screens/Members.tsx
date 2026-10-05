@@ -1,17 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MemberDialog } from '../components/MemberDialog'
 import { AppShell } from '../layout/AppShell'
 import { useMembersStore } from '../store/membersStore'
 import { useProfileStore } from '../store/profileStore'
 
 const KNOWN_PROVIDERS = ['email', 'google', 'github']
 
-/** Yönetici ekranı (`/members`): üyeler, en yeni üstte. Sayfa açılınca yeni üyeler görüldü sayılır. */
+/** Yönetici ekranı (`/members`): üyeler, en yeni üstte. Sayfa açılınca yeni üyeler görüldü sayılır; satıra tıklayınca ayrıntı. */
 export function Members() {
   const { t, i18n } = useTranslation()
   const isAdmin = useProfileStore((s) => s.isAdmin)
   const { members, total, status } = useMembersStore()
   const open = useMembersStore((s) => s.open)
+  const [selected, setSelected] = useState<string | null>(null)
+  const selectedMember = members.find((m) => m.userId === selected)
 
   useEffect(() => {
     if (isAdmin) void open()
@@ -48,10 +51,13 @@ export function Members() {
                   </thead>
                   <tbody>
                     {members.map((m) => (
-                      <tr key={m.userId} className={m.isNew ? 'is-new' : undefined}>
+                      <tr key={m.userId} className={m.isNew ? 'is-new' : undefined} onClick={() => setSelected(m.userId)}>
                         <td>
-                          {m.email || '—'}
+                          <button type="button" className="members-open" title={t('members.openDetail')}>
+                            {m.email || '—'}
+                          </button>
                           {m.isNew && <span className="members-new">{t('nav.new')}</span>}
+                          {m.banned && <span className="members-banned">{t('members.banned')}</span>}
                         </td>
                         <td>{KNOWN_PROVIDERS.includes(m.provider) ? t(`members.providers.${m.provider}`) : m.provider}</td>
                         <td>{t(`pricing.plans.${m.plan}`, { defaultValue: m.plan })}</td>
@@ -64,6 +70,7 @@ export function Members() {
               </div>
             )}
             {members.length < total && <p className="hint">{t('members.truncated', { count: members.length })}</p>}
+            {selectedMember && <MemberDialog key={selectedMember.userId} member={selectedMember} onClose={() => setSelected(null)} />}
           </>
         )}
       </div>

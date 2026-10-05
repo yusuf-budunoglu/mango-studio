@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { logExport } from '../cloud/exportLog'
 import { canScale, DEFAULT_IMAGE, exportImage, imageSize, type ImageOptions } from '../export/exportImage'
 import { safeFileName } from '../persistence/thumbnail'
 import { useProjectStore } from '../store/projectStore'
@@ -59,6 +60,7 @@ export function ExportImageButton() {
       a.href = url
       a.download = `${safeFileName(current.name)}${scale > 1 ? `@${scale}x` : ''}.${options.format}`
       a.click()
+      logExport({ kind: 'image', format: options.format, ...imageSize(current, scale) })
       setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus({ kind: 'idle' })
       setOpen(false)

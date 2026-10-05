@@ -1,6 +1,7 @@
 import { Download, Lock } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { logExport } from '../cloud/exportLog'
 import { cheapestPlanFor, clampExport, RESOLUTION_LABEL, RESOLUTIONS, type Fps } from '../billing/plans'
 import { DEFAULT_EXPORT, ExportCanceledError, exportSize, exportVideo, type ExportOptions } from '../export/exportVideo'
 import { safeFileName } from '../persistence/thumbnail'
@@ -76,6 +77,7 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
       a.href = url
       a.download = `${safeFileName(current.name)}.${options.container}`
       a.click()
+      logExport({ kind: 'video', format: options.container, ...exportSize(current, effective.resolution), fps: effective.fps, duration: current.duration })
       setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus({ kind: 'idle' })
       setOpen(false)
