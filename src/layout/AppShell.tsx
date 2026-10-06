@@ -1,8 +1,8 @@
-import { PanelLeft, Search } from 'lucide-react'
-import type { MouseEvent, ReactNode } from 'react'
+import { Moon, PanelLeft, Search, Sun } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AccountButton } from '../components/AccountButton'
-import { navigate, routeToPath, type Route } from '../router'
+import { routeToPath, type Route } from '../router'
 import { useUiStore } from '../store/uiStore'
 import { Sidebar } from './Sidebar'
 
@@ -15,20 +15,7 @@ const TOP_LINKS: { labelKey: string; route: Route }[] = [
   { labelKey: 'nav.assets', route: { screen: 'assets' } },
 ]
 
-/** Ana sayfadaki MCP tanıtımına kaydırır; başka sayfadaysak önce ana sayfaya gider. */
-function goToMcp(event: MouseEvent<HTMLAnchorElement>) {
-  event.preventDefault()
-  navigate({ screen: 'home' })
-  const started = performance.now()
-  const tryScroll = () => {
-    const section = document.getElementById('mcp')
-    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    else if (performance.now() - started < 1500) requestAnimationFrame(tryScroll)
-  }
-  requestAnimationFrame(tryScroll)
-}
-
-/** Üst menü: seçili sayfa turuncu, öne çıkan öğelerin yazısında sürekli bir ışık süzülür. */
+/** Üst menü: seçili sayfa turuncu; yalnızca MCP yazısında sürekli bir ışık süzülür. */
 function TopNav({ current }: { current: Route }) {
   const { t } = useTranslation()
   return (
@@ -40,14 +27,12 @@ function TopNav({ current }: { current: Route }) {
         const label = t(link.labelKey)
         return (
           <a key={link.labelKey} className={`topnav-item ${active ? 'is-active' : ''}`} href={routeToPath(link.route)} aria-current={active ? 'page' : undefined}>
-            <span className="shimmer-text" data-text={label}>
-              {label}
-            </span>
+            {label}
           </a>
         )
       })}
       <span className="topnav-divider" aria-hidden="true" />
-      <a className="topnav-item topnav-item--gold" href={routeToPath({ screen: 'home' })} onClick={goToMcp}>
+      <a className={`topnav-item topnav-item--gold ${current.screen === 'claude' ? 'is-active' : ''}`} href={routeToPath({ screen: 'claude' })} aria-current={current.screen === 'claude' ? 'page' : undefined}>
         <span className="shimmer-text shimmer-text--gold" data-text={t('nav.mcp')}>
           {t('nav.mcp')}
         </span>
@@ -66,6 +51,8 @@ export function AppShell({ current, title, bare = false, children }: { current: 
   const search = useUiStore((s) => s.search)
   const setSearch = useUiStore((s) => s.setSearch)
   const toggleSidebar = useUiStore((s) => s.toggleSidebar)
+  const theme = useUiStore((s) => s.theme)
+  const toggleTheme = useUiStore((s) => s.toggleTheme)
 
   return (
     <div className={`shell${bare ? ' shell--bare' : ''}`}>
@@ -98,6 +85,9 @@ export function AppShell({ current, title, bare = false, children }: { current: 
             />
           </label>
           <div className="shell-actions">
+            <button type="button" className="shell-theme" onClick={toggleTheme} aria-label={t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark')} title={t(theme === 'dark' ? 'theme.toLight' : 'theme.toDark')}>
+              {theme === 'dark' ? <Sun size={16} strokeWidth={1.75} /> : <Moon size={16} strokeWidth={1.75} />}
+            </button>
             <AccountButton />
           </div>
         </header>

@@ -1,5 +1,5 @@
 /** Henüz yapılmamış araçlar; menüde "yakında" etiketiyle görünür. */
-export const COMING_SOON = ['text-to-video', 'audio', 'music', 'voiceover', 'sound-effects', 'mcp', 'auto-video'] as const
+export const COMING_SOON = ['text-to-video', 'audio', 'music', 'voiceover', 'sound-effects', 'auto-video'] as const
 export type ComingSoonFeature = (typeof COMING_SOON)[number]
 
 /** Studio'nun bölümleri: Tümü (boş), videolar, görseller (tasarımlar), sesler, kullanıcının şablonları. */
@@ -38,6 +38,8 @@ export type Route =
   /** Yeni parola belirleme: e-postadaki sıfırlama bağlantısı buraya getirir */
   | { screen: 'reset' }
   | { screen: 'soon'; feature: ComingSoonFeature }
+  /** Claude Code'a bağlama (MCP) sayfası. `/mcp` yolu MCP sunucusunun (Worker) olduğu için sayfa `/claude`'da. */
+  | { screen: 'claude' }
   | { screen: 'editor'; projectId: string }
 
 /** Supabase Auth'un (OAuth sunucusu) kullanıcıyı onay için gönderdiği yol; panelindeki "Authorization Path" ile aynı olmalı. */
@@ -76,6 +78,8 @@ export function parsePath(pathname: string): Route {
   if (path === '/signup') return { screen: 'signup' }
   if (path === OAUTH_CONSENT_PATH) return { screen: 'oauth' }
   if (path === RESET_PASSWORD_PATH) return { screen: 'reset' }
+  // `/soon/mcp`: sayfanın "yakında" olduğu dönemden kalan bağlantılar
+  if (path === '/claude' || path === '/soon/mcp') return { screen: 'claude' }
   const soon = path.match(/^\/soon\/([\w-]+)$/)
   if (soon && (COMING_SOON as readonly string[]).includes(soon[1])) return { screen: 'soon', feature: soon[1] as ComingSoonFeature }
   return { screen: 'home' }

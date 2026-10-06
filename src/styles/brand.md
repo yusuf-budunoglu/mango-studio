@@ -4,9 +4,11 @@
 **Mango Studio**. Wordmark büyük harf: `MANGO` sıcak beyaz (kalın), `STUDIO` marka degradesi (orta kalınlık).
 
 ## Yazı tipleri
-- `--font-display` = **Space Grotesk** (`Mango Display`): wordmark ve büyük başlıklar; büyük harf, 700, sıkı aralık (-0.02em).
-- `--font-ui` = **Inter** (`Mango UI`): arayüzün geri kalanı.
-- İkisi de OFL, değişken (wght) woff2 olarak `src/assets/fonts/ui/` içinde; dışarıdan yüklenmez.
+- Tüm sitede tek yazı tipi: **Figtree** (`Mango UI`, `--font-ui`; `--font-display` de aynı aile). 2026-10-06: kullanıcı ana sayfadaki fontun her yerde kullanılmasını istedi; Inter ve Space Grotesk arayüzden kalktı.
+- Referans hyperframes.dev'in fontu TT Norms Pro (ücretli); Figtree ona en yakın açık font. Lisans alınırsa `src/index.css` başındaki iki `@font-face` değişir.
+- Büyük başlıklar 700, sıkı aralık; ana sayfada ikinci satır 300.
+- OFL, değişken (wght 300–900) woff2 olarak `src/assets/fonts/ui/` içinde; dışarıdan yüklenmez.
+- Videodaki yazı tipleri ayrı (`src/render/fonts.ts`); bu değişiklik onları etkilemez.
 
 ## Logo
 Dalgalı bantlı mango + yaprak (`public/brand/`):
@@ -36,9 +38,12 @@ Arayüzün çoğu siyah; vurgular logodaki mango renklerinden. Değerler `src/in
 
 2026-10-01: turuncu, Claude'un mercan turuncusundan (`#d97757`) ayrışsın diye doygun ve sarıya yakın `#ff7a00` oldu (kullanıcı: "Claude turuncusu olmasın, daha ayırt edici"). Pastel değil, doygun: eski "çok açık" uyarısı pastel tonlar içindi. Claude rengi yalnızca Claude'a ait öğelerde kullanılır, böylece iki turuncu yan yana karışmaz.
 
+## Temalar
+Koyu (varsayılan, simsiyah) ve açık (mango kreması `#f7f0de`, yazı `#131109`). Vurgu renkleri iki temada aynı; editör her zaman koyu. Değerler `src/index.css`.
+
 ## Kurallar
 - Turuncu ana vurgudur; bir ekranda birden çok birincil turuncu düğme olmasın.
 - Degrade idareli: wordmark ve tanıtım bandı dışında kullanılmaz.
 - Yeşil yalnızca olumlu durum içindir, dekoratif kullanılmaz.
-- Üst menüde öne çıkan öğe (MCP) altın degradeli yazı; menü yazılarında sürekli süzülen ışık (`.shimmer-text`), hareket azaltma tercihinde kapalı.
+- Üst menüde öne çıkan öğe (MCP) altın degradeli yazı; sürekli süzülen ışık (`.shimmer-text`) yalnızca MCP yazısında (2026-10-06: kullanıcı diğer menü yazılarında istemedi), hareket azaltma tercihinde kapalı.
 - Yeni renk eklerken önce buradaki tokenlardan birini kullan.

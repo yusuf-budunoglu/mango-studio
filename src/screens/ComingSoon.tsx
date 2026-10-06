@@ -9,7 +9,6 @@ const FEATURE_LABEL: Record<ComingSoonFeature, string> = {
   music: 'nav.music',
   voiceover: 'nav.voiceover',
   'sound-effects': 'nav.soundEffects',
-  mcp: 'nav.mcpFull',
   'auto-video': 'newProject.auto.title',
 }
 

@@ -1,15 +1,11 @@
 import {
-  AudioLines,
   Clapperboard,
   Crown,
   FolderOpen,
   House,
   LayoutTemplate,
   MessageSquareText,
-  Mic,
-  Music,
   PlugZap,
-  Type,
   UserRound,
   Users,
   type LucideIcon,
@@ -29,7 +25,6 @@ interface NavItem {
   icon: LucideIcon
   route?: Route
   onClick?: () => void
-  soon?: boolean
 }
 
 const MAIN: NavItem[] = [
@@ -41,16 +36,8 @@ const MAIN: NavItem[] = [
   { labelKey: 'nav.profile', icon: UserRound, route: { screen: 'profile' } },
 ]
 
-const PINNED: NavItem[] = [
-  { labelKey: 'nav.textToVideo', icon: Type, route: { screen: 'soon', feature: 'text-to-video' }, soon: true },
-  { labelKey: 'nav.music', icon: Music, route: { screen: 'soon', feature: 'music' }, soon: true },
-  { labelKey: 'nav.voiceover', icon: Mic, route: { screen: 'soon', feature: 'voiceover' }, soon: true },
-  { labelKey: 'nav.soundEffects', icon: AudioLines, route: { screen: 'soon', feature: 'sound-effects' }, soon: true },
-]
-
 function isActive(item: NavItem, current: Route) {
   if (!item.route) return false
-  if (item.route.screen === 'soon' && current.screen === 'soon') return item.route.feature === current.feature
   // şablon önizlemesi Şablonlar'ın, yeni proje Studio'nun altında sayılır
   const screen = current.screen === 'template' ? 'templates' : current.screen === 'new' ? 'studio' : current.screen
   return item.route.screen === screen
@@ -88,7 +75,6 @@ function NavLink({ item, current, count = 0 }: { item: NavItem; current: Route; 
     <>
       <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
       <span className="nav-label">{t(item.labelKey)}</span>
-      {item.soon && <span className="nav-badge">{t('nav.soon')}</span>}
       {count > 0 && (
         <span className="nav-count" aria-label={t('nav.newMembers', { count })}>
           {count > 99 ? '99+' : count}
@@ -138,19 +124,12 @@ export function Sidebar({ current }: { current: Route }) {
         {isAdmin && <MembersLink current={current} />}
       </nav>
 
-      <div className="nav-group">
-        <div className="nav-heading nav-label">{t('nav.pinned')}</div>
-        {PINNED.map((item) => (
-          <NavLink key={item.labelKey} item={item} current={current} />
-        ))}
-      </div>
-
       <div className="sidebar-foot">
-        <div className="sidebar-card nav-label">
+        <a className="sidebar-card nav-label" href={routeToPath({ screen: 'claude' })}>
           <PlugZap size={16} strokeWidth={1.75} aria-hidden="true" />
           <strong>{t('nav.cardTitle')}</strong>
           <span>{t('nav.cardBody')}</span>
-        </div>
+        </a>
         {guest ? (
           <div className="sidebar-join nav-label">
             <strong>{t('nav.joinTitle')}</strong>

@@ -2,6 +2,22 @@ import { create } from 'zustand'
 
 const SIDEBAR_KEY = 'motion-studio.sidebar-collapsed'
 const FAVORITES_KEY = 'motion-studio.favorite-templates'
+const THEME_KEY = 'motion-studio.theme'
+
+export type Theme = 'dark' | 'light'
+
+function readTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
+  } catch {
+    return 'dark'
+  }
+}
+
+/** Temayı belgeye yazar: tokenlar `:root[data-theme]` ile değişir (index.css). Editör her temada koyu. */
+function applyTheme(theme: Theme) {
+  if (typeof document !== 'undefined') document.documentElement.dataset.theme = theme
+}
 
 function readFavorites(): string[] {
   try {
@@ -29,9 +45,26 @@ interface UiStore {
   /** Kalple işaretlenen şablonlar (yalnızca bu tarayıcıda). */
   favorites: string[]
   toggleFavorite: (templateId: string) => void
+  /** Site teması (yalnızca bu tarayıcıda); varsayılan koyu. */
+  theme: Theme
+  toggleTheme: () => void
 }
 
+applyTheme(readTheme())
+
 export const useUiStore = create<UiStore>()((set) => ({
+  theme: readTheme(),
+  toggleTheme: () =>
+    set((s) => {
+      const theme: Theme = s.theme === 'dark' ? 'light' : 'dark'
+      try {
+        localStorage.setItem(THEME_KEY, theme)
+      } catch {
+        // tercih kaydedilemese de bu oturumda çalışır
+      }
+      applyTheme(theme)
+      return { theme }
+    }),
   search: '',
   setSearch: (search) => set({ search }),
   sidebarCollapsed: readCollapsed(),

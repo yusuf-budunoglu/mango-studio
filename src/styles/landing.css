@@ -15,7 +15,7 @@
 .landing-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; font-weight: 700; letter-spacing: -0.02em; font-size: 14px; }
 .landing-brand em { font-style: normal; color: var(--accent); font-weight: 600; }
 .landing-links { display: flex; gap: 4px; margin-right: auto; }
-.landing-links button { padding: 6px 12px; border: 0; border-radius: 7px; background: transparent; color: #d6d0c6; font-size: 13.5px; cursor: pointer; }
+.landing-links button { padding: 6px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); font-size: 13.5px; cursor: pointer; }
 .landing-links button:hover { background: var(--panel-2); color: var(--ink); }
 .landing-bar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .landing-links + .landing-bar-actions { margin-left: 0; }
@@ -26,7 +26,7 @@
   padding: 11px 20px; border: 1px solid var(--line); border-radius: 9px;
   background: var(--panel-2); color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer;
 }
-.landing-btn:hover { border-color: #3a3730; background: #1f1e22; }
+.landing-btn:hover { border-color: var(--line-2); background: var(--line); }
 .landing-btn--primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 .landing-btn--primary:hover { background: #e47d26; border-color: transparent; }
 .landing-btn--small { padding: 7px 14px; font-size: 13px; border-radius: 7px; }
@@ -42,7 +42,7 @@
 }
 .landing-eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
 .landing-hero h1 { font-size: clamp(40px, 8vw, 88px); line-height: 0.98; font-weight: 700; text-transform: uppercase; max-width: 14ch; }
-.landing-lead { max-width: 56ch; font-size: clamp(15.5px, 2vw, 18px); line-height: 1.55; color: #d9d3c9; text-wrap: balance; }
+.landing-lead { max-width: 56ch; font-size: clamp(15.5px, 2vw, 18px); line-height: 1.55; color: var(--ink-2); text-wrap: balance; }
 .landing-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 6px; }
 .landing-note { font-size: 13px; color: var(--muted); }
 .landing-shots { --h: clamp(130px, 28vw, 360px); display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 2vw, 24px); margin-top: 28px; max-width: 100%; }
@@ -65,7 +65,7 @@
 .landing-feature { display: grid; gap: 8px; align-content: start; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .landing-feature-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
 .landing-feature h3 { font-size: 16px; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.landing-feature p { font-size: 13.5px; line-height: 1.55; color: #c2bcb1; }
+.landing-feature p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
 .landing-soon { font-style: normal; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--gold); }
 
 /* Adımlar */
@@ -73,7 +73,7 @@
 .landing-steps li { counter-increment: step; display: grid; gap: 6px; padding: 18px 20px; border-left: 2px solid var(--accent); }
 .landing-steps li::before { content: counter(step); font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--accent); }
 .landing-steps h3 { font-size: 16px; font-weight: 600; }
-.landing-steps p { font-size: 13.5px; line-height: 1.55; color: #c2bcb1; }
+.landing-steps p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
 
 /* Fiyatlar */
 .landing .plan-grid { margin-top: 4px; }
@@ -87,13 +87,13 @@
 .landing-faq summary::-webkit-details-marker { display: none; }
 .landing-faq summary::after { content: '+'; color: var(--accent); font-size: 20px; line-height: 1; }
 .landing-faq details[open] summary::after { content: '–'; }
-.landing-faq details p { padding: 0 4px 18px; max-width: 62ch; font-size: 14px; line-height: 1.6; color: #c2bcb1; }
+.landing-faq details p { padding: 0 4px 18px; max-width: 62ch; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
 
 /* Kapanış ve alt bilgi */
 .landing-final { display: grid; justify-items: center; gap: 20px; text-align: center; margin: 72px 16px 0; padding: 56px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--brand-gradient); }
 .landing-final h2 { font-size: clamp(26px, 4vw, 40px); text-transform: uppercase; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35); }
 .landing-final .landing-btn--primary { background: #fff; color: #000000; }
-.landing-final .landing-btn--primary:hover { background: #f1ece3; }
+.landing-final .landing-btn--primary:hover { background: var(--ink); }
 .landing-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; padding: 40px 16px 48px; font-size: 13px; color: var(--muted); }
 .landing-foot a { color: var(--muted); }
 .landing-foot a:hover { color: var(--ink); }

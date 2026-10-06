@@ -3,6 +3,7 @@ import { AccountLayer } from './components/AccountLayer'
 import { supabase } from './cloud/client'
 import { goTo, internalLinkPath, legacyHashPath, parsePath, type Route } from './router'
 import { Assets } from './screens/Assets'
+import { ClaudeConnect } from './screens/ClaudeConnect'
 import { ComingSoon } from './screens/ComingSoon'
 import { Credits } from './screens/Credits'
 import { Editor } from './screens/Editor'
@@ -121,6 +122,8 @@ function renderScreen(route: Route, guest: boolean) {
       return <OAuthConsent />
     case 'reset':
       return <ResetPassword />
+    case 'claude':
+      return <ClaudeConnect />
     case 'soon':
       return <ComingSoon feature={route.feature} />
     default:

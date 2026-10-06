@@ -8,6 +8,7 @@ import { buildFoldPromo } from './foldPromo'
 import { buildWordsMotion } from './wordsMotion'
 import { buildMangoAiAd } from './mangoAiAd'
 import { buildCrystal } from './crystal'
+import { buildLaunchAd } from './launchAd'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -464,6 +465,14 @@ export const TEMPLATES: Template[] = [
     accent: '#56eeba',
     tags: ['app-promo', 'dark', 'cinematic', 'vertical', '3d-device'],
     build: () => buildCrystal({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'launch-ad',
+    format: '16:9',
+    seconds: 33,
+    accent: '#FF7A00',
+    tags: ['saas', 'ad', 'light', 'ui', 'typography', '3d-device'],
+    build: () => buildLaunchAd({ t, b, layer, camera, project }),
   },
 ]
 

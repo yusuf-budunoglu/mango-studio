@@ -21,6 +21,7 @@ describe('yönlendirme', () => {
     { screen: 'editor', projectId: 'p-xyz' },
     { screen: 'soon', feature: 'auto-video' },
     { screen: 'soon', feature: 'text-to-video' },
+    { screen: 'claude' },
     { screen: 'profile' },
     { screen: 'members' },
     { screen: 'signup' },
