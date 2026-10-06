@@ -7,7 +7,7 @@ import { pendingModelLoads } from '../../export/bridge'
 // Hazır 3D cihaz modelleri (public/models, scripts/process-models.mjs ile üretilir).
 // Yüklenemezse katman kodla çizilen maketi kullanır.
 
-export type DeviceKind = 'phone' | 'tablet' | 'laptop'
+export type DeviceKind = 'phone' | 'tablet' | 'laptop' | 'foldable'
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
 const promises = new Map<DeviceKind, Promise<Group | null>>()
@@ -18,7 +18,11 @@ export function loadDeviceModel(kind: DeviceKind): Promise<Group | null> {
   if (!p) {
     p = loader
       .loadAsync(`${import.meta.env.BASE_URL}models/${kind}.glb`)
-      .then((gltf) => gltf.scene)
+      .then((gltf) => {
+        // katlanır telefonun katlanma animasyonu: kopyalar şablondan okur
+        gltf.scene.animations = gltf.animations
+        return gltf.scene
+      })
       .catch((error: unknown) => {
         console.warn(`device model ${kind} could not be loaded`, error)
         return null

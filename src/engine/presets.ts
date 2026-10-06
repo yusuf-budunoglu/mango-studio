@@ -1,4 +1,4 @@
-import type { CameraState, LayerState } from './types'
+import type { CameraState, LayerKind, LayerState } from './types'
 
 /**
  * Her animasyon bloğu küçük bir formül: e = eğriden geçmiş ilerleme (0..1),
@@ -21,6 +21,8 @@ interface PresetBase {
   defaultDuration: number
   /** paneldeki ayarlar; `apply` bunların varsayılanlarla birleşmiş halini alır */
   params?: ParamSpec[]
+  /** yalnızca bu türdeki katmanlarda anlamlı (panelde yalnızca onlara önerilir); boşsa hepsinde */
+  kinds?: LayerKind[]
 }
 
 /** `duration`: bloğun süresi (sn); zamana bağlı titreşim gibi bloklar için. */
@@ -49,6 +51,13 @@ const bell = (p: number) => (p <= 0 || p >= 1 ? 0 : Math.sin(Math.PI * p))
 const distance = (d: number): ParamSpec => ({ key: 'distance', default: d, min: -20, max: 20, step: 0.1 })
 
 export const PRESETS: Record<string, Preset> = {
+  // Katlanır telefonu `angle` açıklığına getirir ve orada bırakır (180 açık, 0 kapalı); art arda bloklar birikir:
+  // önce 0'a kapat, sonra 180'e aç gibi.
+  fold: {
+    target: 'layer', category: 'move', defaultEasing: 'ease-in-out', defaultDuration: 1.2, kinds: ['foldable'],
+    params: [{ key: 'angle', default: 0, min: 0, max: 180, step: 5 }],
+    apply: (s, e, _p, { angle }) => { s.fold += (angle - s.fold) * e },
+  },
   'fade-in': {
     target: 'layer', category: 'in', defaultEasing: 'ease-out', defaultDuration: 0.6,
     apply: (s, e) => { s.opacity *= e },

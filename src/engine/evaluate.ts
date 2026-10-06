@@ -31,6 +31,7 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     rotZ: layer.rotation[2] * DEG,
     scale: layer.scale,
     opacity: layer.opacity,
+    fold: layer.foldAngle ?? 180,
     textReveal: 1,
     numberValue: null,
     wordReveal: 1,

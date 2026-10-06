@@ -14,6 +14,7 @@ import { NewProject } from './screens/NewProject'
 import { OAuthConsent } from './screens/OAuthConsent'
 import { Pricing } from './screens/Pricing'
 import { Profile } from './screens/Profile'
+import { Prompts } from './screens/Prompts'
 import { ResetPassword } from './screens/ResetPassword'
 import { SharedView } from './screens/SharedView'
 import { SignUp } from './screens/SignUp'
@@ -99,6 +100,8 @@ function renderScreen(route: Route, guest: boolean) {
       return <Templates />
     case 'template':
       return <TemplatePreview key={route.templateId} templateId={route.templateId} />
+    case 'prompts':
+      return <Prompts promptId={route.promptId} />
     case 'assets':
       return <Assets />
     case 'credits':

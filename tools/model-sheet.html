@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Model kontak sayfası (geliştirici aracı)</title>
+    <style>
+      html, body { margin: 0; background: #20242c; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <!-- Sadece geliştirme sırasında: bir modeli (ya da ?only=<düğüm adı> ile tek parçasını) dört açıdan tek görselde gösterir.
+         Örnek: /tools/model-sheet.html?src=/models-src/duo.glb&only=iphone-duo.001 -->
+    <script type="module">
+      import * as THREE from 'three'
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+      import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+      import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
+
+      const W = 1600, H = 1000
+      const params = new URLSearchParams(location.search)
+      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
+      renderer.setSize(W, H)
+      renderer.setScissorTest(true)
+      renderer.toneMapping = THREE.ACESFilmicToneMapping
+      document.body.appendChild(renderer.domElement)
+      const scene = new THREE.Scene()
+      scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture
+
+      const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(params.get('src'))
+      let model = gltf.scene
+      const only = params.get('only')
+      if (only) model = model.getObjectByName(only.replace(/[ .]/g, (c) => (c === ' ' ? '_' : ''))) ?? model.getObjectByName(only) ?? model
+      // ?fold=<derece>: katlanır modelde açıklık (180 açık, 0 kapalı)
+      if (params.has('fold')) {
+        const closed = (180 - Number(params.get('fold'))) / 180
+        const clip = gltf.animations.find((c) => c.name === 'fold'), pivot = model.getObjectByName('fold')
+        if (clip && pivot) {
+          const mixer = new THREE.AnimationMixer(model)
+          mixer.clipAction(clip).play()
+          mixer.setTime(Math.min(closed * clip.duration, clip.duration - 1e-4))
+          pivot.rotation.y = -closed * (Math.PI / 2)
+        }
+      }
+      model.updateWorldMatrix(true, true)
+      const holder = new THREE.Group()
+      holder.add(model)
+      scene.add(holder)
+      const box = new THREE.Box3().setFromObject(holder)
+      const size = box.getSize(new THREE.Vector3())
+      const center = box.getCenter(new THREE.Vector3())
+      const radius = size.length() / 2
+
+      // dört bakış: önden-sağ üst, arkadan-sol üst, tam üstten, yakın yan
+      const views = (params.get('views') ?? '1,0.6,1.4;-1,0.5,-1.4;0.02,1,0.02;1.6,0.15,0.2').split(';').map((v) => v.split(',').map(Number))
+      const cols = 2, rows = Math.ceil(views.length / cols)
+      views.forEach((dir, i) => {
+        const w = W / cols, h = H / rows
+        const camera = new THREE.PerspectiveCamera(30, w / h, radius / 100, radius * 100)
+        camera.position.copy(center).add(new THREE.Vector3(...dir).normalize().multiplyScalar(radius / Math.sin((15 * Math.PI) / 180) / 1.15))
+        camera.lookAt(center)
+        const x = (i % cols) * w, y = H - (Math.floor(i / cols) + 1) * h
+        renderer.setViewport(x, y, w, h)
+        renderer.setScissor(x, y, w, h)
+        renderer.setClearColor(i % 2 ? '#262b34' : '#20242c')
+        renderer.render(scene, camera)
+      })
+      document.title = 'ready'
+    </script>
+  </body>
+</html>

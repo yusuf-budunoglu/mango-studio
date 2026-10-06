@@ -17,7 +17,7 @@ export class ProjectError extends Error {
 }
 
 export const EASINGS = ['linear', 'ease-in', 'ease-out', 'ease-in-out', 'ease-out-expo', 'ease-out-circ', 'ease-out-back', 'anticipate', 'spring-gentle', 'spring-snappy', 'spring-bouncy']
-export const LAYER_KINDS: LayerKind[] = ['text', 'phone', 'laptop', 'tablet', 'shape', 'image', 'svg', 'video']
+export const LAYER_KINDS: LayerKind[] = ['text', 'phone', 'laptop', 'tablet', 'foldable', 'shape', 'image', 'svg', 'video']
 
 const MAX_BYTES = 4_000_000
 const MAX_LAYERS = 400
@@ -89,7 +89,7 @@ function normalizeLayer(item: unknown, index: number, total: number, problems: s
   if (isNum(start) && isNum(duration) && start + duration > total + 1e-6) problems.push(`${label} clip ends at ${(start + duration).toFixed(3)}s, after the project ends (${total}s)`)
 
   for (const key of ['position', 'rotation'] as const) if (l[key] !== undefined && !isVec3(l[key])) problems.push(`${label}.${key} must be [x, y, z] numbers`)
-  for (const key of ['scale', 'opacity', 'fontSize', 'textWidth', 'letterSpacing', 'lineHeight', 'shapeWidth', 'shapeHeight', 'extrude', 'lidAngle', 'mediaOffset'] as const)
+  for (const key of ['scale', 'opacity', 'fontSize', 'textWidth', 'letterSpacing', 'lineHeight', 'shapeWidth', 'shapeHeight', 'extrude', 'lidAngle', 'foldAngle', 'mediaOffset'] as const)
     if (l[key] !== undefined && !isNum(l[key])) problems.push(`${label}.${key} must be a number`)
   if (l.color !== undefined && !isColor(l.color)) problems.push(`${label}.color must be a hex color like "#ff7a00"`)
   if (l.fontWeight !== undefined && l.fontWeight !== 400 && l.fontWeight !== 700) problems.push(`${label}.fontWeight must be 400 or 700`)

@@ -216,3 +216,30 @@ describe('özel eğri çözücüsü', () => {
     }
   })
 })
+
+describe('fold bloğu (katlanır telefon)', () => {
+  const phone = (blocks: Layer['blocks'], foldAngle?: number) => layer(blocks, { kind: 'foldable', foldAngle })
+
+  it('blok yokken açıklık katmanın değeridir; boşsa tam açık', () => {
+    expect(evaluateLayer(phone([]), 1).fold).toBe(180)
+    expect(evaluateLayer(phone([], 90), 1).fold).toBe(90)
+  })
+
+  it('hedef açıya gider ve orada kalır', () => {
+    const closing = phone([{ id: 'b1', preset: 'fold', start: 1, duration: 2, easing: 'linear', params: { angle: 0 } }])
+    expect(evaluateLayer(closing, 0.5).fold).toBe(180)
+    expect(evaluateLayer(closing, 2).fold).toBeCloseTo(90)
+    expect(evaluateLayer(closing, 3).fold).toBeCloseTo(0)
+    expect(evaluateLayer(closing, 8).fold).toBeCloseTo(0)
+  })
+
+  it('art arda bloklar birikir: kapat, sonra aç', () => {
+    const both = phone([
+      { id: 'b1', preset: 'fold', start: 0, duration: 1, easing: 'linear', params: { angle: 0 } },
+      { id: 'b2', preset: 'fold', start: 2, duration: 2, easing: 'linear', params: { angle: 120 } },
+    ])
+    expect(evaluateLayer(both, 1.5).fold).toBeCloseTo(0)
+    expect(evaluateLayer(both, 3).fold).toBeCloseTo(60)
+    expect(evaluateLayer(both, 5).fold).toBeCloseTo(120)
+  })
+})

@@ -5,7 +5,7 @@ import { FontPicker } from './FontPicker'
 import { isUploadedFont } from '../render/fonts'
 import { useProjectStore } from '../store/projectStore'
 
-const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet']
+const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet', 'foldable']
 
 function NumberField({ id, label, value, step = 0.1, onChange }: { id: string; label: string; value: number; step?: number; onChange: (v: number) => void }) {
   return (
@@ -91,6 +91,9 @@ export function LayerFields({ layer }: { layer: Layer }) {
               ))}
             </select>
           </div>
+          {layer.kind === 'foldable' && (
+            <NumberField id="layer-fold" label={t('layer.foldAngle')} value={layer.foldAngle ?? 180} step={5} onChange={(v) => update({ foldAngle: Math.min(180, Math.max(0, v)) })} />
+          )}
           {layer.kind === 'laptop' && (
             <NumberField id="layer-lid" label={t('layer.lidAngle')} value={layer.lidAngle ?? 105} step={5} onChange={(v) => update({ lidAngle: Math.min(180, Math.max(0, v)) })} />
           )}

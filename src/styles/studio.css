@@ -19,7 +19,12 @@
 .auth-provider { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: #151517; color: var(--ink); font-weight: 600; font-size: 13.5px; }
 .auth-provider:hover:not(:disabled) { border-color: rgba(255, 255, 255, 0.3); background: #1c1c1f; }
 /* Google'ın çizdiği düğme (GoogleButton.tsx): kendi çerçevesi 40 px; yüklenene kadar yer tutar */
-.auth-google { min-height: 40px; display: flex; justify-content: center; color-scheme: light; }
+/* Google'ın düğmesi (çerçeve) görünmez halde bizim düğmenin üstünde: görünen bizimki, tıklamayı Google'ınki alır. */
+.auth-google { position: relative; display: grid; }
+.auth-google-face { display: grid; }
+.auth-google:hover .auth-provider { border-color: rgba(255, 255, 255, 0.3); background: #1c1c1f; }
+.auth-google:focus-within .auth-provider { border-color: var(--accent); }
+.auth-google-hit { position: absolute; top: 50%; left: 50%; translate: -50% -50%; height: 40px; overflow: hidden; opacity: 0.001; color-scheme: light; cursor: pointer; }
 .auth-divider { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); font-size: 12px; }
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .auth-form { display: grid; gap: 8px; width: 100%; }

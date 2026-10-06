@@ -38,6 +38,8 @@ export function freezeFrame(project: Project, time: number, name: string): Proje
       frozen.text = displayText(layer, { ...s, caret: false }, project.numberLocale)
       if (s.letterSpacing) frozen.letterSpacing = (layer.letterSpacing ?? 0) + s.letterSpacing
     }
+    // katlanır telefon o anki açıklığıyla kalır
+    if (layer.kind === 'foldable') frozen.foldAngle = s.fold
     // video o anki karesiyle kalır
     if (layer.kind === 'video') frozen.mediaOffset = (layer.mediaOffset ?? 0) + (layerTime - layer.start)
     return [frozen]

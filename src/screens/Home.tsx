@@ -8,6 +8,7 @@ import {
   Layers,
   LayoutTemplate,
   Loader2,
+  MessageSquareText,
   MousePointer2,
   Palette,
   PenTool,
@@ -24,6 +25,7 @@ import { supabase } from '../cloud/client'
 import { TemplateCard } from '../components/TemplateCard'
 import { reducedMotion, useAutoplay } from '../components/useAutoplay'
 import { AppShell } from '../layout/AppShell'
+import { loadPromptLibrary, promptPosterUrl, promptPreviewUrl, type LibraryPrompt } from '../project/promptLibrary'
 import { TEMPLATES, templateDescription, templateName } from '../project/templates'
 import { routeToPath, type Route } from '../router'
 import { useAuthStore } from '../store/authStore'
@@ -270,6 +272,76 @@ function Showcase() {
   )
 }
 
+/** Ana sayfadaki prompt şeridinde gösterilen önizleme sayısı (dar ekranda sondakiler gizlenir). */
+const PROMPT_STRIP = 5
+
+function PromptTile({ prompt }: { prompt: LibraryPrompt }) {
+  const { t } = useTranslation()
+  const video = useRef<HTMLVideoElement>(null)
+  const playing = useAutoplay(video)
+  return (
+    <a className="x-tile" href={routeToPath({ screen: 'prompts', promptId: prompt.id })} aria-label={t('promptsPage.open', { handle: prompt.handle })}>
+      <span className={`x-loop${playing ? ' is-playing' : ''}`}>
+        <img src={promptPosterUrl(prompt)} alt="" loading="lazy" />
+        <video ref={video} src={promptPreviewUrl(prompt)} muted loop playsInline preload="none" aria-hidden="true" disablePictureInPicture />
+      </span>
+      <span className="x-shot-label">@{prompt.handle}</span>
+    </a>
+  )
+}
+
+/**
+ * Prompt kütüphanesinin tanıtımı: listenin başındaki yatay (16:9) videolardan bir şerit ve sayfaya bağlantı.
+ * Liste indirilene kadar kutular boş durur (yer tutar); indirilemezse bölüm hiç çizilmez.
+ */
+function PromptStrip() {
+  const { t } = useTranslation()
+  const [library, setLibrary] = useState<LibraryPrompt[]>()
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    loadPromptLibrary().then(
+      (list) => alive && setLibrary(list),
+      () => alive && setFailed(true),
+    )
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (failed) return null
+  // Aynı yazar şeritte bir kez; kapağı ve önizlemesi olan 16:9 videolar.
+  const seen = new Set<string>()
+  const picks = (library ?? [])
+    .filter((p) => !p.noPoster && !p.noPreview && Math.abs(p.width / p.height - 16 / 9) < 0.02 && !seen.has(p.handle) && !!seen.add(p.handle))
+    .slice(0, PROMPT_STRIP)
+
+  return (
+    <section className="x-section" aria-labelledby="x-prompts-title">
+      <header className="x-section-head">
+        <div>
+          <span className="x-pill-new">
+            <MessageSquareText size={11} strokeWidth={2} aria-hidden="true" />
+            {library ? t('explore.prompts.eyebrow', { count: library.length }) : t('explore.badges.new')}
+          </span>
+          <h2 id="x-prompts-title">{t('explore.prompts.title')}</h2>
+          <p>{t('explore.prompts.body')}</p>
+        </div>
+        <div className="x-head-actions">
+          <a className="x-btn x-btn--accent" href={routeToPath({ screen: 'prompts' })}>
+            {t('explore.prompts.cta')}
+            <ArrowUpRight size={14} strokeWidth={2} aria-hidden="true" />
+          </a>
+        </div>
+      </header>
+      <div className="x-prompts">
+        {library ? picks.map((prompt) => <PromptTile key={prompt.id} prompt={prompt} />) : Array.from({ length: PROMPT_STRIP }, (_, i) => <span key={i} className="x-tile" />)}
+      </div>
+    </section>
+  )
+}
+
 const EDIT_POINTS: { id: string; icon: LucideIcon }[] = [
   { id: 'text', icon: Type },
   { id: 'colors', icon: Palette },
@@ -429,6 +501,7 @@ export function Home() {
 
         <McpBanner />
         <Showcase />
+        <PromptStrip />
         <EditBand />
       </div>
     </AppShell>

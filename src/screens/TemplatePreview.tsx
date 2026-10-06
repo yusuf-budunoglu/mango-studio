@@ -12,7 +12,7 @@ import { navigate, routeToPath } from '../router'
 import { useProfileStore } from '../store/profileStore'
 import { useUiStore } from '../store/uiStore'
 
-const DEVICE_KINDS = new Set(['phone', 'tablet', 'laptop'])
+const DEVICE_KINDS = new Set(['phone', 'tablet', 'laptop', 'foldable'])
 
 /** Önizleme sayfasının gösterdikleri; kendi şablonlarımız ve yayınlananlar aynı düzende. */
 interface PreviewModel {

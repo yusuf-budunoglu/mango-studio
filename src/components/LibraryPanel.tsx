@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Box, Film, Image, Laptop, Music, PenTool, Smartphone, Sparkles, Tablet, Type, Upload, Video, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, BookOpen, Box, Film, Image, Laptop, Music, PenTool, Smartphone, Sparkles, Tablet, Type, Upload, Video, type LucideIcon } from 'lucide-react'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { readAudioDuration } from '../audio/engine'
@@ -44,6 +44,7 @@ const DEVICE_ITEMS: LayerItem[] = [
   { id: 'phone', kind: 'phone', icon: Smartphone },
   { id: 'tablet', kind: 'tablet', icon: Tablet },
   { id: 'laptop', kind: 'laptop', icon: Laptop },
+  { id: 'foldable', kind: 'foldable', icon: BookOpen },
 ]
 const MEDIA_ITEMS: LayerItem[] = [
   { id: 'image', kind: 'image', icon: Image },

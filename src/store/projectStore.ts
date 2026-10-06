@@ -81,6 +81,8 @@ function layerDefaults(kind: LayerKind): Omit<Layer, 'id' | 'blocks' | 'start' |
       return { ...base, name: t('laptop'), kind, color: '#c99324', rotation: [8, -18, 0], scale: 0.9 }
     case 'tablet':
       return { ...base, name: t('tablet'), kind, color: '#3f8c3c', rotation: [0, -15, 0] }
+    case 'foldable':
+      return { ...base, name: t('foldable'), kind, color: '#d9711c', rotation: [0, -15, 0], scale: 0.85 }
     case 'shape':
       return { ...base, name: t('shape'), kind, color: '#ffb86c', shape: 'rounded', shapeWidth: 2, shapeHeight: 1.2 }
     case 'image':

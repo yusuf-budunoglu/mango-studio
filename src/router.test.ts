@@ -16,6 +16,8 @@ describe('yönlendirme', () => {
     { screen: 'new', folderId: 'f-abc12' },
     { screen: 'templates' },
     { screen: 'template', templateId: 'wallet-promo' },
+    { screen: 'prompts' },
+    { screen: 'prompts', promptId: 'stephanlivera-470926' },
     { screen: 'editor', projectId: 'p-xyz' },
     { screen: 'soon', feature: 'auto-video' },
     { screen: 'soon', feature: 'text-to-video' },

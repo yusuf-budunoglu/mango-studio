@@ -5,6 +5,7 @@ import {
   FolderOpen,
   House,
   LayoutTemplate,
+  MessageSquareText,
   Mic,
   Music,
   PlugZap,
@@ -35,6 +36,7 @@ const MAIN: NavItem[] = [
   { labelKey: 'nav.home', icon: House, route: { screen: 'home' } },
   { labelKey: 'nav.studio', icon: Clapperboard, route: { screen: 'studio' } },
   { labelKey: 'nav.templates', icon: LayoutTemplate, route: { screen: 'templates' } },
+  { labelKey: 'nav.prompts', icon: MessageSquareText, route: { screen: 'prompts' } },
   { labelKey: 'nav.assets', icon: FolderOpen, route: { screen: 'assets' } },
   { labelKey: 'nav.profile', icon: UserRound, route: { screen: 'profile' } },
 ]

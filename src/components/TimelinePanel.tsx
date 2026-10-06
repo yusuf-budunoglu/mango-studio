@@ -18,9 +18,8 @@ import { Waveform } from './Waveform'
 
 type TimelineRow = TimelineEditor['editorData'][number]
 
-/** Satır yükseklikleri: klip satırı belirgin, animasyon şeritleri ince. */
-// İnce satırlar: timeline'a kaydırmadan daha çok katman sığar.
-const ROW = { clip: 30, lane: 20, camera: 24, audio: 28 }
+/** Satır yükseklikleri: klip ve ses satırı film şeridi / dalga biçimi sığacak kadar yüksek, animasyon şeritleri ince. */
+const ROW = { clip: 48, lane: 24, camera: 30, audio: 48 }
 const START_LEFT = 16
 const ZOOM_MIN = 20
 const ZOOM_MAX = 480
@@ -28,6 +27,10 @@ const LANE_SEP = '::'
 const CLIP_PREFIX = 'clip:'
 const trackIdOf = (rowId: string) => rowId.split(LANE_SEP)[0]
 const EPS = 1e-4
+/** Cetvel etiketleri arasındaki en az boşluk (px) ve denenecek adımlar (sn). */
+const LABEL_GAP = 64
+const LABEL_STEPS = [1, 2, 5, 10, 15, 30, 60]
+const clock = (seconds: number) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 
 /** Çakışmayan blokları aynı şeride koyar, çakışanlar için yeni şerit açar. */
 function splitIntoLanes<T extends { start: number; duration: number }>(blocks: T[]): T[][] {
@@ -349,6 +352,9 @@ export function TimelinePanel({ timelineRef }: Props) {
     if (Object.keys(audio).length && current.audio?.length) store.setAudioTimes(audio)
   }
 
+  // Uzaklaşınca etiketler üst üste binmesin: sığan en küçük adımda yazılır.
+  const labelStep = LABEL_STEPS.find((step) => step * scaleWidth >= LABEL_GAP) ?? 120
+
   const layerOfClip = (actionId: string) => project.layers.find((l) => CLIP_PREFIX + l.id === actionId)
   const hasSelection = !!selectedBlockIds.length || project.layers.some((l) => l.id === selectedTrackId)
   // Oynatma kafası hareket edince "böl" düğmesinin durumu güncellensin.
@@ -415,6 +421,7 @@ export function TimelinePanel({ timelineRef }: Props) {
           startLeft={START_LEFT}
           rowHeight={ROW.clip}
           minScaleCount={Math.ceil(project.duration) + 1}
+          getScaleRender={(second) => (second % labelStep === 0 ? clock(second) : null)}
           gridSnap
           dragLine
           autoScroll

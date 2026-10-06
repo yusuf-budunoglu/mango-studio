@@ -151,6 +151,11 @@
 .x-wall-col { display: grid; gap: 10px; min-width: 0; }
 .x-tile { position: relative; display: block; border-radius: 12px; overflow: hidden; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.06); }
 .x-tile:hover { border-color: var(--accent); }
+/* Prompt şeridi: yan yana 16:9 önizlemeler; ekran daraldıkça sondakiler gizlenir */
+.x-prompts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.x-prompts .x-tile { aspect-ratio: 16 / 9; }
+@media (max-width: 1280px) { .x-prompts { grid-template-columns: repeat(4, minmax(0, 1fr)); } .x-prompts .x-tile:nth-child(n + 5) { display: none; } }
+@media (max-width: 900px) { .x-prompts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .x-shot-label {
   position: absolute; left: 10px; bottom: 10px; padding: 4px 9px; border-radius: 7px; background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(6px); color: var(--ink); font-size: 12px; font-weight: 700; opacity: 0; transform: translateY(4px); transition: opacity 0.2s ease, transform 0.2s ease;

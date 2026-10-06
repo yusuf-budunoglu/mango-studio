@@ -1,8 +1,10 @@
 import { useThree } from '@react-three/fiber'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import {
+  AnimationMixer,
   Box3,
   CanvasTexture,
+  Color,
   MeshBasicMaterial,
   Object3D,
   SRGBColorSpace,
@@ -13,12 +15,15 @@ import {
   type Mesh,
   type MeshPhysicalMaterial,
   type MeshStandardMaterial,
+  type SkinnedMesh,
   type Texture,
 } from 'three'
+import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import type { DeviceFinish, Layer } from '../../engine/types'
 import { useDeviceModel, type DeviceKind } from './deviceModels'
 import { roundedPlane, roundedSlab } from './geometry'
 import { useImageTexture, useLayerNode, type LayerProps } from './shared'
+import { useVideoFrames } from './videoFrames'
 
 // Cihaz maketleri: önce hazır 3D model (public/models), yüklenene kadar ya da yüklenemezse
 // kodla çizilen maket. Ölçüler sahne birimi; telefon ~1.7×3.5, tablet ~3.6×2.6, laptop ~3.8 genişlik.
@@ -271,7 +276,7 @@ function Laptop({ layer, screen }: { layer: Layer; screen: Texture | null }) {
 }
 
 /** Ekran oranı (genişlik / yükseklik); ekran görüntüsü yokken çizilen temsili arayüz için. */
-const SCREEN_ASPECT: Record<DeviceKind, number> = { phone: 0.46, tablet: 1.333, laptop: 1.54 }
+const SCREEN_ASPECT: Record<DeviceKind, number> = { phone: 0.46, tablet: 1.333, laptop: 1.54, foldable: 1.43 }
 /** Laptop menteşesinin kodla çizilen maketteki yeri; eski projelerde yerleşim aynı kalsın. */
 const LAPTOP_HINGE = new Vector3(0, -1.225, 0)
 
@@ -307,11 +312,19 @@ function usePlaceholderScreen(color: string, aspect: number) {
  * Hazır 3D model: katman başına kopyalanır (malzemeler ayrı, geometri paylaşılır). Ekran parçasına
  * ekran görüntüsü, gövde malzemelerine seçilen renk uygulanır; laptop kapağı menteşede döner.
  */
-function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; template: Group; layer: Layer; screen: Texture | null }) {
+/** Katlanır telefonun açıklığını (derece) iki yarının menteşe dönüşüne çevirir; her karede motordan çağrılır. */
+type FoldSetter = (angle: number) => void
+
+function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: DeviceKind; template: Group; layer: Layer; screen: Texture | null; cover: Texture | null; fold: RefObject<FoldSetter | null> }) {
   const parts = useMemo(() => {
-    const root = template.clone(true)
+    // iskeletli model (katlanır telefon) kemikleriyle birlikte kopyalanır
+    const root = (template.animations.length ? cloneSkinned(template) : template.clone(true)) as Group
     const screenMaterial = new MeshBasicMaterial({ toneMapped: false })
-    const finishes: { slot: 'frame' | 'back'; material: MeshStandardMaterial }[] = []
+    // katlanır telefonun dış ekranı: görsel varsa onu gösterir, yoksa modeldeki koyu cam kalır
+    const coverMaterial = new MeshBasicMaterial({ toneMapped: false })
+    let coverMesh: Mesh | null = null
+    let coverGlass: MeshStandardMaterial | null = null
+    const finishes: { slot: 'frame' | 'back'; material: MeshStandardMaterial; tone: Color | null }[] = []
     const materials: MeshStandardMaterial[] = []
     const screenNode = root.getObjectByName('screen')
     root.traverse((o) => {
@@ -319,6 +332,8 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
       if (!mesh.isMesh) return
       // Seçim için yüz binlerce üçgen yerine görünmez kutu kullanılır.
       mesh.raycast = () => {}
+      // kemikle bükülen parçanın sınır küresi açık poza göre: katlanınca yanlış kırpılmasın
+      if ((mesh as SkinnedMesh).isSkinnedMesh) mesh.frustumCulled = false
       let inScreen = false
       for (let p: Object3D | null = mesh; p; p = p.parent) if (p === screenNode) inScreen = true
       if (inScreen) {
@@ -328,21 +343,38 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
       const material = (mesh.material as MeshStandardMaterial).clone()
       mesh.material = material
       materials.push(material)
+      if (mesh.name === 'cover') {
+        coverMesh = mesh
+        coverGlass = material
+      }
       // Cam parçalarındaki "transmission" ayrı bir çizim geçişi ister ve kenarlarda renkli parlama
       // yapıyor; düz yarı saydam cam yeterli.
       if ('transmission' in material && (material as MeshPhysicalMaterial).transmission > 0) (material as MeshPhysicalMaterial).transmission = 0
       const slot = /finish.?(frame|back)/.exec(material.name)?.[1] as 'frame' | 'back' | undefined
       if (slot) {
-        if (material.roughness > 0.95) material.roughness = 0.45
-        // kasa: parlak metal (stüdyo ışığında kenar yansımaları)
-        if (slot === 'frame') {
-          material.metalness = 1
-          material.roughness = Math.min(material.roughness, 0.28)
+        // `tone`: parçanın ana renge oranı (anten şeridi, vidalar); böyle malzemelerin yüzey ayarı modelden gelir
+        const tone = material.userData.tone as [number, number, number] | undefined
+        if (!tone) {
+          if (material.roughness > 0.95) material.roughness = 0.45
+          // kasa: parlak metal (stüdyo ışığında kenar yansımaları)
+          if (slot === 'frame') {
+            material.metalness = 1
+            material.roughness = Math.min(material.roughness, 0.28)
+          }
         }
-        finishes.push({ slot, material })
+        finishes.push({ slot, material, tone: tone ? new Color().setRGB(tone[0], tone[1], tone[2]) : null })
       }
     })
     const lid = root.getObjectByName('lid') ?? null
+    const foldPivot = root.getObjectByName('fold') ?? null
+    if (foldPivot) {
+      // Katlanır telefonda ekranın 1 mm altındaki menteşe parçaları derinlik karşılaştırmasında ekranla çakışıp
+      // ince çizgicikler halinde öne geçiyor: ekran derinlikte biraz öne alınır (görüntüdeki yeri değişmez).
+      screenMaterial.polygonOffset = true
+      screenMaterial.polygonOffsetFactor = -4
+      screenMaterial.polygonOffsetUnits = -800
+    }
+    const foldClip = template.animations.find((clip) => clip.name === 'fold') ?? null
     root.updateMatrixWorld(true)
     // Laptop: menteşe eski maketteki yere; telefon ve tablet zaten ortalı.
     if (lid) root.position.copy(LAPTOP_HINGE).sub(lid.getWorldPosition(new Vector3()))
@@ -351,8 +383,13 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
     return {
       root,
       lid,
+      foldPivot,
+      foldClip,
       baseAngle: (lid?.userData.baseAngle as number | undefined) ?? 109,
       screenMaterial,
+      coverMaterial,
+      coverMesh: coverMesh as Mesh | null,
+      coverGlass: coverGlass as MeshStandardMaterial | null,
       finishes,
       materials,
       hitSize: box.getSize(new Vector3()).toArray(),
@@ -364,13 +401,17 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
     () => () => {
       parts.materials.forEach((m) => m.dispose())
       parts.screenMaterial.dispose()
+      parts.coverMaterial.dispose()
     },
     [parts],
   )
 
   const finish = FINISHES[layer.deviceFinish ?? (kind === 'phone' ? 'space' : 'silver')]
   useEffect(() => {
-    for (const { slot, material } of parts.finishes) material.color.set(finish[slot])
+    for (const { slot, material, tone } of parts.finishes) {
+      material.color.set(finish[slot])
+      if (tone) material.color.multiply(tone)
+    }
   }, [parts, finish])
 
   const placeholder = usePlaceholderScreen(layer.color, SCREEN_ASPECT[kind])
@@ -393,6 +434,44 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
     if (parts.lid) parts.lid.rotation.x = -(((layer.lidAngle ?? 105) - parts.baseAngle) * Math.PI) / 180
   }, [parts, layer.lidAngle])
 
+  useEffect(() => {
+    if (!parts.coverMesh || !parts.coverGlass) return
+    if (cover && cover.anisotropy !== maxAnisotropy) {
+      // eslint-disable-next-line react-hooks/immutability -- three.js dokusu, React durumu değil
+      cover.anisotropy = maxAnisotropy
+      cover.needsUpdate = true
+    }
+    // eslint-disable-next-line react-hooks/immutability -- three.js malzemesi, React durumu değil
+    parts.coverMaterial.map = cover
+    parts.coverMaterial.needsUpdate = true
+    parts.coverMesh.material = cover ? parts.coverMaterial : parts.coverGlass
+  }, [parts, cover, maxAnisotropy])
+
+  // Katlanma (180° düz, 0° ekranlar yüz yüze): modelin `fold` animasyonu açıklığa göre sarılır (0 = açık, sonu =
+  // kapalı; ekran menteşede kemiklerle bükülür). Modelde sağ yarı sabit, sol yarı döner: `fold` düğümü yarım açı
+  // kadar ters çevrilir, böylece iki yarı simetrik kapanır ve sırt yerinde kalır. Açı her karede motordan gelir.
+  useEffect(() => {
+    const { foldPivot, foldClip, root } = parts
+    if (!foldPivot || !foldClip) return
+    const mixer = new AnimationMixer(root)
+    mixer.clipAction(foldClip).play()
+    const set: FoldSetter = (angle) => {
+      const closed = (180 - Math.min(180, Math.max(0, angle))) / 180
+      // sonda başa sarmasın diye sürenin hemen altında tutulur
+      mixer.setTime(Math.min(closed * foldClip.duration, foldClip.duration - 1e-4))
+      // eslint-disable-next-line react-hooks/immutability -- three.js düğümü, React durumu değil
+      foldPivot.rotation.y = -closed * (Math.PI / 2)
+    }
+    set(layer.foldAngle ?? 180)
+    // eslint-disable-next-line react-hooks/immutability -- üst bileşenin kare başına çağırdığı işlev
+    fold.current = set
+    return () => {
+      fold.current = null
+      mixer.stopAllAction()
+      mixer.uncacheRoot(root)
+    }
+  }, [parts, fold, layer.foldAngle])
+
   return (
     <>
       <primitive object={parts.root} />
@@ -404,19 +483,30 @@ function ModelDevice({ kind, template, layer, screen }: { kind: DeviceKind; temp
   )
 }
 
-/** Telefon, tablet ve laptop maketleri: ekran rengi ya da ekran görüntüsü, gövde rengi. */
+/** Telefon, tablet, laptop ve katlanır telefon maketleri: ekran rengi ya da ekran görüntüsü, gövde rengi. */
 export function DeviceLayer({ layer, register }: LayerProps) {
-  const node = useLayerNode(layer, register)
-  const screen = useImageTexture(layer.image)?.texture ?? null
-  const kind: DeviceKind = layer.kind === 'laptop' || layer.kind === 'tablet' ? layer.kind : 'phone'
+  const fold = useRef<FoldSetter | null>(null)
+  // Ekranda video (ekran kaydı) varsa görselin yerine o çizilir; katlanır telefonun dış ekranı için de aynısı.
+  const screenVideo = useVideoFrames(layer, layer.media)
+  const coverVideo = useVideoFrames(layer, layer.kind === 'foldable' ? layer.coverMedia : undefined)
+  const node = useLayerNode(layer, register, (_group, state) => {
+    fold.current?.(state.fold)
+    screenVideo.tick()
+    coverVideo.tick()
+  })
+  const screenImage = useImageTexture(layer.image)?.texture ?? null
+  const coverImage = useImageTexture(layer.kind === 'foldable' ? layer.coverImage : undefined)?.texture ?? null
+  const screen = screenVideo.view?.texture ?? screenImage
+  const cover = coverVideo.view?.texture ?? coverImage
+  const kind: DeviceKind = layer.kind === 'laptop' || layer.kind === 'tablet' || layer.kind === 'foldable' ? layer.kind : 'phone'
   const model = useDeviceModel(kind)
   return (
     <group {...node}>
       {model ? (
-        <ModelDevice key={kind} kind={kind} template={model} layer={layer} screen={screen} />
+        <ModelDevice key={kind} kind={kind} template={model} layer={layer} screen={screen} cover={cover} fold={fold} />
       ) : kind === 'laptop' ? (
         <Laptop layer={layer} screen={screen} />
-      ) : kind === 'tablet' ? (
+      ) : kind === 'tablet' || kind === 'foldable' ? (
         <Tablet layer={layer} screen={screen} />
       ) : (
         <Phone layer={layer} screen={screen} />

@@ -4,6 +4,7 @@ import { newId } from '../engine/ids'
 import { PRESETS } from '../engine/presets'
 import { buildAiSearchAd } from './aiSearchAd'
 import { buildMeadowPhone } from './meadowPhone'
+import { buildFoldPromo } from './foldPromo'
 import { buildWordsMotion } from './wordsMotion'
 import { buildMangoAiAd } from './mangoAiAd'
 import { buildCrystal } from './crystal'
@@ -431,6 +432,14 @@ export const TEMPLATES: Template[] = [
     accent: '#3f8c3c',
     tags: ['app-promo', 'nature', 'light', 'vertical', '3d-device'],
     build: () => buildMeadowPhone({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'fold-promo',
+    format: '16:9',
+    seconds: 20,
+    accent: '#ff7a00',
+    tags: ['app-promo', 'ad', 'typography', 'foldable', '3d-device'],
+    build: () => buildFoldPromo({ t, b, layer, camera, project }),
   },
   {
     id: 'words-motion',

@@ -32,6 +32,16 @@
   --c-move: #c0722a;
   --c-transition: #9b2f2f;
   --c-lens: #b88a2e;
+  /* timeline klipleri: görseli olmayan klip türünün rengiyle dolar (doygun mango ailesi) */
+  --lime: #8cc63f;          /* marka degradesinin limon ucu */
+  --clip-text: var(--gold);
+  --clip-shape: var(--tangerine);
+  --clip-svg: var(--mango-red);
+  --clip-device: var(--lime);
+  --clip-audio: var(--accent);
+  --clip-media: var(--line);
+  --tl-bg: var(--panel);    /* timeline zemini */
+  --tl-lane: var(--panel-2); /* satır şeridi */
   --font-ui: 'Mango UI', 'Segoe UI', system-ui, sans-serif;
   --font-display: 'Mango Display', 'Mango UI', 'Segoe UI', sans-serif;
   color-scheme: dark;
@@ -162,10 +172,19 @@ button.danger { color: var(--danger); }
 .export-popover .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .export-progress { height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
 .export-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.2s ease; }
-.block--audio { position: relative; background: #2f5a38; }
-.block--audio .block-name { position: relative; z-index: 1; }
-.waveform { position: absolute; inset: 2px 0; width: 100%; height: calc(100% - 4px); pointer-events: none; }
-.waveform polygon { fill: rgba(240, 190, 110, 0.5); }
+.block--audio { position: relative; height: calc(100% - 8px); margin-top: 4px; padding: 5px 6px; align-items: flex-start; border-radius: 10px; background: var(--clip-audio); }
+.block--audio .block-name {
+  position: relative; z-index: 1; max-width: 100%; padding: 2px 7px; border-radius: 6px; overflow: hidden; text-overflow: ellipsis;
+  font-size: 11.5px; font-weight: 600; color: var(--accent-ink); background: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+.block--audio.is-selected { box-shadow: 0 0 0 2px var(--ink); }
+/* Dalga biçimi dolu şekil olarak çizilir; maske onu dikey çubuklara böler. */
+.waveform {
+  position: absolute; inset: 4px 6px; width: calc(100% - 12px); height: calc(100% - 8px); pointer-events: none;
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 3px, transparent 3px 6px);
+  mask-image: repeating-linear-gradient(90deg, #000 0 3px, transparent 3px 6px);
+}
+.waveform polygon { fill: color-mix(in srgb, var(--accent-ink) 55%, transparent); }
 .export-upgrade { display: inline-flex; align-items: center; gap: 5px; color: var(--gold); font-size: 12px; font-weight: 600; text-decoration: none; }
 .export-upgrade:hover { text-decoration: underline; }
 .export-error { color: var(--danger); font-size: 12px; max-width: 260px; }
@@ -179,12 +198,12 @@ button.danger { color: var(--danger); }
   grid-template-columns: 220px 1fr;
   grid-template-rows: 38px minmax(0, 1fr);
   border-top: 1px solid var(--line);
-  background: #111113;
+  background: var(--tl-bg);
   min-height: 0;
 }
+/* Cetvelin hizasındaki boşluk: yapışık durur, kaydırılan adlar cetvelin yanına taşmaz. */
+.track-names::before { content: ""; position: sticky; top: 0; z-index: 4; height: 42px; background: var(--tl-bg); }
 .track-names {
-  padding-top: 42px;
-  border-right: 1px solid var(--line);
   overflow: hidden;
   display: grid;
   align-content: start;
@@ -193,32 +212,43 @@ button.danger { color: var(--danger); }
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 6px 0 2px;
-  color: var(--muted);
+  padding: 0 8px 0 4px;
+  border: solid transparent;
+  border-width: 4px 8px 4px 6px;
+  border-radius: 14px;
+  background-clip: padding-box;
+  color: var(--ink);
   cursor: pointer;
   user-select: none;
-  background: #111113;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
 }
-.track-name:hover { color: var(--ink); }
-.track-name.is-selected { color: var(--ink); background: var(--accent-soft); }
+.track-name.is-selected { background-color: var(--accent-soft); }
 .track-name.is-hidden .track-label { opacity: 0.45; text-decoration: line-through; }
 .track-name.is-dragging { position: relative; z-index: 3; background: #26211a; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); }
 .track-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.track-grip { display: grid; place-items: center; width: 16px; height: 22px; padding: 0; border: 0; background: transparent; color: #5e5952; cursor: grab; }
+.track-grip { display: grid; place-items: center; width: 16px; height: 22px; padding: 0; border: 0; background: transparent; color: #5e5952; cursor: grab; opacity: 0; }
+.track-name:hover .track-grip, .track-grip:focus-visible { opacity: 1; }
 .track-grip:active { cursor: grabbing; }
 .track-toggle { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; background: transparent; color: #5e5952; opacity: 0; }
 .track-name:hover .track-toggle, .track-toggle.is-on, .track-toggle:focus-visible { opacity: 1; }
 .track-toggle.is-on { color: var(--accent); }
 .track-rename { flex: 1; min-width: 0; padding: 2px 4px; border: 1px solid var(--accent); border-radius: 4px; background: var(--panel-2); font-size: 13px; }
-.track-kind { flex: 0 0 auto; color: #8a847b; }
+.track-kind { flex: 0 0 auto; margin-right: 4px; color: var(--muted); }
 
-.timeline-editor { background: #111113 !important; }
+.timeline-editor { background: var(--tl-bg) !important; font-family: var(--font-ui) !important; }
 .timeline-editor-action { background: transparent !important; }
+/* Her satır yuvarlak köşeli bir şerit; kütüphanenin dikey ızgara çizgileri yok. */
+.timeline-editor-edit-row { background-image: none !important; isolation: isolate; }
+.timeline-editor-edit-row::after { content: ''; position: absolute; inset: 2px 0; z-index: -1; border-radius: 12px; background: var(--tl-lane); }
+/* Cetvel: yalnızca saniye çizgileri ve 00:02 biçimli etiketler. */
+.timeline-editor-time-unit { border-right-color: transparent !important; }
+.timeline-editor-time-unit-big { border-right-color: color-mix(in srgb, var(--muted) 55%, transparent) !important; }
+.timeline-editor-time-unit-scale { color: var(--muted) !important; font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; transform: translate(50%, -130%) !important; }
 .block {
-  height: calc(100% - 4px);
-  margin-top: 2px;
-  border-radius: 4px;
+  height: calc(100% - 6px);
+  margin-top: 3px;
+  border-radius: 7px;
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -236,7 +266,7 @@ button.danger { color: var(--danger); }
 .block--emphasis { background: var(--c-vurgu); }
 .block--text { background: var(--c-metin); }
 .block--camera { background: var(--c-kamera); }
-.block.is-selected { box-shadow: inset 0 0 0 2px #fff; }
+.block.is-selected { box-shadow: inset 0 0 0 2px var(--ink); }
 
 /* Üst çubuk ekleri */
 .back { padding: 6px 10px; }
@@ -420,43 +450,56 @@ button.danger { color: var(--danger); }
 .timeline-hint { margin-left: 12px; font-size: 12px; color: #6b665f; }
 .timeline-zoom { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .timeline-zoom input { width: 120px; accent-color: var(--accent); }
-.track-layer { display: grid; align-content: start; background: #111113; }
+.track-layer { display: grid; align-content: start; background: var(--tl-bg); }
 .track-layer.is-dragging { position: relative; z-index: 3; background: #26211a; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); }
 .track-expand { display: grid; place-items: center; width: 18px; height: 22px; padding: 0; border: 0; background: transparent; color: #8a847b; }
 .track-expand:disabled { opacity: 0.25; }
-.track-sub { padding: 4px 0 0 22px; margin-left: 20px; font-size: 11px; color: #6b665f; border-left: 2px solid #2c2a27; }
-.timeline-editor-edit-row.row-lane { background: #131315; }
+.track-sub { padding: 4px 0 0 22px; margin-left: 30px; font-size: 11px; color: #6b665f; border-left: 2px solid #2c2a27; }
+.timeline-editor-edit-row.row-lane::after { inset: 1px 0; border-radius: 8px; background: color-mix(in srgb, var(--tl-lane) 60%, var(--tl-bg)); }
 .clip {
-  position: relative; height: calc(100% - 4px); margin-top: 2px; border-radius: 5px; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center; padding: 0 8px 3px;
-  color: #fff; font-family: var(--font-ui); font-size: 11.5px; cursor: grab; background: #4a4035; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  position: relative; height: calc(100% - 8px); margin-top: 4px; border-radius: 10px; overflow: hidden;
+  color: var(--accent-ink); font-family: var(--font-ui); font-size: 11.5px; cursor: grab;
+  background: var(--clip-media) repeat-x left center / auto 100%;
 }
-.clip--text { background: #8a5a1c; }
-.clip--phone, .clip--tablet, .clip--laptop { background: #2f6b3f; }
-.clip--image, .clip--video { background: #7a3a2a; }
-.clip--shape { background: #7d6a22; }
-.clip--svg { background: #8a3b2c; }
-.clip.is-selected { box-shadow: inset 0 0 0 2px #fff; }
-.clip.is-locked { cursor: not-allowed; background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(0, 0, 0, 0.18) 6px 12px); }
+.clip--text { background-color: var(--clip-text); }
+.clip--phone, .clip--tablet, .clip--laptop, .clip--foldable { background-color: var(--clip-device); }
+.clip--shape { background-color: var(--clip-shape); }
+.clip--svg { background-color: var(--clip-svg); }
+/* Küçük resimli klip: film şeridi gibi yan yana tekrar eder. */
+.clip--thumb { background-color: var(--clip-media); color: var(--ink); }
+.clip.is-selected { box-shadow: 0 0 0 2px var(--ink); }
+.clip.is-locked { cursor: not-allowed; }
+.clip.is-locked::after { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--bg) 28%, transparent) 6px 12px); }
 .timeline-editor-edit-row.is-hidden .clip { opacity: 0.4; }
 .clip-intro, .clip-outro { position: absolute; top: 0; bottom: 0; }
-.clip-intro { left: 0; background: linear-gradient(90deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05)); border-right: 1px dashed rgba(255, 255, 255, 0.45); }
-.clip-outro { right: 0; background: linear-gradient(270deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05)); border-left: 1px dashed rgba(255, 255, 255, 0.45); }
-.clip-head { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.clip-intro { left: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--bg) 34%, transparent), transparent); border-right: 1px dashed color-mix(in srgb, var(--bg) 55%, transparent); }
+.clip-outro { right: 0; background: linear-gradient(270deg, color-mix(in srgb, var(--bg) 34%, transparent), transparent); border-left: 1px dashed color-mix(in srgb, var(--bg) 55%, transparent); }
+.clip--thumb .clip-intro { background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 40%, transparent), transparent); border-right-color: color-mix(in srgb, var(--ink) 60%, transparent); }
+.clip--thumb .clip-outro { background: linear-gradient(270deg, color-mix(in srgb, var(--ink) 40%, transparent), transparent); border-left-color: color-mix(in srgb, var(--ink) 60%, transparent); }
+/* Klibin adı sol üstte etiket: renkli klipte açık, küçük resimli klipte koyu. */
+.clip-head {
+  position: absolute; top: 5px; left: 6px; max-width: calc(100% - 12px); display: flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap;
+  padding: 2px 7px; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+.clip-head svg { flex: none; }
+.clip--thumb .clip-head { background: color-mix(in srgb, var(--bg) 68%, transparent); }
 .clip-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .clip-sub { opacity: 0.7; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.clip-count { margin-left: auto; padding: 0 6px; border-radius: 99px; background: rgba(0, 0, 0, 0.25); font-size: 10px; }
-.clip-marks { position: absolute; left: 0; right: 0; bottom: 2px; height: 3px; }
-.clip-mark { position: absolute; height: 3px; min-width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.6); }
+.clip-count { flex: none; opacity: 0.7; font-size: 10.5px; }
+.clip-marks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: color-mix(in srgb, var(--bg) 45%, transparent); }
+.clip-marks:empty { display: none; }
+.clip-mark { position: absolute; top: 1.5px; height: 3px; min-width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.6); }
 .clip-mark--emphasis { background: #f4d06f; }
 .clip-mark--move { background: #ffb05a; }
 .clip-mark--text { background: #ffd66b; }
 .clip-mark--in { background: #9fd57e; }
 .clip-mark--out { background: #ff8a66; }
 
-/* Timeline oynatma kafası: kütüphanenin mavisi yerine mango turuncusu */
-.timeline-editor-cursor { border-left-color: var(--accent) !important; border-right-color: var(--accent) !important; }
-.timeline-editor-cursor-top path, .timeline-editor-cursor-top rect { fill: var(--accent) !important; }
+/* Timeline oynatma kafası: kütüphanenin mavisi yerine mango turuncusu; üstünde yuvarlak başlık */
+.timeline-editor-cursor { top: 18px !important; height: calc(100% - 18px) !important; border-left: 2px solid var(--accent) !important; border-right: 2px solid var(--accent) !important; }
+.timeline-editor-cursor-top { display: none; }
+/* İmleç yatayda yarıya ölçeklendiği için başlık iki kat geniş çizilir (ekranda 12 × 14 px). */
+.timeline-editor-cursor::before { content: ''; position: absolute; top: 0; left: 50%; width: 24px; height: 14px; transform: translateX(-50%); border-radius: 8px / 4px; background: var(--accent); }
 
 /* ───────── Önizlemede seçim kutusu (mavi): taşı, köşeden ölçekle, sağ üstte yapay zekâ ───────── */
 .sel-box {

@@ -112,7 +112,7 @@ export function AnimationPanel({ layer }: { layer: Layer }) {
   const addAtPlayhead = (id: string) => useProjectStore.getState().addBlock(layer.id, id, usePlaybackStore.getState().time)
   const groups = (['emphasis', 'move', ...(layer.kind === 'text' ? ['text'] : [])] as const).map((category) => ({
     category,
-    presets: presetsFor('layer').filter(([, p]) => p.category === category),
+    presets: presetsFor('layer').filter(([, p]) => p.category === category && (!p.kinds || p.kinds.includes(layer.kind))),
   }))
 
   return (

@@ -9,6 +9,7 @@ import { Sidebar } from './Sidebar'
 const TOP_LINKS: { labelKey: string; route: Route }[] = [
   { labelKey: 'nav.explore', route: { screen: 'home' } },
   { labelKey: 'nav.templates', route: { screen: 'templates' } },
+  { labelKey: 'nav.prompts', route: { screen: 'prompts' } },
   { labelKey: 'nav.audio', route: { screen: 'soon', feature: 'audio' } },
   { labelKey: 'nav.studio', route: { screen: 'studio' } },
   { labelKey: 'nav.assets', route: { screen: 'assets' } },

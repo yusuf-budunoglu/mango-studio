@@ -18,6 +18,7 @@ export function LayerNode(props: LayerProps) {
     case 'phone':
     case 'tablet':
     case 'laptop':
+    case 'foldable':
       return <DeviceLayer {...props} />
     case 'image':
       return <ImageLayer {...props} />

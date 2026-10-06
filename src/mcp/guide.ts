@@ -10,6 +10,7 @@ export const FONT_IDS = [
 
 /** Her bloğun ne yaptığı (model için, İngilizce). Yeni blok eklenince buraya da yazılır (test kontrol eder). */
 export const PRESET_NOTES: Record<string, string> = {
+  fold: 'foldable phone only: folds or unfolds to `angle` degrees (180 open flat, 0 closed) and stays there; chain blocks to close then reopen',
   'fade-in': 'opacity 0 → 1',
   'slide-up': 'rises from `distance` below while fading in',
   'slide-down': 'drops from `distance` above while fading in',
@@ -94,7 +95,7 @@ Every layer: \`name\`, \`kind\` (${LAYER_KINDS.join(' | ')}), \`position\` [x, y
 - **List order**: the first layer in the array is in front when layers share a depth. Overlapping flat layers also need slightly different z (0.01 apart, front one larger) or they flicker.
 - \`text\`: \`text\`, \`fontSize\` (units, default 0.4), \`fontFamily\`, \`fontWeight\` (400 | 700), \`align\` (left | center | right — the position is that edge/centre), \`textWidth\` (wrap width, default 5), \`letterSpacing\`, \`lineHeight\`. Use \\n for line breaks.
 - \`image\`: \`image\` reference; 3 units wide at scale 1, height from the image's aspect ratio (scale = wanted_width / 3). Transparent PNGs work. \`tint: true\` multiplies a white image by \`color\` so users can recolour it.
-- \`phone\` (1.7 × 3.5 units), \`tablet\` (3.6 × 2.6), \`laptop\` (3.8 wide; \`lidAngle\` degrees): real 3D models. \`image\` is the screenshot shown on the screen; \`deviceFinish\` is silver | space | titanium | blue.
+- \`phone\` (1.7 × 3.5 units), \`tablet\` (3.6 × 2.6), \`laptop\` (3.8 wide; \`lidAngle\` degrees), \`foldable\` (folding phone, 4.9 × 3.5 open; \`foldAngle\` degrees, 180 open flat / 0 closed, animate with the \`fold\` block): real 3D models. \`image\` is the screenshot shown on the screen; \`deviceFinish\` is silver | space | titanium | blue.
 - \`shape\`: \`shape\` (cube | rect | rounded | circle), \`shapeWidth\`, \`shapeHeight\` in units, filled with \`color\`.
 - \`svg\`: \`media\` reference; \`tint\` paints it with \`color\`; \`extrude\` gives 3D thickness.
 - \`video\`: \`media\` reference; 3 units wide; \`mediaOffset\` seconds into the source. Its sound is not used (add an audio clip).

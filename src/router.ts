@@ -19,6 +19,8 @@ export type Route =
   | { screen: 'templates' }
   /** Şablon önizleme sayfası */
   | { screen: 'template'; templateId: string }
+  /** Prompt kütüphanesi; `promptId` varsa o prompt'un penceresi açık */
+  | { screen: 'prompts'; promptId?: string }
   | { screen: 'assets' }
   | { screen: 'credits' }
   /** Gizlilik politikası ve kullanım koşulları (herkese açık) */
@@ -61,6 +63,9 @@ export function parsePath(pathname: string): Route {
   if (template) return { screen: 'template', templateId: template[1] }
   if (path === '/welcome') return { screen: 'welcome' }
   if (path === '/templates') return { screen: 'templates' }
+  if (path === '/prompts') return { screen: 'prompts' }
+  const prompt = path.match(/^\/prompts\/([\w-]+)$/)
+  if (prompt) return { screen: 'prompts', promptId: prompt[1] }
   if (path === '/assets') return { screen: 'assets' }
   if (path === '/credits') return { screen: 'credits' }
   if (path === '/privacy') return { screen: 'privacy' }
@@ -91,6 +96,8 @@ export function routeToPath(route: Route): string {
       return route.folderId ? `/${route.screen}/${route.folderId}` : `/${route.screen}`
     case 'template':
       return `/t/${route.templateId}`
+    case 'prompts':
+      return route.promptId ? `/prompts/${route.promptId}` : '/prompts'
     case 'home':
       return '/'
     case 'oauth':

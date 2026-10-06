@@ -8,7 +8,7 @@ export const PROJECT_VERSION = 2
 
 export type Vec3 = [number, number, number]
 
-export type LayerKind = 'text' | 'phone' | 'laptop' | 'tablet' | 'shape' | 'image' | 'svg' | 'video'
+export type LayerKind = 'text' | 'phone' | 'laptop' | 'tablet' | 'foldable' | 'shape' | 'image' | 'svg' | 'video'
 
 export type ShapeType = 'cube' | 'rect' | 'rounded' | 'circle'
 
@@ -50,8 +50,11 @@ export interface Layer {
   lineHeight?: number
   /** görsel katmanı ya da cihaz ekranı için resim (asset:<id>, data URL veya adres) */
   image?: string
-  /** SVG logo ya da video katmanının dosyası (asset:<id>) */
+  /** SVG logo ya da video katmanının dosyası (asset:<id>); cihazda ekranda oynayan video (ekran kaydı; `image` yerine) */
   media?: string
+  /** katlanır telefon: dış (kapak) ekranın görseli ve videosu (video varsa o çizilir); ikisi de boşsa ekran kapalı */
+  coverImage?: string
+  coverMedia?: string
   /** video: kaynakta nereden başladığı (sn) */
   mediaOffset?: number
   /** SVG: orijinal renkler yerine katman rengiyle boya; görsel: katman rengiyle çarp (beyaz görseller renge boyanır) */
@@ -62,6 +65,8 @@ export interface Layer {
   deviceFinish?: DeviceFinish
   /** laptop: kapak açısı (derece; 90 dik, 105 hafif geriye yatık) */
   lidAngle?: number
+  /** katlanır telefon: açıklık (derece; 180 tam açık, 0 kapalı). Boşsa 180. `fold` bloğu bunu zamanla değiştirir. */
+  foldAngle?: number
   /** şekil katmanının türü ve boyutu (sahne birimi) */
   shape?: ShapeType
   shapeWidth?: number
@@ -151,6 +156,8 @@ export interface LayerState {
   rotZ: number
   scale: number
   opacity: number
+  /** katlanır telefonun o andaki açıklığı (derece; 180 açık, 0 kapalı) */
+  fold: number
   /** 0..1 arası: metnin ne kadarı görünüyor (typewriter) */
   textReveal: number
   /** count-up bloğu varsa gösterilecek sayı */
