@@ -1021,6 +1021,7 @@ const en = {
     badges: { new: 'New', top: 'Top' },
     hero: {
       ad: { title: 'AI product ad', body: 'A 21-second SaaS demo where every scene is editable' },
+      prompts: { body: '{{count}} prompts behind videos made with Claude' },
       claude: { title: 'Claude Opus 5.5 + MCP', body: 'Edit your video by chatting with Claude' },
       fintech: { title: 'Cinematic 3D app ad', body: 'A real 3D phone, camera moves and light, all editable' },
       words: { title: 'Words into motion', body: 'Kinetic type that ends on your logo' },

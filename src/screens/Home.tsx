@@ -31,8 +31,10 @@ import { routeToPath, type Route } from '../router'
 import { useAuthStore } from '../store/authStore'
 import { matchesSearch, useUiStore } from '../store/uiStore'
 
-// Girişte yalnızca yatay (16:9) şablonlar: dikey bir video yatay karta kırpılmaz.
-const HERO_TEMPLATES = ['mango-ai-ad', 'fintech', 'words-motion'] as const
+// Girişte yalnızca yatay (16:9) şablonlar: dikey bir video yatay karta kırpılmaz. İlk kart prompt kütüphanesi
+// (`PromptHero`); liste indirilemezse yerine `HERO_FALLBACK` şablonu gösterilir.
+const HERO_TEMPLATES = ['fintech', 'words-motion'] as const
+const HERO_FALLBACK = 'mango-ai-ad'
 
 /**
  * Şablon vitrini (Higgsfield Genjutsu gibi): her sütunda tek bir yön, her önizleme kendi oranında; dikey ve yatay
@@ -275,6 +277,56 @@ function Showcase() {
 /** Ana sayfadaki prompt şeridinde gösterilen önizleme sayısı (dar ekranda sondakiler gizlenir). */
 const PROMPT_STRIP = 5
 
+/**
+ * Ana sayfada gösterilecek prompt'lar: kapağı ve önizlemesi olan 16:9 videolar, aynı yazar bir kez.
+ * İlki girişteki kartta (`PromptHero`), sonrakiler şeritte (`PromptStrip`). `library` indirilene kadar boş.
+ */
+function usePromptPicks() {
+  const [library, setLibrary] = useState<LibraryPrompt[]>()
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    loadPromptLibrary().then(
+      (list) => alive && setLibrary(list),
+      () => alive && setFailed(true),
+    )
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const seen = new Set<string>()
+  const picks = (library ?? [])
+    .filter((p) => !p.noPoster && !p.noPreview && Math.abs(p.width / p.height - 16 / 9) < 0.02 && !seen.has(p.handle) && !!seen.add(p.handle))
+    .slice(0, PROMPT_STRIP + 1)
+  return { library, failed, picks }
+}
+
+/** Girişteki ilk kart: prompt kütüphanesi, listenin başındaki videonun önizlemesiyle. */
+function PromptHero() {
+  const { t } = useTranslation()
+  const { library, failed, picks } = usePromptPicks()
+  const video = useRef<HTMLVideoElement>(null)
+  const playing = useAutoplay(video)
+  const prompt = picks[0]
+
+  if (failed || (library && !prompt))
+    return (
+      <HeroCard route={{ screen: 'template', templateId: HERO_FALLBACK }} title={t('explore.hero.ad.title')} body={t('explore.hero.ad.body')}>
+        <Loop id={HERO_FALLBACK} />
+      </HeroCard>
+    )
+  return (
+    <HeroCard route={{ screen: 'prompts' }} title={t('explore.prompts.title')} body={t('explore.hero.prompts.body', { count: library?.length ?? 0 })}>
+      <span className={`x-loop${playing ? ' is-playing' : ''}`}>
+        {prompt && <img src={promptPosterUrl(prompt)} alt="" />}
+        <video ref={video} src={prompt ? promptPreviewUrl(prompt) : undefined} muted loop playsInline preload="none" aria-hidden="true" disablePictureInPicture />
+      </span>
+    </HeroCard>
+  )
+}
+
 function PromptTile({ prompt }: { prompt: LibraryPrompt }) {
   const { t } = useTranslation()
   const video = useRef<HTMLVideoElement>(null)
@@ -296,26 +348,11 @@ function PromptTile({ prompt }: { prompt: LibraryPrompt }) {
  */
 function PromptStrip() {
   const { t } = useTranslation()
-  const [library, setLibrary] = useState<LibraryPrompt[]>()
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    loadPromptLibrary().then(
-      (list) => alive && setLibrary(list),
-      () => alive && setFailed(true),
-    )
-    return () => {
-      alive = false
-    }
-  }, [])
+  const { library, failed, picks: all } = usePromptPicks()
 
   if (failed) return null
-  // Aynı yazar şeritte bir kez; kapağı ve önizlemesi olan 16:9 videolar.
-  const seen = new Set<string>()
-  const picks = (library ?? [])
-    .filter((p) => !p.noPoster && !p.noPreview && Math.abs(p.width / p.height - 16 / 9) < 0.02 && !seen.has(p.handle) && !!seen.add(p.handle))
-    .slice(0, PROMPT_STRIP)
+  // İlk video girişteki kartta; şerit ondan sonrakilerle başlar.
+  const picks = all.slice(1)
 
   return (
     <section className="x-section" aria-labelledby="x-prompts-title">
@@ -471,14 +508,12 @@ export function Home() {
     )
   }
 
-  const [first, second, third] = HERO_TEMPLATES
+  const [second, third] = HERO_TEMPLATES
   return (
     <AppShell current={{ screen: 'home' }} title={t('nav.home')} bare={guest}>
       <div className="x-page">
         <div className="x-hero">
-          <HeroCard route={{ screen: 'template', templateId: first }} title={t('explore.hero.ad.title')} body={t('explore.hero.ad.body')}>
-            <Loop id={first} />
-          </HeroCard>
+          <PromptHero />
           <HeroCard route={{ screen: 'soon', feature: 'mcp' }} title={t('explore.hero.claude.title')} body={t('explore.hero.claude.body')}>
             <ClaudeChat />
           </HeroCard>

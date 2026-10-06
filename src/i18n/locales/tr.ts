@@ -1022,6 +1022,7 @@ const tr: Translation = {
     badges: { new: 'Yeni', top: 'Popüler' },
     hero: {
       ad: { title: 'Yapay zekâ ürün reklamı', body: 'Her sahnesi düzenlenebilen 21 saniyelik SaaS demosu' },
+      prompts: { body: 'Claude ile yapılmış videoların {{count}} prompt’u' },
       claude: { title: 'Claude Opus 5.5 + MCP', body: "Videonu Claude'la sohbet ederek düzenle" },
       fintech: { title: 'Sinematik 3D uygulama reklamı', body: 'Gerçek 3D telefon, kamera hareketi ve ışık, hepsi düzenlenebilir' },
       words: { title: 'Kelimelerden harekete', body: 'Logonla biten hareketli yazı' },
