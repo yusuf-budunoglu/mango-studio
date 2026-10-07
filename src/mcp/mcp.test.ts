@@ -77,6 +77,14 @@ describe('MCP: proje doğrulama', () => {
     expect(problemsOf({ ...minimal(), layers: [{ name: 'Shot', kind: 'image', image: 'file:///C:/x.png' }] })).toContain('must be "asset:<id>"')
   })
 
+  it('ses: yüklenen dosyayı ve hazır şablonun kendi ses dosyasını kabul eder, başka adresi reddeder', () => {
+    const clip = (asset: string) => ({ asset, start: 0, offset: 0, duration: 2, sourceDuration: 2, volume: 1, fadeIn: 0, fadeOut: 0 })
+    expect(() => normalizeProject({ ...minimal(), audio: [clip('asset:a-123')] })).not.toThrow()
+    // hazır şablondan açılan proje get_project → save_project ile geri kaydedilebilmeli
+    expect(() => normalizeProject({ ...minimal(), audio: [clip('/templates/launch-ad/sfx/air.mp3')] })).not.toThrow()
+    expect(() => normalizeProject({ ...minimal(), audio: [clip('https://example.com/song.mp3')] })).toThrow(ProjectError)
+  })
+
   it('bilinmeyen blok ayarı uyarıdır, hata değil', () => {
     const input = minimal()
     Object.assign(input.layers[0].blocks[0], { params: { wobble: 3 } })

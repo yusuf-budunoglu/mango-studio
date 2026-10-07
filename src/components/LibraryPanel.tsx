@@ -61,7 +61,7 @@ const SHAPE_ITEMS: LayerItem[] = (['rounded', 'rect', 'circle', 'cube'] as const
 /** Kamera satırına eklenen hazırlar. */
 const CAMERA_PRESETS: Record<'effects' | 'transitions' | 'camera', string[]> = {
   effects: ['lens-punch', 'flare-sweep', 'light-leak', 'camera-shake'],
-  transitions: ['fade-black', 'fade-white', 'flash'],
+  transitions: ['fade-black', 'fade-to-black', 'fade-white', 'flash'],
   camera: ['camera-push', 'camera-pull', 'camera-orbit', 'camera-pan', 'focus-pull'],
 }
 

@@ -56,5 +56,7 @@ export const LAUNCH_EM: Record<string, [number, number]> = {
   "Aktar": [2.5679, 2.626],
   "Sadece": [3.584, 3.6138],
   "yaz": [1.6958, 1.7202],
+  "Templates": [4.9448, 5.0176],
+  "Şablonlar": [4.4961, 4.564],
   " ": [0.2666, 0],
 }

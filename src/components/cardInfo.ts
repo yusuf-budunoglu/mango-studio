@@ -9,9 +9,13 @@ export interface CardInfo {
   format: string
   ratio: [number, number]
   seconds: number
+  /** tek karelik görsel şablon: süre gösterilmez, döngü videosu yoktur */
+  image: boolean
   posterUrl?: string
   loopUrl?: string
   accent: string
+  /** döngü videosu sesli: önizleme sayfasında ses düğmesi gösterilir */
+  sound?: boolean
 }
 
 export function cardInfo(template: Template | PublishedTemplate): CardInfo {
@@ -24,9 +28,11 @@ export function cardInfo(template: Template | PublishedTemplate): CardInfo {
       format: template.format,
       ratio: [w, h],
       seconds: template.seconds,
+      image: template.mode === 'design',
       posterUrl: `${base}templates/posters/${template.id}.jpg`,
-      loopUrl: `${base}templates/loops/${template.id}.mp4`,
+      loopUrl: template.mode === 'design' ? undefined : `${base}templates/loops/${template.id}.mp4`,
       accent: template.accent,
+      sound: template.sound,
     }
   }
   return {
@@ -35,6 +41,7 @@ export function cardInfo(template: Template | PublishedTemplate): CardInfo {
     format: aspectLabel(template.width, template.height),
     ratio: [template.width, template.height],
     seconds: Math.round(template.duration * 10) / 10,
+    image: template.mode === 'design',
     posterUrl: template.posterUrl,
     loopUrl: template.loopUrl,
     accent: '#FF7A00',

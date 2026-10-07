@@ -43,6 +43,14 @@ describe('geçişler', () => {
     expect(at('fade-white', 1.5).overlayWhite).toBe(1)
   })
 
+  it('siyaha kapanış blok boyunca kararır ve siyah kalır', () => {
+    expect(at('fade-to-black', 0.5).overlayOpacity).toBe(0)
+    expect(at('fade-to-black', 1.5).overlayOpacity).toBeCloseTo(0.5)
+    expect(at('fade-to-black', 2).overlayOpacity).toBeCloseTo(1)
+    expect(at('fade-to-black', 3).overlayOpacity).toBeCloseTo(1)
+    expect(at('fade-to-black', 3).overlayWhite).toBe(0)
+  })
+
   it('flaş hızla açılır, yavaşça söner', () => {
     expect(at('flash', 1.15).overlayOpacity).toBeCloseTo(1)
     expect(at('flash', 1.05).overlayOpacity).toBeGreaterThan(0.2)

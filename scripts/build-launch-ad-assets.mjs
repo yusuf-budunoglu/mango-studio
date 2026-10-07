@@ -44,7 +44,10 @@ function shoot(name, w, h, body, { scale = 2, css = '' } = {}) {
 
 // Marka renkleri (src/styles/brand.md); zemin aydınlık, vurgular mango
 const C = { panel2: '#FAF8F5', line: '#E9E4DB', ink: '#17130F', muted: '#8C857B', orange: '#FF7A00', gold: '#FFB21E', leaf: '#46A83F', red: '#E2361B' }
-const SHADOW = '0 30px 70px rgba(255,122,0,.20), 0 4px 14px rgba(40,25,5,.08)'
+const SHADOW = '0 30px 70px rgba(255,122,0,.26), 0 4px 14px rgba(40,25,5,.10)'
+// Beyaz yüzeyler (panel, arayüz, satır, sayaç zemini) açık zeminde kaybolmasın: belirgin turuncu kenar çizgisi + renkli gölge
+const EDGE = '2.5px solid rgba(255,122,0,.5)'
+const GLOW = '0 46px 120px rgba(255,122,0,.34), 0 8px 26px rgba(60,30,0,.10)'
 const poster = (id) => url(`public/templates/posters/${id}.jpg`)
 const SPARK = (c = '#fff') => `<svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 1.2c1 5.8 5 9.8 10.8 10.8-5.8 1-9.8 5-10.8 10.8C11 17 7 13 1.2 12 7 11 11 7 12 1.2Z" fill="${c}"/></svg>`
 /** logo koyu rozet içinde */
@@ -59,7 +62,7 @@ const WORDS = [
   'Turn', 'ideas', 'into', 'Motion', 'Any', 'style', 'Instantly', 'Just', 'prompt', 'and', 'go', 'Text.', 'Shapes.', 'Devices.', 'One', 'motion', 'studio',
   'Rendered', 'Every', 'format', 'Export', 'in', '4K', 'Prompt.', 'Edit.', 'Mango', 'Studio', 'mangostudio', '.design', '/100', '100',
   'Fikirden', 'videoya', 'Hareket', 'Her', 'tarz', 'Anında', 'Yaz', 've', 'izle', 'Metin.', 'Şekil.', 'Cihaz.', 'Tek', 'hareket', 'stüdyosu',
-  'Hazır', 'biçim', 'dışa', 'aktar', 'Yaz.', 'Düzenle.', 'Aktar', 'Sadece', 'yaz',
+  'Hazır', 'biçim', 'dışa', 'aktar', 'Yaz.', 'Düzenle.', 'Aktar', 'Sadece', 'yaz', 'Templates', 'Şablonlar',
 ]
 
 fs.mkdirSync(OUT, { recursive: true })
@@ -93,40 +96,60 @@ shoot('bar', 2400, 260, `<div style="${pill('background:#fff')}"></div>`, { scal
 // parlaklık (boyanmaz): üstte beyaz yansıma, solda açılan ton, uçta sarı
 shoot('bar-shine', 2400, 260, `<div style="${pill('background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0) 60%),linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0) 22%,rgba(255,255,255,0) 70%,rgba(255,236,170,.6))')}"></div>`, { scale: 1 })
 shoot('bar-glow', 2400, 260, `<div style="position:absolute;left:0;top:150px;width:2300px;height:60px;border-radius:30px;background:#fff;filter:blur(34px);opacity:.75"></div>`, { scale: 1 })
-shoot('bar-track', 2400, 260, `<div style="${pill('background:#fff;box-shadow:0 14px 40px rgba(40,25,5,.10), inset 0 0 0 1.5px #EEE9E1')}"></div>`, { scale: 1 })
+shoot('bar-track', 2400, 260, `<div style="${pill('background:#fff;box-sizing:border-box;border:2.5px solid rgba(255,122,0,.42);box-shadow:0 18px 44px rgba(255,122,0,.30), 0 4px 12px rgba(60,30,0,.10)')}"></div>`, { scale: 1 })
+// çubuğun ucu: 333 px'lik kısa parça (sağ ucu yuvarlak, sol ucu düz). Telefon kadrajdayken uzun çubuk yerine bu çizilir.
+shoot('bar-tip', 340, 260, `<div style="position:absolute;left:0;top:${(260 - BAR_H) / 2}px;width:333px;height:${BAR_H}px;border-radius:0 ${BAR_H / 2}px ${BAR_H / 2}px 0;background:#fff"></div>`, { scale: 4 })
 shoot('dot', 200, 200, `<div style="position:absolute;left:${(200 - BAR_H) / 2}px;top:${(200 - BAR_H) / 2}px;width:${BAR_H}px;height:${BAR_H}px;border-radius:50%;background:#fff"></div>`, { scale: 2 })
-// sıvı geçiş: solda kadrajı kaplayan dolgu, sağa doğru çubuk kalınlığına iner; kenarları yumuşak
-const y0 = 800 - BAR_H / 2
-const y1 = 800 + BAR_H / 2
-shoot('funnel', 2600, 1600, `<svg width="2600" height="1600" viewBox="0 0 2600 1600"><defs><filter id="b" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="16"/></filter></defs>
-  <path filter="url(#b)" d="M-60 -60 C700 60 850 ${y0} 1500 ${y0} L2480 ${y0} A${BAR_H / 2} ${BAR_H / 2} 0 0 1 2480 ${y1} L1500 ${y1} C850 ${y1} 700 1540 -60 1660 Z" fill="#fff"/></svg>`, { scale: 1 })
-// onay halkası (soluk dolgu + çizgi) ve işaret
-shoot('ring', 240, 240, `<div style="position:absolute;inset:14px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.16);box-sizing:border-box;box-shadow:0 18px 50px rgba(255,255,255,.35)"></div>`, { scale: 4 })
-shoot('tick', 240, 240, `<svg width="240" height="240" viewBox="0 0 240 240"><path d="M80 124 l28 28 54 -62" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`, { scale: 4 })
+// sıvı geçiş: telefonun üst kenarından, o kenarla AYNI boyda çıkan yelpaze. Sol kenar 352 px (sahnede 2.7 kat: ~950 px,
+// yatay duran telefonun üst kenarı kadar), köşeleri telefon gibi yuvarlak; sağ uç çubuk kalınlığında (BAR_H).
+// Görsel 560×480, yelpaze (60, 64)'ten başlar ve 440 px geniştir; kenarları yumuşak.
+const fy0 = 240 - BAR_H / 2
+const fy1 = 240 + BAR_H / 2
+shoot('funnel', 560, 480, `<svg width="560" height="480" viewBox="0 0 560 480"><defs><filter id="b" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter></defs>
+  <path filter="url(#b)" d="M60 112 Q60 64 108 64 C250 70 300 ${fy0} 470 ${fy0} L500 ${fy0} L500 ${fy1} L470 ${fy1} C300 ${fy1} 250 410 108 416 Q60 416 60 368 Z" fill="#fff"/></svg>`, { scale: 5 })
+// onay halkası (soluk dolgu + çizgi) ve işaret: halka 212 px, tuval 400 px (ışıma kenarda kesilmesin)
+shoot('ring', 400, 400, `<div style="position:absolute;left:94px;top:94px;width:212px;height:212px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.16);box-sizing:border-box;box-shadow:0 14px 44px rgba(255,255,255,.3)"></div>`, { scale: 3 })
+shoot('tick', 400, 400, `<svg width="400" height="400" viewBox="0 0 400 400"><path d="M160 204 l28 28 54 -62" stroke="#fff" stroke-width="11" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`, { scale: 3 })
 // düğme gövdesi (yazı ayrı metin katmanı), gölgesi, tıklama halkası (çizgi) ve yumuşak dalga (dolgu)
 shoot('button', 760, 260, `<div style="position:absolute;left:40px;top:40px;width:680px;height:180px;border-radius:44px;background:#fff"></div>`, { scale: 3 })
 shoot('button-shadow', 760, 260, `<div style="position:absolute;left:70px;top:90px;width:620px;height:130px;border-radius:44px;background:#fff;filter:blur(30px);opacity:.6"></div>`, { scale: 1 })
 shoot('pulse', 700, 460, `<div style="position:absolute;inset:24px;border-radius:44px;border:4px solid rgba(255,255,255,.95);box-shadow:0 0 34px rgba(255,255,255,.5);box-sizing:border-box"></div>`, { scale: 2 })
 shoot('pulse-soft', 900, 620, `<div style="position:absolute;inset:110px;border-radius:60px;background:#fff;filter:blur(38px);opacity:.75"></div>`, { scale: 1 })
-// yıldızın arkasında bıraktığı iz (kavisli, başı sönük)
-shoot('trail', 600, 400, `<svg width="600" height="400" viewBox="0 0 600 400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="7"/></filter></defs>
-  <path filter="url(#b)" d="M40 60 C150 120 260 260 330 330 C400 290 470 200 560 150" stroke="url(#g)" stroke-width="26" fill="none" stroke-linecap="round"/></svg>`, { scale: 1 })
+// yıldızın izi: V biçimi (sol üstten iner, seker, sağa yükselir); başı sönük
+shoot('trail', 600, 460, `<svg width="600" height="460" viewBox="0 0 600 460"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity=".2"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="8"/></filter></defs>
+  <path filter="url(#b)" d="M40 40 C140 90 250 250 330 400 C380 320 450 250 560 220" stroke="url(#g)" stroke-width="30" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`, { scale: 1 })
+// bırakma dalgası: beyaz yumuşak köşeli levha, çevresinde turuncuya çalan gölge (boyanmaz)
+shoot('ripple', 900, 700, `<div style="position:absolute;left:170px;top:150px;width:560px;height:400px;border-radius:56px;background:#fff;box-shadow:0 30px 80px rgba(255,122,0,.40), 0 0 0 2.5px rgba(255,122,0,.42)"></div>`, { scale: 1 })
+// konfeti: düzensiz dörtgen, net ve bulanık (yakın parçalar) hali; ikisi de boyanır
+const QUAD = '<svg width="200" height="200" viewBox="0 0 200 200"><path d="M46 38 L162 54 L140 150 L34 132 Z" fill="#fff"/></svg>'
+shoot('confetti', 200, 200, QUAD, { scale: 2 })
+shoot('confetti-blur', 200, 200, `<div style="filter:blur(9px)">${QUAD}</div>`, { scale: 2 })
+// kart şeridinin kenar solması (zemin renginde boyanır) ve halkadan karta dönüşen boş kart
+shoot('edge-fade', 400, 800, `<div style="width:400px;height:800px;background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.85) 30%,rgba(255,255,255,0) 100%)"></div>`, { scale: 1 })
+shoot('blank-card', 500, 500, `<div style="position:absolute;left:100px;top:90px;width:300px;height:300px;border-radius:70px;background:#fff;border:2.5px solid rgba(255,122,0,.55);box-sizing:border-box;box-shadow:0 26px 60px rgba(255,122,0,.22)"></div>`, { scale: 2 })
 
-// --- proje karosu (turuncu degrade cam, oynat üçgeni + yıldız): karo 340 px, görsel 400×440 (alt gölge payı)
-shoot('tile', 400, 440, `<div style="position:absolute;left:30px;top:20px;width:340px;height:340px;border-radius:76px;background:linear-gradient(145deg,${C.gold} 0%,${C.orange} 52%,${C.red} 125%);box-shadow:0 46px 70px rgba(255,122,0,.42), inset 0 3px 0 rgba(255,255,255,.5), inset 0 -10px 30px rgba(180,40,0,.25)">
-    <div style="position:absolute;left:0;right:0;top:0;height:150px;border-radius:76px 76px 120px 120px;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0))"></div>
-    <svg style="position:absolute;left:112px;top:96px" width="140" height="150" viewBox="0 0 100 108"><path d="M14 8 L88 54 L14 100 Z" fill="#fff" stroke="#fff" stroke-width="14" stroke-linejoin="round"/></svg>
-    <div style="position:absolute;right:38px;top:34px;width:60px;height:60px">${SPARK('#fff')}</div>
-  </div>`, { scale: 3 })
-
-// --- bırakma paneli: beyaz cam, altta zaman çizelgesi şeritleri
-shoot('panel', 1700, 1000, `<div style="position:absolute;inset:60px;border-radius:46px;background:linear-gradient(180deg,#FFFFFF,#FCFBF9);border:2px solid #F1ECE4;border-bottom:3px solid rgba(255,122,0,.55);box-shadow:0 50px 110px rgba(255,122,0,.16)">
-    <div style="position:absolute;left:50px;right:50px;top:50px;bottom:250px;border-radius:30px;border:2.5px dashed #E6DFD4"></div>
+// --- 3D klasör: dört parça aynı tuvalde (520×600, gövde 340×290, merkezi (260, 300)); sahnede farklı derinlikte dizilir
+const FOLD = (inner) => `<div style="position:absolute;left:90px;top:155px;width:340px;height:290px">${inner}</div>`
+shoot('folder-shadow', 520, 600, FOLD(`<div style="position:absolute;left:20px;right:20px;top:120px;bottom:-40px;border-radius:60px;background:rgba(255,122,0,.5);filter:blur(44px)"></div>`), { scale: 2 })
+shoot('folder-back', 520, 600, FOLD(`<div style="position:absolute;inset:0;border-radius:40px;background:linear-gradient(160deg,#FF8A1F,#E55300)"></div>
+  <div style="position:absolute;left:0;top:-34px;width:170px;height:80px;border-radius:30px 34px 0 0;background:#F56A00"></div>`), { scale: 3 })
+shoot('folder-papers', 520, 600, FOLD(`<div style="position:absolute;left:150px;top:-52px;width:160px;height:210px;border-radius:16px;background:#2A1A0E;transform:rotate(7deg);box-shadow:0 6px 16px rgba(60,20,0,.25)"><div style="position:absolute;inset:14px;border-radius:10px;background:linear-gradient(135deg,${C.red},${C.orange} 55%,${C.gold})"></div></div>
+  <div style="position:absolute;left:44px;top:-44px;width:176px;height:220px;border-radius:16px;background:#fff;transform:rotate(-5deg);box-shadow:0 6px 16px rgba(60,20,0,.22)">
+    <svg style="position:absolute;left:62px;top:40px" width="52" height="56" viewBox="0 0 100 108"><path d="M14 8 L88 54 L14 100 Z" fill="${C.orange}" stroke="${C.orange}" stroke-width="14" stroke-linejoin="round"/></svg>
+    <div style="position:absolute;left:28px;right:28px;top:116px;height:12px;border-radius:6px;background:#EADFD0"></div><div style="position:absolute;left:28px;width:80px;top:140px;height:12px;border-radius:6px;background:#EADFD0"></div></div>`), { scale: 3 })
+shoot('folder-front', 520, 600, FOLD(`<div style="position:absolute;left:0;right:0;top:78px;bottom:0;border-radius:26px 40px 40px 40px;background:linear-gradient(180deg,rgba(255,196,120,.86),rgba(255,138,24,.94) 55%,rgba(244,98,0,.97));box-shadow:inset 0 3px 0 rgba(255,255,255,.6), inset 0 -12px 30px rgba(190,60,0,.22)"></div>
+  <div style="position:absolute;left:0;top:78px;right:0;height:90px;border-radius:26px 40px 60px 60px;background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,0))"></div>
+  <div style="position:absolute;left:34px;bottom:58px;width:120px;height:16px;border-radius:8px;background:rgba(255,255,255,.95)"></div>
+  <div style="position:absolute;left:34px;bottom:34px;width:76px;height:10px;border-radius:5px;background:rgba(255,255,255,.6)"></div>
+  <div style="position:absolute;right:30px;bottom:34px;width:34px;height:34px">${SPARK('#fff')}</div>`), { scale: 3 })
+// --- bırakma paneli: beyaz cam, altta zaman çizelgesi şeritleri (panel 1580×880, görselde 160 px içeride)
+shoot('panel', 1900, 1200, `<div style="position:absolute;inset:160px;border-radius:46px;background:#fff;border:${EDGE};border-bottom:4px solid rgba(255,122,0,.7);box-shadow:${GLOW}">
+    <div style="position:absolute;left:50px;right:50px;top:50px;bottom:250px;border-radius:30px;border:2.5px dashed #D9CFC0;background:#FBF8F3"></div>
     ${[0, 1, 2].map((i) => `<div style="position:absolute;left:${50 + i * 110}px;bottom:${178 - i * 58}px;width:${[620, 460, 760][i]}px;height:38px;border-radius:14px;background:${[C.orange, C.gold, C.leaf][i]}"></div>`).join('')}
     <div style="position:absolute;left:50px;right:50px;bottom:240px;height:1.5px;background:#EFE9E0"></div>
   </div>`)
 
-// --- şablon kartları: kendi kapaklarımız, beyaz kart + turuncu kenar ve ışık (kart 500×400, görselde (50, 40)'ta)
+// --- şablon kartları: kendi kapaklarımız, beyaz kart + turuncu kenar ve ışık (kart 500×400, görsel 720×620, kart (110, 90)'da)
 const CARDS = [
   { id: 'fintech', title: 'Fintech promo', meta: '16:9 · 19.3 s' },
   { id: 'words-motion', title: 'Words to motion', meta: '16:9 · 11.3 s' },
@@ -143,7 +166,7 @@ const cardHtml = (c, border = `1.5px solid ${C.line}`) => `<div style="position:
     </div>
     <div style="padding:6px 20px;font:400 17px Inter;color:${C.muted}">${c.meta} · 60 fps</div>
   </div>`
-for (const c of CARDS) shoot(`card-${c.id}`, 600, 500, `<div style="position:absolute;left:50px;top:40px;box-shadow:${SHADOW};border-radius:26px">${cardHtml(c, '2.5px solid rgba(255,122,0,.6)')}</div>`, { scale: 3 })
+for (const c of CARDS) shoot(`card-${c.id}`, 720, 620, `<div style="position:absolute;left:110px;top:90px;box-shadow:${SHADOW};border-radius:26px">${cardHtml(c, '2.5px solid rgba(255,122,0,.6)')}</div>`, { scale: 3 })
 
 for (const [lang, t] of Object.entries(COPY)) {
   const side = `<div style="position:absolute;left:0;top:0;bottom:0;width:250px;border-right:1px solid ${C.line};padding:28px 22px;box-sizing:border-box;background:${C.panel2}">
@@ -156,22 +179,25 @@ for (const [lang, t] of Object.entries(COPY)) {
       <div style="width:260px;height:44px;border-radius:14px;background:${C.panel2};border:1px solid ${C.line};font:400 17px/44px Inter;color:${C.muted};padding-left:18px;box-sizing:border-box">${t.search}</div>
       <div style="height:44px;padding:0 20px;border-radius:14px;background:${C.ink};font:600 17px/44px Inter;color:#fff">+ ${t.new}</div>
     </div>`
-  // çerçeve görselde 60 px içeride: arayüz 1600×1000
-  const frame = (inner) => `<div style="position:absolute;inset:60px;border-radius:30px;background:#fff;border:1.5px solid ${C.line};border-left:3px solid rgba(255,122,0,.6);overflow:hidden;box-shadow:0 50px 120px rgba(255,122,0,.18), 0 6px 20px rgba(40,25,5,.06)">${inner}</div>`
+  // çerçeve görselde 140 px içeride: arayüz 1600×1000, görsel 1880×1280
+  const frame = (inner) => `<div style="position:absolute;inset:140px;border-radius:30px;background:#fff;border:${EDGE};border-left:4px solid rgba(255,122,0,.75);overflow:hidden;box-shadow:${GLOW}">${inner}</div>`
   // Studio: kart ızgarası (3 × 2). Kart konumları şablonda da kullanılıyor (launchAd.ts PICK).
-  shoot(`studio-${lang}`, 1720, 1120, frame(`${side}${top(1)}
-    ${CARDS.map((c, i) => `<div style="position:absolute;left:${290 + (i % 3) * 430}px;top:${110 + Math.floor(i / 3) * 440}px;transform:scale(.8);transform-origin:0 0">${cardHtml(c)}</div>`).join('')}`))
+  const studio = frame(`${side}${top(1)}
+    ${CARDS.map((c, i) => `<div style="position:absolute;left:${290 + (i % 3) * 430}px;top:${110 + Math.floor(i / 3) * 440}px;transform:scale(.8);transform-origin:0 0">${cardHtml(c)}</div>`).join('')}`)
+  shoot(`studio-${lang}`, 1880, 1280, studio)
+  // kart seçilince arkada kalan arayüz bulanıklaşır: aynı görselin bulanık hali üste solarak gelir
+  shoot(`studio-blur-${lang}`, 1880, 1280, `<div style="position:absolute;inset:0;filter:blur(16px)">${studio}</div>`, { scale: 1 })
   // Studio: liste görünümü
   const rows = [['Launch video', t.today], ['Fintech promo', t.today], ['Words to motion', t.yesterday], ['Fold promo', t.yesterday], ['Crystal', '2 Oct'], ['Wallet promo', '28 Sep']]
   if (lang === 'tr') { rows[0][0] = t.rowTitle; rows[4][1] = '2 Eki'; rows[5][1] = '28 Eyl' }
   const ids = ['mango-ai-ad', 'fintech', 'words-motion', 'fold-promo', 'crystal', 'wallet-promo']
-  shoot(`list-${lang}`, 1720, 1120, frame(`${side}${top(0)}
+  shoot(`list-${lang}`, 1880, 1280, frame(`${side}${top(0)}
     <div style="position:absolute;left:290px;right:40px;top:104px;height:40px;display:flex;font:500 16px/40px Inter;color:${C.muted};border-bottom:1px solid ${C.line}"><div style="width:700px;padding-left:120px;box-sizing:border-box">${t.name}</div><div style="width:260px">${t.format}</div><div>${t.edited}</div></div>
     ${rows.map(([name, when], i) => `<div style="position:absolute;left:290px;right:40px;top:${152 + i * 128}px;height:116px;border-radius:18px;background:${i === 0 ? '#FFF6EC' : 'transparent'};border:1px solid ${i === 0 ? '#FFD9B0' : 'transparent'};display:flex;align-items:center;font:500 21px Inter;color:${C.ink}">
         <div style="width:96px;height:66px;margin:0 22px 0 14px;border-radius:12px;background:#111 url(${poster(ids[i])}) center/cover no-repeat;flex:none"></div>
         <div style="width:566px">${name}</div><div style="width:260px;color:${C.muted};font-weight:400">${i < 4 ? '16:9' : '9:16'} · 60 fps</div><div style="color:${C.muted};font-weight:400">${when}</div></div>`).join('')}`))
-  // yakın plandaki satır (düğme ayrı katman): satır 2600×320, görselde 100 px içeride
-  shoot(`row-${lang}`, 2800, 520, `<div style="position:absolute;left:100px;top:100px;width:2600px;height:320px;border-radius:56px;background:#fff;box-shadow:0 60px 110px rgba(255,122,0,.16), 0 6px 20px rgba(40,25,5,.05);display:flex;align-items:center">
+  // yakın plandaki satır (düğme ayrı katman): satır 2600×320, görsel 3000×720, 200 px içeride
+  shoot(`row-${lang}`, 3000, 720, `<div style="position:absolute;left:200px;top:200px;width:2600px;height:320px;border-radius:56px;background:#fff;box-sizing:border-box;border:3px solid rgba(255,122,0,.45);box-shadow:0 60px 120px rgba(255,122,0,.30), 0 8px 24px rgba(60,30,0,.08);display:flex;align-items:center">
       <div style="width:44px;height:44px;margin-left:56px;border-radius:12px;border:3px solid #DDD6CA;box-sizing:border-box;flex:none"></div>
       <div style="width:300px;height:200px;margin:0 50px 0 46px;border-radius:26px;background:#111 url(${poster('mango-ai-ad')}) center/cover no-repeat;flex:none"></div>
       <div><div style="font:600 70px Inter;color:${C.ink};letter-spacing:-.01em">${t.rowTitle}</div><div style="margin-top:14px;font:400 44px Inter;color:${C.muted}">${t.rowMeta}</div></div>

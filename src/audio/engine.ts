@@ -13,13 +13,16 @@ function context(): AudioContext {
 
 const buffers = new Map<string, Promise<AudioBuffer | null>>()
 
-/** `asset:<id>` referanslı ses dosyasını bir kez çözer. AudioBuffer her bağlamda kullanılabilir. */
+/**
+ * Ses dosyasını bir kez çözer. AudioBuffer her bağlamda kullanılabilir. Kaynak dosya deposundaki bir dosya
+ * (`asset:<id>`) ya da bir adrestir: hazır şablonların ses efektleri sitenin kendi dosyalarıdır (`/templates/...`),
+ * görseller ve cihaz videoları gibi adresle gelir.
+ */
 export function loadAudioBuffer(ref: string): Promise<AudioBuffer | null> {
   let buffer = buffers.get(ref)
   if (!buffer) {
     buffer = (async () => {
-      if (!isAssetRef(ref)) return null
-      const blob = await assets.getBlob(assetIdOf(ref))
+      const blob = isAssetRef(ref) ? await assets.getBlob(assetIdOf(ref)) : await fetch(ref).then((res) => (res.ok ? res.blob() : undefined), () => undefined)
       if (!blob) return null
       return context().decodeAudioData(await blob.arrayBuffer())
     })().catch(() => null)

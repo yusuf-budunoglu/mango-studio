@@ -9,6 +9,8 @@ import { buildWordsMotion } from './wordsMotion'
 import { buildMangoAiAd } from './mangoAiAd'
 import { buildCrystal } from './crystal'
 import { buildLaunchAd } from './launchAd'
+import { buildIconCloseup, buildIconCloseupImage } from './iconCloseup'
+import { buildFoldRock } from './foldRock'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -107,13 +109,17 @@ export function fitClip(layer: Layer, total: number): Layer {
 export interface Template {
   id: string
   /** kart önizlemesinin oranı (proje boyutuyla aynı; test kontrol eder) */
-  format: '16:9' | '9:16'
-  /** kartta gösterilen süre (sn, bir ondalık; test kontrol eder) */
+  format: '16:9' | '9:16' | '1:1' | '2:3'
+  /** kartta gösterilen süre (sn, bir ondalık; test kontrol eder). Görsel şablonda `DESIGN_DURATION`, kartta gösterilmez. */
   seconds: number
+  /** 'design': tek karelik görsel şablon (PNG/JPG çıktısı); kartta süre yerine "Görsel" yazar, döngü videosu yoktur */
+  mode?: 'design'
   /** kütüphane kartında gösterilecek renk */
   accent: string
   /** önizleme sayfasındaki kategori/stil etiketleri (`templateTags.<id>`) */
   tags: string[]
+  /** döngü videosunda ses var (ses efektli şablon): önizleme sayfasında ses düğmesi çıkar */
+  sound?: boolean
   build: () => Project
 }
 
@@ -472,7 +478,34 @@ export const TEMPLATES: Template[] = [
     seconds: 33,
     accent: '#FF7A00',
     tags: ['saas', 'ad', 'light', 'ui', 'typography', '3d-device'],
+    sound: true,
     build: () => buildLaunchAd({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'icon-closeup',
+    format: '1:1',
+    seconds: 8,
+    accent: '#FF7A00',
+    tags: ['app-promo', 'dark', 'cinematic', 'square', '3d-device'],
+    build: () => buildIconCloseup({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'icon-closeup-image',
+    format: '1:1',
+    seconds: DESIGN_DURATION,
+    mode: 'design',
+    accent: '#FF7A00',
+    tags: ['image', 'app-promo', 'dark', 'square', '3d-device'],
+    build: () => buildIconCloseupImage({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'fold-rock',
+    format: '2:3',
+    seconds: DESIGN_DURATION,
+    mode: 'design',
+    accent: '#FF7A00',
+    tags: ['image', 'app-promo', 'dark', 'cinematic', 'vertical', 'foldable', '3d-device'],
+    build: () => buildFoldRock({ t, b, layer, camera, project }),
   },
 ]
 

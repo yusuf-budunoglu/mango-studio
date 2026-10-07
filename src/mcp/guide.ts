@@ -39,6 +39,7 @@ export const PRESET_NOTES: Record<string, string> = {
   'camera-orbit': 'camera orbits its target to `angle` degrees (absolute per block)',
   'focus-pull': 'depth of field: focus plane moves from z=`from` to z=`to`; `blur` multiplies blur from this block on (0 = everything sharp). Needs effects.dof.enabled',
   'fade-black': 'transition: screen dips to black at the middle of the block',
+  'fade-to-black': 'ending: screen fades to black over the block and stays black (put it at the end of the video)',
   'fade-white': 'transition: screen dips to white at the middle of the block',
   flash: 'short white flash that decays',
   'camera-shake': 'handheld shake: `amount` units, `speed`',

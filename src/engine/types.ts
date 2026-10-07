@@ -102,7 +102,7 @@ export interface CameraTrack {
 export interface AudioClip {
   id: string
   name: string
-  /** dosya deposu referansı: `asset:<id>` */
+  /** dosya deposu referansı (`asset:<id>`) ya da adres (hazır şablonların kendi ses dosyaları: `/templates/...`) */
   asset: string
   /** videodaki başlangıç (sn) */
   start: number

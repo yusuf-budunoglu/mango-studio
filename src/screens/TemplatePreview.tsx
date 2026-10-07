@@ -1,4 +1,4 @@
-import { ChevronRight, Pause, Play } from 'lucide-react'
+import { ChevronRight, Pause, Play, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../components/Dialog'
@@ -38,7 +38,8 @@ function builtInModel(template: Template, t: (key: string) => string): PreviewMo
     about: templateAbout(template.id),
     width: project.width,
     height: project.height,
-    fps: project.fps,
+    // tek karelik görselde kare hızı yok
+    fps: project.mode === 'design' ? undefined : project.fps,
     fillIn: { screens, texts },
     tags: template.tags.map((tag) => t(`templateTags.${tag}`)),
     published: false,
@@ -76,6 +77,8 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
   const isAdmin = useProfileStore((s) => s.isAdmin)
   const video = useRef<HTMLVideoElement>(null)
   const [paused, setPaused] = useState(false)
+  // Video sessiz başlar (tarayıcılar sesli otomatik oynatmaya izin vermez); ses düğmesiyle açılır.
+  const [muted, setMuted] = useState(true)
   const [creating, setCreating] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -124,6 +127,19 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
     if (!v) return
     if (v.paused) void v.play().catch(() => undefined)
     else v.pause()
+  }
+  // React `muted` özelliğini sonradan güncellemiyor: öğenin kendisine yazılır. Ses açılınca video baştan oynar
+  // (efektler görüntüyle eşli; ortasından açmak yerine başından dinlensin).
+  const toggleSound = () => {
+    const v = video.current
+    if (!v) return
+    const next = !v.muted
+    v.muted = next
+    setMuted(next)
+    if (!next) {
+      v.currentTime = 0
+      void v.play().catch(() => undefined)
+    }
   }
 
   const use = async () => {
@@ -196,6 +212,11 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
                 <button type="button" className="tp-play" onClick={togglePlay} aria-label={t(paused ? 'templatePreview.play' : 'templatePreview.pause')}>
                   {paused ? <Play size={14} strokeWidth={2} /> : <Pause size={14} strokeWidth={2} />}
                 </button>
+                {card.sound && (
+                  <button type="button" className="tp-play tp-sound" onClick={toggleSound} aria-pressed={!muted} aria-label={t(muted ? 'templatePreview.soundOn' : 'templatePreview.soundOff')}>
+                    {muted ? <VolumeX size={14} strokeWidth={2} /> : <Volume2 size={14} strokeWidth={2} />}
+                  </button>
+                )}
               </>
             ) : card.posterUrl ? (
               <img src={card.posterUrl} alt="" />
@@ -236,8 +257,8 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
                   <dd>{card.format}</dd>
                 </div>
                 <div>
-                  <dt>{t('templatePreview.duration')}</dt>
-                  <dd>{t('templatesPage.seconds', { value: seconds })}</dd>
+                  <dt>{t(card.image ? 'templatePreview.type' : 'templatePreview.duration')}</dt>
+                  <dd>{card.image ? t('templatesPage.image') : t('templatesPage.seconds', { value: seconds })}</dd>
                 </div>
                 <div>
                   <dt>{t('templatePreview.resolution')}</dt>

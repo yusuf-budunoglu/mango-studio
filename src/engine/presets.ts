@@ -304,6 +304,16 @@ export const PRESETS: Record<string, Preset> = {
       s.overlayWhite = 0
     },
   },
+  'fade-to-black': {
+    // Kapanış: ekran blok boyunca kararır ve siyah kalır (videonun sonuna koyulur; fade-black ortasında kararıp
+    // geri açıldığı için tam karanlık videonun dışında kalıyordu).
+    target: 'camera', category: 'transition', defaultEasing: 'ease-in', defaultDuration: 0.6,
+    apply: (s, e) => {
+      if (e <= s.overlayOpacity) return
+      s.overlayOpacity = Math.min(1, e)
+      s.overlayWhite = 0
+    },
+  },
   'fade-white': {
     target: 'camera', category: 'transition', defaultEasing: 'ease-in-out', defaultDuration: 0.8,
     apply: (s, e) => {

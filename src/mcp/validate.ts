@@ -171,7 +171,8 @@ export function normalizeProject(input: unknown, id?: string): { project: Projec
     else
       audio.forEach((clip, i) => {
         const a = isObject(clip) ? clip : {}
-        if (typeof a.asset !== 'string' || !a.asset.startsWith('asset:')) problems.push(`audio[${i}].asset must be "asset:<id>" from create_upload`)
+        // hazır şablondan gelen projelerde ses sitenin kendi dosyasıdır (/templates/...): get_project → save_project bozulmasın
+        if (typeof a.asset !== 'string' || !(a.asset.startsWith('asset:') || a.asset.startsWith('/templates/'))) problems.push(`audio[${i}].asset must be "asset:<id>" from create_upload`)
         for (const key of ['start', 'offset', 'duration', 'sourceDuration', 'volume', 'fadeIn', 'fadeOut']) if (!isNum(a[key])) problems.push(`audio[${i}].${key} must be a number`)
         if (typeof a.id !== 'string' || !a.id) a.id = newId('a')
         if (typeof a.name !== 'string' || !a.name) a.name = `Audio ${i + 1}`

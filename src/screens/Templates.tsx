@@ -12,7 +12,11 @@ const FILTERS: Filter[] = ['all', 'landscape', 'vertical', 'favorites']
 type AnyTemplate = Template | PublishedTemplate
 
 const isBuiltIn = (tpl: AnyTemplate): tpl is Template => 'build' in tpl
-const orientation = (tpl: AnyTemplate) => (isBuiltIn(tpl) ? (tpl.format === '9:16' ? 'vertical' : 'landscape') : tpl.height > tpl.width ? 'vertical' : 'landscape')
+// oran metinden okunur ("2:3" gibi yeni oranlar da doğru süzgece düşsün); kare yatay sayılır
+const orientation = (tpl: AnyTemplate) => {
+  const [w, h] = isBuiltIn(tpl) ? tpl.format.split(':').map(Number) : [tpl.width, tpl.height]
+  return h > w ? 'vertical' : 'landscape'
+}
 const searchText = (tpl: AnyTemplate) =>
   isBuiltIn(tpl) ? `${templateName(tpl.id)} ${templateDescription(tpl.id)}` : `${tpl.name} ${tpl.description} ${tpl.tags.join(' ')}`
 

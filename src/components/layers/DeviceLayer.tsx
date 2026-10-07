@@ -327,8 +327,9 @@ function usePlaceholderScreen(color: string, aspect: number) {
 /** Katlanır telefonun açıklığını (derece) iki yarının menteşe dönüşüne çevirir; her karede motordan çağrılır. */
 type FoldSetter = (angle: number) => void
 
-/** Katlanma geçişinde bulanıklık örnekleri arasındaki en büyük aralık (ekran yüksekliğine oranla); 5×5 örnek alınır */
+/** Katlanma geçişinde bulanıklığın en büyük yarıçapının yarısı (ekran yüksekliğine oranla) ve örnek sayısı */
 const FOLD_BLUR_STEP = 0.03
+const FOLD_BLUR_TAPS = 40
 /** bulanıklık ve kararma cephesinin yumuşak kenarı (cephenin geçtiği yolun oranı olarak) */
 const FOLD_FRONT_SOFT = 0.45
 /** iç ekranda netleşen cephenin kenarı: daha geniş, bulanıklık yavaş çekilsin */
@@ -342,7 +343,7 @@ const FOLD_FRONT_WIDE = 0.9
  *   doğru ilerler; arkasından kararma gelir. Yarı açıkken tamamen bulanık ve koyu, tam açıkken kapalıdır.
  * - İç ekran: sağ yarı hep nettir. Sol yarı (dış ekranın arkasındaki) yarı açıkken tamamen bulanık ve koyudur; açı
  *   büyüdükçe netlik menteşeden sol kenara doğru ilerler, önce kararma sonra bulanıklık çekilir; tam açıkken ekran nettir.
- * Bulanıklık dokunun küçük katmanlarından (mipmap) 5×5 örnekle okunur; açıklık her karede `uOpen`'a yazılır.
+ * Bulanıklık dokunun küçük katmanlarından (mipmap) sarmal dizilimli örneklerle okunur; açıklık her karede `uOpen`'a yazılır.
  */
 function addFoldTransition(material: MeshBasicMaterial, side: 'inner' | 'cover') {
   const uniforms = { uOpen: { value: 1 }, uAmount: { value: 1 }, uBlurStep: { value: new Vector2(FOLD_BLUR_STEP, FOLD_BLUR_STEP) }, uBlurLod: { value: 5 } }
@@ -379,18 +380,20 @@ function addFoldTransition(material: MeshBasicMaterial, side: 'inner' | 'cover')
         #ifdef USE_MAP
         vec3 foldBlur(vec2 uv, float k) {
           if (k < 0.002) return texture2D(map, uv).rgb;
-          // örnek aralığı kadar küçültülmüş katmandan okunur: örnekler arasında boşluk kalmaz
-          float lod = max(0.0, uBlurLod + log2(k));
-          vec2 stride = uBlurStep * k;
+          // Örnekler sarmal üzerinde (altın açı), Gauss ağırlıklı; örnek aralığına denk küçültülmüş katmandan okunur, arada
+          // boşluk kalmaz. Izgara dizilimli 5×5 örnek, eğik duran ekranda iri harflerde dikey çizgilenme yapıyordu.
+          float lod = max(0.0, uBlurLod + log2(k) - 1.0);
+          vec2 reach = uBlurStep * k * 2.0;
           vec3 sum = vec3(0.0);
-          for (int y = -2; y <= 2; y++) {
-            for (int x = -2; x <= 2; x++) {
-              float wx = x == 0 ? 6.0 : (abs(x) == 1 ? 4.0 : 1.0);
-              float wy = y == 0 ? 6.0 : (abs(y) == 1 ? 4.0 : 1.0);
-              sum += textureLod(map, uv + vec2(float(x), float(y)) * stride, lod).rgb * wx * wy;
-            }
+          float total = 0.0;
+          for (int i = 0; i < ${FOLD_BLUR_TAPS}; i++) {
+            float r = sqrt((float(i) + 0.5) / ${FOLD_BLUR_TAPS}.0);
+            float a = float(i) * 2.39996323;
+            float w = exp(-2.2 * r * r);
+            sum += textureLod(map, uv + vec2(cos(a), sin(a)) * r * reach, lod).rgb * w;
+            total += w;
           }
-          return sum / 256.0;
+          return sum / total;
         }
         #endif`,
       )

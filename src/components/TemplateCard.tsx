@@ -41,7 +41,7 @@ export function TemplateCard({ template }: { template: Template | PublishedTempl
         <div className="tcard-text">
           <span className="tcard-title">{card.name}</span>
           <span className="tcard-meta">
-            {t('templatesPage.free')} · {card.format} · {t('templatesPage.seconds', { value: seconds })}
+            {t('templatesPage.free')} · {card.format} · {card.image ? t('templatesPage.image') : t('templatesPage.seconds', { value: seconds })}
           </span>
         </div>
         <button

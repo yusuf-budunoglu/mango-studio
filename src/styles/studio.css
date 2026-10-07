@@ -199,11 +199,13 @@ button.danger-solid { background: var(--danger); border-color: transparent; colo
 .tp-stage { display: grid; place-items: center; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: radial-gradient(ellipse at 50% 0%, var(--panel-2), var(--panel) 70%); }
 /* Yükseklik ekranın %72'sini geçmesin: genişlik oranla sınırlanır (dikey şablonlar daralır). */
 .tp-media { position: relative; width: min(100%, calc(72vh * var(--tp-ratio, 1.7778))); border-radius: 10px; overflow: hidden; background: #000; }
-.tp-media video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tp-media video, .tp-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .tp-play {
   position: absolute; right: 12px; bottom: 12px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
   border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent); border-radius: 99px; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(6px); color: #fff;
 }
+/* ses düğmesi: oynat/durdur düğmesinin solunda, aynı görünüm */
+.tp-sound { right: 50px; }
 .tp-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
 .tp-about h2, .tp-card h2, .tp-more h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
 .tp-about p { margin: 0; max-width: 62ch; color: var(--ink-2); font-size: 13.5px; line-height: 1.6; }
