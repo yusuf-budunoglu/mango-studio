@@ -91,6 +91,7 @@ function normalizeLayer(item: unknown, index: number, total: number, problems: s
   for (const key of ['position', 'rotation'] as const) if (l[key] !== undefined && !isVec3(l[key])) problems.push(`${label}.${key} must be [x, y, z] numbers`)
   for (const key of ['scale', 'opacity', 'fontSize', 'textWidth', 'letterSpacing', 'lineHeight', 'shapeWidth', 'shapeHeight', 'extrude', 'lidAngle', 'foldAngle', 'mediaOffset'] as const)
     if (l[key] !== undefined && !isNum(l[key])) problems.push(`${label}.${key} must be a number`)
+  if (l.foldBlur !== undefined && typeof l.foldBlur !== 'boolean') problems.push(`${label}.foldBlur must be true or false`)
   if (l.color !== undefined && !isColor(l.color)) problems.push(`${label}.color must be a hex color like "#ff7a00"`)
   if (l.fontWeight !== undefined && l.fontWeight !== 400 && l.fontWeight !== 700) problems.push(`${label}.fontWeight must be 400 or 700`)
   if (l.align !== undefined && !['left', 'center', 'right'].includes(l.align as string)) problems.push(`${label}.align must be left, center or right`)

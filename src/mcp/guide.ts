@@ -26,7 +26,7 @@ export const PRESET_NOTES: Record<string, string> = {
   'light-sweep': 'image layer only: the image is visible only where `count` lights travel around a rounded-box outline (neon border); `turns` laps over the block',
   typewriter: 'text appears letter by letter; `trail` colours the last N letters with `trailHue`',
   caret: 'shows a "|" cursor at the end of the text during the block; `blink` per second',
-  move: 'keyframe-like: moves by dx/dy/dz, rotates by rotate (Z) / rotX / rotY degrees and scales by `scaleBy`, then STAYS there; consecutive move blocks accumulate',
+  move: 'keyframe-like: moves by dx/dy/dz, rotates by rotate (Z) / rotX / rotY degrees and scales by `scaleBy`, then STAYS there; `pivotX`/`pivotZ` (units at scale 1) make the rotY turn go around that point of the layer instead of its centre; consecutive move blocks accumulate',
   'word-reveal': 'text appears word by word',
   'wipe-in': 'text is revealed left to right with a hard edge',
   'soft-reveal': 'text is revealed left to right with a soft edge (`softness`)',
@@ -95,7 +95,7 @@ Every layer: \`name\`, \`kind\` (${LAYER_KINDS.join(' | ')}), \`position\` [x, y
 - **List order**: the first layer in the array is in front when layers share a depth. Overlapping flat layers also need slightly different z (0.01 apart, front one larger) or they flicker.
 - \`text\`: \`text\`, \`fontSize\` (units, default 0.4), \`fontFamily\`, \`fontWeight\` (400 | 700), \`align\` (left | center | right — the position is that edge/centre), \`textWidth\` (wrap width, default 5), \`letterSpacing\`, \`lineHeight\`. Use \\n for line breaks.
 - \`image\`: \`image\` reference; 3 units wide at scale 1, height from the image's aspect ratio (scale = wanted_width / 3). Transparent PNGs work. \`tint: true\` multiplies a white image by \`color\` so users can recolour it.
-- \`phone\` (1.7 × 3.5 units), \`tablet\` (3.6 × 2.6), \`laptop\` (3.8 wide; \`lidAngle\` degrees), \`foldable\` (folding phone, 4.9 × 3.5 open; \`foldAngle\` degrees, 180 open flat / 0 closed, animate with the \`fold\` block): real 3D models. \`image\` is the screenshot shown on the screen; \`deviceFinish\` is silver | space | titanium | blue.
+- \`phone\` (1.7 × 3.5 units), \`tablet\` (3.6 × 2.6), \`laptop\` (3.8 wide; \`lidAngle\` degrees), \`foldable\` (folding phone, 4.9 × 3.5 open; \`foldAngle\` degrees, 180 open flat / 0 closed, animate with the \`fold\` block; while folding its screens blur and dim with the hinge angle like the real device, \`foldBlur: false\` turns that off): real 3D models. \`image\` is the screenshot shown on the screen; \`deviceFinish\` is silver | space | titanium | blue.
 - \`shape\`: \`shape\` (cube | rect | rounded | circle), \`shapeWidth\`, \`shapeHeight\` in units, filled with \`color\`.
 - \`svg\`: \`media\` reference; \`tint\` paints it with \`color\`; \`extrude\` gives 3D thickness.
 - \`video\`: \`media\` reference; 3 units wide; \`mediaOffset\` seconds into the source. Its sound is not used (add an audio clip).

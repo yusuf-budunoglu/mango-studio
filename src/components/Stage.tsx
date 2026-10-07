@@ -6,7 +6,9 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { CanvasTexture, Color, DoubleSide, PMREMGenerator, SRGBColorSpace, Vector3, type Mesh, type MeshBasicMaterial, type Object3D, type PerspectiveCamera } from 'three'
 import { lensFrame, lensPasses, resolveEffects, type ProjectEffects } from '../engine/effects'
+import { isDesign } from '../engine/design'
 import { evaluate } from '../engine/evaluate'
+import { motionSamples, subframeTimes } from '../engine/motion'
 import { manualTransformPatch } from '../engine/manualTransform'
 import type { Layer, LayerState, Project } from '../engine/types'
 import * as bridgeModule from '../export/bridge'
@@ -257,6 +259,71 @@ function Background({ project, planeRef, sourceRef }: { project: Project; planeR
   )
 }
 
+/** Önizlemede bir karede en çok kaç alt kare çizilir (dışa aktarmadaki sayı daha yüksek olabilir) */
+const PREVIEW_BLUR_SAMPLES = 12
+/** Alt kareler bu süreyi (ms) aşarsa sayı azaltılır, altındaysa artırılır: oynatma akıcı kalsın */
+const PREVIEW_BLUR_BUDGET = 12
+
+/**
+ * Oynatırken hareket bulanıklığının önizlemesi. Dışa aktarmayla aynı yöntem: kare, deklanşör süresince birkaç alt
+ * karede çizilip kanvasın üstündeki 2B kanvasta ortalanır. Yalnızca oynatırken: dururken düzenlenen kare net kalır.
+ */
+function PreviewMotionBlur({ samples, shutter, fps }: { samples: number; shutter: number; fps: number }) {
+  const gl = useThree((s) => s.gl)
+  const advance = useThree((s) => s.advance)
+  const setFrameloop = useThree((s) => s.setFrameloop)
+  const playing = usePlaybackStore((s) => s.isPlaying)
+  const clean = useEditorStore((s) => s.cleanRenders > 0)
+  const active = playing && !clean && samples > 1
+
+  useEffect(() => {
+    if (!active) return
+    const source = gl.domElement
+    const overlay = document.createElement('canvas')
+    overlay.className = 'stage-blur'
+    const ctx = overlay.getContext('2d', { alpha: false })
+    if (!ctx || !source.parentElement) return
+    source.parentElement.appendChild(overlay)
+    setFrameloop('never')
+    const cap = Math.min(Math.round(samples), PREVIEW_BLUR_SAMPLES)
+    let count = Math.min(cap, 6)
+    let raf = 0
+    const loop = () => {
+      raf = requestAnimationFrame(loop)
+      // başka bir çizim (küçük resim, kare çıktısı) sahne zamanını tutuyorsa karışma
+      if (renderTimeOverride.current !== null) return
+      if (overlay.width !== source.width || overlay.height !== source.height) {
+        overlay.width = source.width
+        overlay.height = source.height
+      }
+      const began = performance.now()
+      const t = usePlaybackStore.getState().time
+      const n = motionSamples(useProjectStore.getState().project, t, fps, count, shutter, source.height)
+      const times = subframeTimes(t, fps, n, shutter)
+      for (let k = 0; k < times.length; k++) {
+        renderTimeOverride.current = times[k]
+        advance(began)
+        ctx.globalAlpha = 1 / (k + 1)
+        ctx.drawImage(source, 0, 0)
+      }
+      renderTimeOverride.current = null
+      ctx.globalAlpha = 1
+      const spent = performance.now() - began
+      if (n === count && spent > PREVIEW_BLUR_BUDGET && count > 3) count--
+      else if (spent < PREVIEW_BLUR_BUDGET / 2 && count < cap) count++
+    }
+    raf = requestAnimationFrame(loop)
+    return () => {
+      cancelAnimationFrame(raf)
+      overlay.remove()
+      // dışa aktarma başladıysa çizimi o yönetiyor
+      if (useEditorStore.getState().cleanRenders === 0) setFrameloop('always')
+    }
+  }, [active, gl, advance, setFrameloop, samples, shutter, fps])
+
+  return null
+}
+
 /** Video çıktısının sahneyi kare kare, istenen çözünürlükte çizmesini sağlar. */
 function ExportBridge() {
   const gl = useThree((s) => s.gl)
@@ -424,6 +491,7 @@ function Scene({ project }: { project: Project }) {
       <LayerGizmo project={project} />
       <SelectionTracker />
       <ExportBridge />
+      {effects.motionBlur.enabled && !isDesign(project) && <PreviewMotionBlur samples={effects.motionBlur.samples} shutter={effects.motionBlur.shutter} fps={project.fps} />}
     </>
   )
 }

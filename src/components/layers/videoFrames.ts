@@ -38,6 +38,8 @@ export function useVideoFrames(layer: Layer, source: string | undefined): VideoF
   const sink = useRef<Promise<CanvasSink | null> | null>(null)
   /** dışa aktarmada kanvasta duran video karesinin kaynak zaman aralığı [baş, son) */
   const drawn = useRef<[number, number] | null>(null)
+  /** önizlemede kanvasa en son çizilen oynatıcı anı: aynı an yeniden çizilmez */
+  const shown = useRef(-1)
   // Her karedeki çağrı katmanın son halini okusun (klip taşınınca doku yeniden kurulmadan).
   const current = useRef(layer)
   useEffect(() => {
@@ -75,6 +77,7 @@ export function useVideoFrames(layer: Layer, source: string | undefined): VideoF
     // Dışa aktarma için kare-doğru çözücü, ilk ihtiyaçta hazırlanır.
     sink.current = null
     drawn.current = null
+    shown.current = -1
     return () => {
       alive = false
       loaded.current = null
@@ -136,10 +139,14 @@ export function useVideoFrames(layer: Layer, source: string | undefined): VideoF
       if (!element.paused) element.pause()
       if (!element.seeking && Math.abs(element.currentTime - target) > 0.02) element.currentTime = target
     }
-    if (element.readyState >= 2) {
-      draw(element)
-      drawn.current = null
-    }
+    // Aynı kare yeniden çizilmez: her çizim dokuyu ekran kartına baştan yüklüyor. Çekim başına ayrı cihaz katmanı olan
+    // şablonda sekiz video her karede (hareket bulanıklığı önizlemesinde her alt karede) yüklenince oynatma yavaşlıyordu.
+    // Sararken oynatıcı hedef anı hemen bildirir ama karesi henüz gelmemiştir: o sırada beklenir.
+    if (element.readyState < 2 || element.seeking) return
+    if (element.currentTime === shown.current && !drawn.current) return
+    draw(element)
+    shown.current = element.currentTime
+    drawn.current = null
   }, [draw])
 
   return { view: source && view?.source === source ? view : null, tick }

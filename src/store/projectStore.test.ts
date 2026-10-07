@@ -127,6 +127,28 @@ describe('cihaz ekranı', () => {
   })
 })
 
+describe('katlanır telefonun ekranları', () => {
+  const phones = () => store().project.layers.filter((l) => l.kind === 'foldable')
+
+  it('görsel seçilince ekran videosu kalkar ve bütün çekimler değişir; dış ekran olduğu gibi kalır', () => {
+    store().loadProject(TEMPLATES.find((tpl) => tpl.id === 'fold-promo')!.build())
+    const cover = phones()[0].coverMedia
+    expect(phones().length).toBeGreaterThan(1)
+    store().setScreen(phones()[0].id, 'screen', 'image', 'asset:foto')
+    expect(phones().every((l) => l.image === 'asset:foto' && l.media === undefined)).toBe(true)
+    expect(phones().every((l) => l.coverMedia === cover)).toBe(true)
+  })
+
+  it('dış ekranın görseli ve videosu ayrı değişir', () => {
+    store().loadProject(TEMPLATES.find((tpl) => tpl.id === 'fold-promo')!.build())
+    const inner = phones()[0].media
+    store().setScreen(phones()[1].id, 'cover', 'image', 'asset:kapak')
+    expect(phones().every((l) => l.coverImage === 'asset:kapak' && l.coverMedia === undefined && l.media === inner)).toBe(true)
+    store().setScreen(phones()[0].id, 'cover', 'video', 'asset:film')
+    expect(phones().every((l) => l.coverMedia === 'asset:film')).toBe(true)
+  })
+})
+
 describe('videonun sınırları', () => {
   it('bitişe yakın eklenen blok videonun içinde kalır', () => {
     const duration = store().project.duration

@@ -12,6 +12,7 @@ import {
 import { renderAudioMix } from '../audio/engine'
 import type { Fps, Resolution } from '../billing/plans'
 import { resolveEffects } from '../engine/effects'
+import { motionSamples, subframeTimes } from '../engine/motion'
 import type { Project } from '../engine/types'
 import i18n from '../i18n'
 import { usePlaybackStore } from '../store/projectStore'
@@ -45,11 +46,7 @@ export function supersampleFactor(width: number, height: number) {
   return Math.max(1, Math.min(2, Math.floor((4096 / Math.max(width, height)) * 10) / 10))
 }
 
-/** Hareket bulanıklığında bir karenin alt kare zamanları: kare anından ileriye, deklanşör süresince. */
-export function subframeTimes(t: number, fps: number, samples: number, shutter: number) {
-  if (samples <= 1) return [t]
-  return Array.from({ length: samples }, (_, k) => t + (k / samples) * (shutter / fps))
-}
+export { subframeTimes }
 
 export class ExportCanceledError extends Error {}
 
@@ -91,7 +88,8 @@ export async function exportVideo(
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
   const blur = resolveEffects(project.effects).motionBlur
-  const samples = blur.enabled ? Math.max(1, Math.round(blur.samples)) : 1
+  // ayardaki sayı üst sınır: her kare, o andaki hareketin gerektirdiği kadar alt kareyle çizilir
+  const maxSamples = blur.enabled ? Math.max(1, Math.round(blur.samples)) : 1
   let output: Output | null = null
 
   try {
@@ -112,7 +110,7 @@ export async function exportVideo(
     for (let frame = 0; frame < totalFrames; frame++) {
       if (signal?.aborted) throw new ExportCanceledError()
       const t = frame / fps
-      const times = subframeTimes(t, fps, samples, blur.shutter)
+      const times = subframeTimes(t, fps, motionSamples(project, t, fps, maxSamples, blur.shutter, height), blur.shutter)
       for (let k = 0; k < times.length; k++) {
         // Sahne zamanı doğrudan verilir: oynatma zamanını (store) her alt karede değiştirmek
         // timeline ve paneli yeniden çizdiriyor, dışa aktarmayı kat kat yavaşlatıyordu.

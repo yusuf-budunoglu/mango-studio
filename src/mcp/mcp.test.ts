@@ -64,6 +64,8 @@ describe('MCP: proje doğrulama', () => {
     expect(problemsOf({ ...minimal(), layers: [{ name: 'X', kind: 'hologram' }] })).toContain('kind must be one of')
     expect(problemsOf({ ...minimal(), layers: [{ name: 'Late', kind: 'text', text: 'a', start: 3, duration: 2 }] })).toContain('after the project ends')
     expect(problemsOf({ ...minimal(), width: 100000 })).toContain('width must be an integer')
+    expect(problemsOf({ ...minimal(), layers: [{ name: 'Fold', kind: 'foldable', foldBlur: 'off' }] })).toContain('foldBlur must be true or false')
+    expect(problemsOf({ ...minimal(), layers: [{ name: 'Fold', kind: 'foldable', foldBlur: false }] })).toBe('')
     expect(problemsOf({ ...minimal(), version: 99 })).toContain('newer')
     expect(problemsOf('nope')).toContain('must be a JSON object')
   })

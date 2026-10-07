@@ -10,8 +10,8 @@ export interface ProjectEffects {
   /** -1..1 */
   color: { saturation: number; contrast: number; brightness: number }
   /**
-   * Hareket bulanıklığı (yalnızca video çıktısında): her kare, deklanşör süresince `samples` alt
-   * kare çizilip ortalanır. shutter: kare süresinin ne kadarı açık (0.5 = 180°).
+   * Hareket bulanıklığı (video çıktısında ve oynatırken önizlemede): her kare, deklanşör süresince en çok
+   * `samples` alt kare çizilip ortalanır (sayı o andaki harekete göre, `engine/motion.ts`). shutter: kare süresinin ne kadarı açık (0.5 = 180°).
    */
   motionBlur: { enabled: boolean; samples: number; shutter: number }
   /** kromatik sapma: kenarlara doğru artan renk kayması */

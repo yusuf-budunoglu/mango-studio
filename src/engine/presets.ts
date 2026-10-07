@@ -180,13 +180,27 @@ export const PRESETS: Record<string, Preset> = {
       { key: 'rotX', default: 0, min: -720, max: 720, step: 5 },
       { key: 'rotY', default: 0, min: -720, max: 720, step: 5 },
       { key: 'scaleBy', default: 1, min: 0.05, max: 10, step: 0.05 },
+      // rotY dönüşünün ekseni: katmanın merkezinden bu kadar yanda/önde (birim, ölçek 1 iken). Katman merkezinden değil
+      // bu noktadan döner (ör. menteşesi merkezde olan kapalı katlanır telefon gövdesinin ortasından).
+      { key: 'pivotX', default: 0, min: -10, max: 10, step: 0.05 },
+      { key: 'pivotZ', default: 0, min: -10, max: 10, step: 0.05 },
     ],
-    apply: (s, e, _p, { dx, dy, dz, rotate, rotX, rotY, scaleBy }) => {
+    apply: (s, e, _p, { dx, dy, dz, rotate, rotX, rotY, scaleBy, pivotX, pivotZ }) => {
       s.x += dx * e
       s.y += dy * e
       s.z += dz * e
       s.rotZ += rotate * DEG * e
       s.rotX += rotX * DEG * e
+      if (pivotX || pivotZ) {
+        // eksen noktası yerinde kalsın: dönüşten önceki ve sonraki yeri arasındaki fark konuma eklenir
+        const before = s.rotY
+        const after = before + rotY * DEG * e
+        const at = (angle: number) => [pivotX * Math.cos(angle) + pivotZ * Math.sin(angle), -pivotX * Math.sin(angle) + pivotZ * Math.cos(angle)]
+        const [x0, z0] = at(before)
+        const [x1, z1] = at(after)
+        s.x += (x0 - x1) * s.scale
+        s.z += (z0 - z1) * s.scale
+      }
       s.rotY += rotY * DEG * e
       s.scale *= 1 + (scaleBy - 1) * e
     },

@@ -47,6 +47,11 @@ interface ProjectStore {
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
   /** Cihaz ekranı: aynı ekran görüntüsünü paylaşan aynı türdeki cihazlar da (bir animasyonun çekimleri) birlikte değişir. */
   setScreenImage: (layerId: string, image: string | undefined) => void
+  /**
+   * Cihaz ekranının (`cover`: katlanır telefonun dış ekranı) görselini ya da videosunu değiştirir; aynı ekranı
+   * paylaşan çekimler birlikte değişir. Görsel seçilince o ekranın videosu kalkar (video görselin üstünde çizilir).
+   */
+  setScreen: (layerId: string, slot: 'screen' | 'cover', kind: 'image' | 'video', ref: string | undefined) => void
   addLayer: (kind: LayerKind, time: number) => string
   removeLayer: (layerId: string) => void
   /** Katmanı listede `toIndex` konumuna taşır (0 = en üst = en önde). */
@@ -66,6 +71,14 @@ interface ProjectStore {
   updateEffects: (patch: EffectsPatch) => void
   /** Başka bir projeyi açar; geri alma geçmişi sıfırlanır. */
   loadProject: (project: Project) => void
+}
+
+const SCREEN_FIELDS = { screen: ['image', 'media'], cover: ['coverImage', 'coverMedia'] } as const
+
+/** İki cihaz aynı ekranı mı gösteriyor: aynı tür, aynı görsel ve video (en az biri dolu). */
+export function sharesScreen(a: Layer, b: Layer, slot: 'screen' | 'cover') {
+  const [imageKey, videoKey] = SCREEN_FIELDS[slot]
+  return a.kind === b.kind && !!(b[imageKey] || b[videoKey]) && a[imageKey] === b[imageKey] && a[videoKey] === b[videoKey]
 }
 
 /** Yeni katmanın varsayılanları; adı ve metni o anki arayüz dilinde. */
@@ -266,12 +279,15 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) },
         })),
-      setScreenImage: (layerId, image) =>
+      setScreenImage: (layerId, image) => get().setScreen(layerId, 'screen', 'image', image),
+      setScreen: (layerId, slot, kind, ref) =>
         set((s) => {
           const target = s.project.layers.find((l) => l.id === layerId)
           if (!target) return {}
-          const shared = (l: Layer) => l.id === layerId || (!!target.image && l.kind === target.kind && l.image === target.image)
-          return { project: { ...s.project, layers: s.project.layers.map((l) => (shared(l) ? { ...l, image } : l)) } }
+          const [imageKey, videoKey] = SCREEN_FIELDS[slot]
+          const shared = (l: Layer) => l.id === layerId || sharesScreen(l, target, slot)
+          const patch = (l: Layer): Layer => (kind === 'video' ? { ...l, [videoKey]: ref } : { ...l, [imageKey]: ref, ...(ref ? { [videoKey]: undefined } : {}) })
+          return { project: { ...s.project, layers: s.project.layers.map((l) => (shared(l) ? patch(l) : l)) } }
         }),
       addLayer: (kind, time) => {
         // Yeni klip oynatma kafasından başlar, 5 sn sürer; videonun sonuna sığmazsa geri çekilir.

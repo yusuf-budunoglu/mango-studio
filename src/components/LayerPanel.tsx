@@ -3,7 +3,7 @@ import type { Layer, LayerKind, Vec3 } from '../engine/types'
 import { AssetPicker } from './AssetPicker'
 import { FontPicker } from './FontPicker'
 import { isUploadedFont } from '../render/fonts'
-import { useProjectStore } from '../store/projectStore'
+import { sharesScreen, useProjectStore } from '../store/projectStore'
 
 const DEVICE_KINDS: LayerKind[] = ['phone', 'laptop', 'tablet', 'foldable']
 
@@ -21,11 +21,10 @@ export function LayerFields({ layer }: { layer: Layer }) {
   const { t } = useTranslation()
   const updateLayer = useProjectStore((s) => s.updateLayer)
   const removeLayer = useProjectStore((s) => s.removeLayer)
-  const setScreenImage = useProjectStore((s) => s.setScreenImage)
+  const setScreen = useProjectStore((s) => s.setScreen)
   // Aynı ekranı paylaşan cihazlar (ör. şablonda her çekim ayrı telefon katmanı) birlikte değişir.
-  const sharedScreens = useProjectStore((s) =>
-    DEVICE_KINDS.includes(layer.kind) && layer.image ? s.project.layers.filter((l) => l.kind === layer.kind && l.image === layer.image).length : 1,
-  )
+  const sharedScreens = useProjectStore((s) => (DEVICE_KINDS.includes(layer.kind) ? s.project.layers.filter((l) => l.id === layer.id || sharesScreen(l, layer, 'screen')).length : 1))
+  const sharedCovers = useProjectStore((s) => (layer.kind === 'foldable' ? s.project.layers.filter((l) => l.id === layer.id || sharesScreen(l, layer, 'cover')).length : 1))
   const update = (patch: Partial<Layer>) => updateLayer(layer.id, patch)
   const setVec = (key: 'position' | 'rotation', index: number, v: number) => {
     const next = [...layer[key]] as Vec3
@@ -37,6 +36,17 @@ export function LayerFields({ layer }: { layer: Layer }) {
     <>
       <label htmlFor="layer-name">{t('layer.name')}</label>
       <input id="layer-name" value={layer.name} onChange={(e) => update({ name: e.target.value })} />
+
+      {/* Menteşe: açıklık ve ona bağlı ekran bulanıklığı. Cihazın kendi özelliği olduğu için görsel alanlarının üstünde. */}
+      {layer.kind === 'foldable' && (
+        <>
+          <NumberField id="layer-fold" label={t('layer.foldAngle')} value={layer.foldAngle ?? 180} step={5} onChange={(v) => update({ foldAngle: Math.min(180, Math.max(0, v)) })} />
+          <label className="fx-toggle" htmlFor="layer-fold-blur">
+            <input id="layer-fold-blur" type="checkbox" checked={layer.foldBlur !== false} onChange={(e) => update({ foldBlur: e.target.checked ? undefined : false })} /> {t('layer.foldBlur')}
+          </label>
+          <p className="hint">{t('layer.foldBlurHint')}</p>
+        </>
+      )}
 
       {layer.kind === 'text' && (
         <>
@@ -74,8 +84,17 @@ export function LayerFields({ layer }: { layer: Layer }) {
 
       {DEVICE_KINDS.includes(layer.kind) && (
         <>
-          <AssetPicker id="layer-image" label={t('layer.screenshot')} kind="image" value={layer.image} onChange={(image) => setScreenImage(layer.id, image)} />
+          <AssetPicker id="layer-image" label={t('layer.screenshot')} kind="image" value={layer.image} onChange={(ref) => setScreen(layer.id, 'screen', 'image', ref)} />
+          <AssetPicker id="layer-screen-video" label={t('layer.screenVideo')} kind="video" value={layer.media} onChange={(ref) => setScreen(layer.id, 'screen', 'video', ref)} />
+          {layer.media && <p className="hint">{t('layer.screenVideoHint')}</p>}
           {sharedScreens > 1 && <p className="hint">{t('layer.sharedScreen', { count: sharedScreens })}</p>}
+          {layer.kind === 'foldable' && (
+            <>
+              <AssetPicker id="layer-cover-image" label={t('layer.coverImage')} kind="image" value={layer.coverImage} onChange={(ref) => setScreen(layer.id, 'cover', 'image', ref)} />
+              <AssetPicker id="layer-cover-video" label={t('layer.coverVideo')} kind="video" value={layer.coverMedia} onChange={(ref) => setScreen(layer.id, 'cover', 'video', ref)} />
+              {sharedCovers > 1 && <p className="hint">{t('layer.sharedScreen', { count: sharedCovers })}</p>}
+            </>
+          )}
         </>
       )}
 
@@ -91,9 +110,6 @@ export function LayerFields({ layer }: { layer: Layer }) {
               ))}
             </select>
           </div>
-          {layer.kind === 'foldable' && (
-            <NumberField id="layer-fold" label={t('layer.foldAngle')} value={layer.foldAngle ?? 180} step={5} onChange={(v) => update({ foldAngle: Math.min(180, Math.max(0, v)) })} />
-          )}
           {layer.kind === 'laptop' && (
             <NumberField id="layer-lid" label={t('layer.lidAngle')} value={layer.lidAngle ?? 105} step={5} onChange={(v) => update({ lidAngle: Math.min(180, Math.max(0, v)) })} />
           )}

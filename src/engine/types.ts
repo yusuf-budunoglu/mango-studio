@@ -67,6 +67,11 @@ export interface Layer {
   lidAngle?: number
   /** katlanır telefon: açıklık (derece; 180 tam açık, 0 kapalı). Boşsa 180. `fold` bloğu bunu zamanla değiştirir. */
   foldAngle?: number
+  /**
+   * katlanır telefon: katlanırken ekranların menteşe açısına bağlı bulanıklaşıp kararması (gerçek cihazdaki geçiş).
+   * Boşsa açık; `false` kapatır (ekranlar her açıda net).
+   */
+  foldBlur?: boolean
   /** şekil katmanının türü ve boyutu (sahne birimi) */
   shape?: ShapeType
   shapeWidth?: number

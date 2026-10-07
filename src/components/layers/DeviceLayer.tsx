@@ -8,6 +8,7 @@ import {
   MeshBasicMaterial,
   Object3D,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   type BufferGeometry,
   type Group,
@@ -281,6 +282,17 @@ const SCREEN_ASPECT: Record<DeviceKind, number> = { phone: 0.46, tablet: 1.333, 
 const LAPTOP_HINGE = new Vector3(0, -1.225, 0)
 
 /** Ekran görüntüsü yokken: ekran rengi üzerinde temsili arayüz çizgileri. */
+/** katlanır telefonun dış ekranının en-boy oranı */
+const FOLDABLE_COVER_ASPECT = 0.69
+
+/** Dokuyu `target` oranındaki yüzeye gerdirmeden, ortadan kırparak sığdırır. */
+function fitCover(texture: Texture, aspect: number, target: number) {
+  const x = Math.min(1, target / aspect)
+  const y = Math.min(1, aspect / target)
+  texture.repeat.set(x, y)
+  texture.offset.set((1 - x) / 2, (1 - y) / 2)
+}
+
 function usePlaceholderScreen(color: string, aspect: number) {
   const texture = useMemo(() => {
     const h = 512
@@ -315,6 +327,85 @@ function usePlaceholderScreen(color: string, aspect: number) {
 /** Katlanır telefonun açıklığını (derece) iki yarının menteşe dönüşüne çevirir; her karede motordan çağrılır. */
 type FoldSetter = (angle: number) => void
 
+/** Katlanma geçişinde bulanıklık örnekleri arasındaki en büyük aralık (ekran yüksekliğine oranla); 5×5 örnek alınır */
+const FOLD_BLUR_STEP = 0.03
+/** bulanıklık ve kararma cephesinin yumuşak kenarı (cephenin geçtiği yolun oranı olarak) */
+const FOLD_FRONT_SOFT = 0.45
+/** iç ekranda netleşen cephenin kenarı: daha geniş, bulanıklık yavaş çekilsin */
+const FOLD_FRONT_WIDE = 0.9
+
+/**
+ * Katlanır telefonun ekranlarındaki katlanma geçişi: tamamen menteşe açısına bağlıdır, zamana değil (gerçek cihazın
+ * kaydından kare kare ölçüldü; aynı eşlemeyi kullanan açık kaynak kopyaları da var). Telefon hangi açıda duruyorsa
+ * ekran o açının görüntüsünü gösterir.
+ * - Dış ekran: açılmaya başlayınca bulanıklık serbest kenardan (menteşenin karşısı) girer ve açı büyüdükçe menteşeye
+ *   doğru ilerler; arkasından kararma gelir. Yarı açıkken tamamen bulanık ve koyu, tam açıkken kapalıdır.
+ * - İç ekran: sağ yarı hep nettir. Sol yarı (dış ekranın arkasındaki) yarı açıkken tamamen bulanık ve koyudur; açı
+ *   büyüdükçe netlik menteşeden sol kenara doğru ilerler, önce kararma sonra bulanıklık çekilir; tam açıkken ekran nettir.
+ * Bulanıklık dokunun küçük katmanlarından (mipmap) 5×5 örnekle okunur; açıklık her karede `uOpen`'a yazılır.
+ */
+function addFoldTransition(material: MeshBasicMaterial, side: 'inner' | 'cover') {
+  const uniforms = { uOpen: { value: 1 }, uAmount: { value: 1 }, uBlurStep: { value: new Vector2(FOLD_BLUR_STEP, FOLD_BLUR_STEP) }, uBlurLod: { value: 5 } }
+  const soft = FOLD_FRONT_SOFT.toFixed(2)
+  const wide = FOLD_FRONT_WIDE.toFixed(2)
+  // fAcross: cephenin yolu boyunca konum (0 = cephenin ilk ulaştığı yer, 1 = son ulaştığı yer)
+  const amounts =
+    side === 'inner'
+      ? `// menteşeden (u = 0.5) sol kenara (u = 0): tam açığa yaklaştıkça netlik menteşeden sola ilerler
+        // Netleşme, dış ekrandakinden geniş ve yumuşak bir cepheyle, açının sonuna doğru ağırlaşarak çekilir
+        // (kullanıcı kararı: dar cepheyle "bir anda gidiyordu").
+        float fAcross = vFoldUv.x / 0.5;
+        float fFolded = pow(clamp((1.0 - uOpen) / 0.5, 0.0, 1.0), 0.7);
+        float fLeft = 1.0 - smoothstep(0.5, 0.58, vFoldUv.x);
+        float fBlur = clamp((fFolded * (1.0 + ${wide}) - fAcross) / ${wide}, 0.0, 1.0) * fLeft;
+        float fDark = clamp((clamp((fFolded - 0.35) / 0.65, 0.0, 1.0) * (1.0 + ${wide}) - fAcross) / ${wide}, 0.0, 1.0) * fLeft * 0.82;`
+      : `// serbest kenardan (u = 1) menteşeye (u = 0): açı büyüdükçe bulanıklık menteşeye doğru ilerler
+        float fAcross = 1.0 - vFoldUv.x;
+        float fBlur = clamp((clamp(uOpen / 0.3, 0.0, 1.0) * (1.0 + ${soft}) - fAcross) / ${soft}, 0.0, 1.0);
+        float fDark = clamp((clamp((uOpen - 0.08) / 0.3, 0.0, 1.0) * (1.0 + ${soft}) - fAcross) / ${soft}, 0.0, 1.0) * 0.9;
+        fDark = max(fDark, smoothstep(0.45, 0.6, uOpen));`
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms)
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vFoldUv;').replace('#include <uv_vertex>', '#include <uv_vertex>\nvFoldUv = uv;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <map_pars_fragment>',
+        `#include <map_pars_fragment>
+        uniform float uOpen;
+        uniform float uAmount;
+        uniform vec2 uBlurStep;
+        uniform float uBlurLod;
+        varying vec2 vFoldUv;
+        #ifdef USE_MAP
+        vec3 foldBlur(vec2 uv, float k) {
+          if (k < 0.002) return texture2D(map, uv).rgb;
+          // örnek aralığı kadar küçültülmüş katmandan okunur: örnekler arasında boşluk kalmaz
+          float lod = max(0.0, uBlurLod + log2(k));
+          vec2 stride = uBlurStep * k;
+          vec3 sum = vec3(0.0);
+          for (int y = -2; y <= 2; y++) {
+            for (int x = -2; x <= 2; x++) {
+              float wx = x == 0 ? 6.0 : (abs(x) == 1 ? 4.0 : 1.0);
+              float wy = y == 0 ? 6.0 : (abs(y) == 1 ? 4.0 : 1.0);
+              sum += textureLod(map, uv + vec2(float(x), float(y)) * stride, lod).rgb * wx * wy;
+            }
+          }
+          return sum / 256.0;
+        }
+        #endif`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#ifdef USE_MAP
+        ${amounts}
+        diffuseColor.rgb *= foldBlur(vMapUv, fBlur * uAmount) * (1.0 - fDark * uAmount);
+        #endif`,
+      )
+  }
+  material.customProgramCacheKey = () => `fold-${side}`
+  return uniforms
+}
+
 function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: DeviceKind; template: Group; layer: Layer; screen: Texture | null; cover: Texture | null; fold: RefObject<FoldSetter | null> }) {
   const parts = useMemo(() => {
     // iskeletli model (katlanır telefon) kemikleriyle birlikte kopyalanır
@@ -322,6 +413,7 @@ function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: Dev
     const screenMaterial = new MeshBasicMaterial({ toneMapped: false })
     // katlanır telefonun dış ekranı: görsel varsa onu gösterir, yoksa modeldeki koyu cam kalır
     const coverMaterial = new MeshBasicMaterial({ toneMapped: false })
+    const foldFx = kind === 'foldable' ? { inner: addFoldTransition(screenMaterial, 'inner'), cover: addFoldTransition(coverMaterial, 'cover') } : null
     let coverMesh: Mesh | null = null
     let coverGlass: MeshStandardMaterial | null = null
     const finishes: { slot: 'frame' | 'back'; material: MeshStandardMaterial; tone: Color | null }[] = []
@@ -388,6 +480,7 @@ function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: Dev
       baseAngle: (lid?.userData.baseAngle as number | undefined) ?? 109,
       screenMaterial,
       coverMaterial,
+      foldFx,
       coverMesh: coverMesh as Mesh | null,
       coverGlass: coverGlass as MeshStandardMaterial | null,
       finishes,
@@ -395,7 +488,7 @@ function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: Dev
       hitSize: box.getSize(new Vector3()).toArray(),
       hitCenter: box.getCenter(new Vector3()).toArray(),
     }
-  }, [template])
+  }, [template, kind])
 
   useEffect(
     () => () => {
@@ -450,13 +543,26 @@ function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: Dev
   // Katlanma (180° düz, 0° ekranlar yüz yüze): modelin `fold` animasyonu açıklığa göre sarılır (0 = açık, sonu =
   // kapalı; ekran menteşede kemiklerle bükülür). Modelde sağ yarı sabit, sol yarı döner: `fold` düğümü yarım açı
   // kadar ters çevrilir, böylece iki yarı simetrik kapanır ve sırt yerinde kalır. Açı her karede motordan gelir.
+  const blurOn = layer.foldBlur !== false
   useEffect(() => {
-    const { foldPivot, foldClip, root } = parts
+    const { foldPivot, foldClip, root, foldFx, screenMaterial, coverMaterial } = parts
     if (!foldPivot || !foldClip) return
     const mixer = new AnimationMixer(root)
     mixer.clipAction(foldClip).play()
     const set: FoldSetter = (angle) => {
       const closed = (180 - Math.min(180, Math.max(0, angle))) / 180
+      if (foldFx) {
+        for (const [fx, material, aspect] of [[foldFx.inner, screenMaterial, SCREEN_ASPECT.foldable], [foldFx.cover, coverMaterial, FOLDABLE_COVER_ASPECT]] as const) {
+          fx.uOpen.value = 1 - closed
+          fx.uAmount.value = blurOn ? 1 : 0
+          // ekranda her yöne eşit bulanıklık: doku koordinatında yatay aralık ekran oranına bölünür; kırpılmış dokuda ölçeklenir
+          const map = material.map
+          const stepV = FOLD_BLUR_STEP * (map?.repeat.y ?? 1)
+          fx.uBlurStep.value.set((FOLD_BLUR_STEP / aspect) * (map?.repeat.x ?? 1), stepV)
+          const height = (map?.image as { height?: number } | undefined)?.height ?? 1024
+          fx.uBlurLod.value = Math.log2(Math.max(1, stepV * height))
+        }
+      }
       // sonda başa sarmasın diye sürenin hemen altında tutulur
       mixer.setTime(Math.min(closed * foldClip.duration, foldClip.duration - 1e-4))
       // eslint-disable-next-line react-hooks/immutability -- three.js düğümü, React durumu değil
@@ -470,7 +576,7 @@ function ModelDevice({ kind, template, layer, screen, cover, fold }: { kind: Dev
       mixer.stopAllAction()
       mixer.uncacheRoot(root)
     }
-  }, [parts, fold, layer.foldAngle])
+  }, [parts, fold, layer.foldAngle, blurOn])
 
   return (
     <>
@@ -494,11 +600,20 @@ export function DeviceLayer({ layer, register }: LayerProps) {
     screenVideo.tick()
     coverVideo.tick()
   })
-  const screenImage = useImageTexture(layer.image)?.texture ?? null
-  const coverImage = useImageTexture(layer.kind === 'foldable' ? layer.coverImage : undefined)?.texture ?? null
-  const screen = screenVideo.view?.texture ?? screenImage
-  const cover = coverVideo.view?.texture ?? coverImage
+  const screenImage = useImageTexture(layer.image)
+  const coverImage = useImageTexture(layer.kind === 'foldable' ? layer.coverImage : undefined)
+  const screenView = screenVideo.view ?? screenImage
+  const coverView = coverVideo.view ?? coverImage
+  const screen = screenView?.texture ?? null
+  const cover = coverView?.texture ?? null
   const kind: DeviceKind = layer.kind === 'laptop' || layer.kind === 'tablet' || layer.kind === 'foldable' ? layer.kind : 'phone'
+  // Katlanır telefonun iki ekranının oranı çok farklı (1.43 ve 0.69): yüklenen fotoğraf ya da video ekrana gerilmez,
+  // ortadan kırpılarak sığdırılır. Diğer cihazlarda görsel ekrana gerilir (şablonların ekran görüntüleri buna göre).
+  useEffect(() => {
+    if (kind !== 'foldable') return
+    if (screenView) fitCover(screenView.texture, screenView.aspect, SCREEN_ASPECT.foldable)
+    if (coverView) fitCover(coverView.texture, coverView.aspect, FOLDABLE_COVER_ASPECT)
+  }, [kind, screenView, coverView])
   const model = useDeviceModel(kind)
   return (
     <group {...node}>

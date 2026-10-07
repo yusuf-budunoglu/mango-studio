@@ -2,17 +2,18 @@ import type { Block, CameraTrack, Layer, Project, Vec3 } from '../engine/types'
 
 // "Fold promo": yatay (1920×1080, 60 kare/sn, 20 sn) katlanır telefon tanıtımı; Mango Studio'nun kendi reklamı.
 // 60 kare/sn'lik bir oyun tanıtımından (2880×2160, 4:3, 1200 kare) kare kare incelendi: beş çekim, her biri 240 kare
-// (kesmeler 241, 481, 721; 961'de kesme yok, telefon bir tur döner). Kare numaraları referansın, ölçüler referansın
+// (kesmeler 241, 481, 721; 961'de kesme yok). Kare numaraları referansın, ölçüler referansın
 // 1440×1080'e indirilmiş pikseli; yatay yerleşim 16:9'a uyarlandı (yazı sütunu ve telefon aynı yükseklikte, daha aralıklı).
 // Birebir kopya değil: metinler Mango Studio'ya göre yazıldı, referanstaki kare desenli ve ızgaralı fon yerine koyu,
-// sıcak tonlarda düz fon + yumuşak ışık var, telefon ekranlarında bizim editör ve ana sayfa videoları oynuyor.
+// açık, sıcak tonlarda düz fon + yumuşak ışık var, telefon ekranlarında bizim editör ve ana sayfa videoları oynuyor.
 // Referansta telefon 2. çekimde dikeye, 4. çekimde yataya çeyrek tur döner; bizde ekrandaki editör yan yatmasın diye
 // 2. çekimde tam tur atar, 4. çekim yatay başlar
 // (node scripts/build-fold-promo-screens.mjs).
-// Akış: kapalı telefon dönerek gelir, "FOLDED." (1–120) → açılır, "UN / FOLDED." (131–200) │ açık telefon yatay,
-// kelimeler tek tek + eğik etiket (241–360) → kendi düzleminde bir tur döner, "TURN IT." (361–412) │ koyu fon, kapalı telefon düşer,
-// kelimeler + etiket, telefon takla atar (481–624) │ açık telefon eğik gelip düzelir, katlanır (721–838), bir tur
-// döner, "KEEP / CREATING." (846–960) │ bir tur daha, marka adı ve alan adı (964–1200).
+// Akış: kapalı telefon dönerek gelir, "FOLDED." (1–120) → açılır, "UN / FOLDED." (140–210) │ açık telefon yatay,
+// kelimeler tek tek + eğik etiket (241–360) → kendi düzleminde bir tur döner, "TURN IT." (361–412) │ taş rengi fon, kapalı telefon düşer,
+// kelimeler + etiket (481–624) │ açık telefon eğik gelip düzelir, katlanır (721–838), bir tur
+// döner, "KEEP / CREATING." (846–960) │ marka adı ve alan adı (964–1200). Referanstaki 3. çekim taklası ve kapanıştaki
+// ikinci tur yok (kullanıcı kararı).
 
 type BlockSpec = Omit<Block, 'id'>
 type Bezier = [number, number, number, number]
@@ -33,15 +34,16 @@ const P = (x: number, y: number, z = 0): Vec3 => [(x - 960) * U, (540 - y) * U, 
 const f = (frame: number) => Math.round((frame / 60) * 1e6) / 1e6
 
 // Renkler (hepsi ayrı katman ya da katman rengi: editörden değişir)
-// Koyu ve sıcak tonlar (kullanıcı kararı: düz turuncu/sarı fonlar fazla açık ve sertti). Marka turuncusunun koyu
-// akrabaları: espresso fon + konyak ışık, fildişi yazı, kehribar vurgu; açık çekimde fildişi fon + grafit yazı.
-const ESPRESSO = '#1b0e06'
-const COGNAC = '#b05a1e'
-const OBSIDIAN = '#09090a'
-const IVORY = '#f3efe8'
+// Açık ve sıcak tonlar (kullanıcı kararı; önce düz turuncu/sarı fonlar "sert", sonra koyu fonlar "kapalı" bulundu):
+// fildişi, kum ve taş rengi fonlar + beyaz ışık, grafit yazı; marka turuncusu yalnızca etiket ve alan adında.
+// Koyu ekranlı koyu telefon açık fonda öne çıkar.
+const IVORY = '#f3eee6'
+const SAND = '#eadfce'
+const STONE = '#e7e4de'
+const WHITE = '#ffffff'
 const GRAPHITE = '#1d1d1f'
-const AMBER = '#f0a25a'
-const CHAMPAGNE = '#c9b596'
+const TAUPE = '#7c7268'
+const MANGO = '#ff7a00'
 
 // Katlanır telefon: açıkken 4.9 × 3.5 birim; kapalıyken (menteşe etrafında katlanınca) 2.45 genişliğinde ve gövdenin
 // ortası menteşeden 1.22 birim yanda. Kapalıyken kapak ekranı kameraya baksın diye katman y'de ~90° döner.
@@ -50,31 +52,39 @@ const HALF = 1.22
 const closedHinge = (cx: number, scale: number) => cx - (HALF * scale) / U
 const SOFT: Bezier = [0.16, 1, 0.3, 1]
 const SWING: Bezier = [0.65, 0, 0.35, 1]
+/** açılma ve katlanma: referansta neredeyse sabit hızda (en hızlı an ortalamanın 1.2 katı), uçları yumuşak */
+const GLIDE: Bezier = [0.2, 0, 0.8, 1]
+/** açılma: hızlı başlar, uzun ve yumuşak biter; iç ekrandaki bulanıklık açının son yarısında yavaşça çekilsin diye */
+const UNFOLD: Bezier = [0.3, 0.1, 0.25, 1]
 /** büyük harfli Inter 700 başlığın yaklaşık genişliği (em); etiket kutuları buna göre boyanır */
 const CAPS_EM = 0.69
+/** etiket yazısının kutunun ortasına oturması için kayması (em): sağa, aşağı */
+const PILL_NUDGE = [0.02, 0.15]
 
 export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
   const base = import.meta.env.BASE_URL
   const k = (key: string) => t(`templates.fold-promo.${key}`)
   const cut = (from: number, to: number) => [b('fade-in', f(from), 0), b('fade-out', f(to), 0)]
-  type Move = { dx?: number; dy?: number; rotate?: number; rotX?: number; rotY?: number; scaleBy?: number }
+  type Move = { dx?: number; dy?: number; rotate?: number; rotX?: number; rotY?: number; scaleBy?: number; pivotX?: number; pivotZ?: number }
   /** `from`–`to` kareleri arasında hareket (piksel); süre 0 ise o karede anında */
   const move = (from: number, to: number, p: Move, easing: string | Bezier = SWING): BlockSpec => {
-    const params = { dx: (p.dx ?? 0) * U, dy: -(p.dy ?? 0) * U, rotate: p.rotate ?? 0, rotX: p.rotX ?? 0, rotY: p.rotY ?? 0, scaleBy: p.scaleBy ?? 1 }
+    const params = { dx: (p.dx ?? 0) * U, dy: -(p.dy ?? 0) * U, rotate: p.rotate ?? 0, rotX: p.rotX ?? 0, rotY: p.rotY ?? 0, scaleBy: p.scaleBy ?? 1, pivotX: p.pivotX ?? 0, pivotZ: p.pivotZ ?? 0 }
     return typeof easing === 'string' ? b('move', f(from), f(to - from), { params, easing }) : b('move', f(from), f(to - from), { params, easing: 'custom', bezier: easing })
   }
   /** çekimin başındaki poz farkı ve oradan asıl poza giriş */
   const enter = (from: number, to: number, p: Move): BlockSpec[] => [
     move(from, from, p, 'linear'),
-    move(from, to, { dx: -(p.dx ?? 0), dy: -(p.dy ?? 0), rotate: -(p.rotate ?? 0), rotX: -(p.rotX ?? 0), rotY: -(p.rotY ?? 0), scaleBy: 1 / (p.scaleBy ?? 1) }, SOFT),
+    move(from, to, { dx: -(p.dx ?? 0), dy: -(p.dy ?? 0), rotate: -(p.rotate ?? 0), rotX: -(p.rotX ?? 0), rotY: -(p.rotY ?? 0), scaleBy: 1 / (p.scaleBy ?? 1), pivotX: p.pivotX, pivotZ: p.pivotZ }, SOFT),
   ]
-  const fold = (from: number, to: number, angle: number) => b('fold', f(from), f(to - from), { params: { angle }, easing: 'custom', bezier: SWING })
+  /** kapalı telefonun gövde ortası (katman `rest` derece dönükken menteşenin sağında): turlar menteşeden değil buradan */
+  const body = (rest: number) => ({ pivotX: HALF * Math.cos((rest * Math.PI) / 180), pivotZ: HALF * Math.sin((rest * Math.PI) / 180) })
+  const fold = (from: number, to: number, angle: number, bezier: Bezier = GLIDE) => b('fold', f(from), f(to - from), { params: { angle }, easing: 'custom', bezier })
 
   const phone = (name: string, shot: [number, number], hingeX: number, scale: number, rotation: Vec3, foldAngle: number, blocks: BlockSpec[]) =>
     layer({
       name,
       kind: 'foldable',
-      deviceFinish: 'titanium',
+      deviceFinish: 'space',
       color: GRAPHITE,
       // ekran videoları 20 sn'lik tek kayıt: her çekim kendi anından devam eder
       media: `${base}templates/fold-promo/inner.mp4`,
@@ -99,7 +109,7 @@ export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
       letterSpacing: o.spacing ?? -0.03,
       textWidth: 20,
       align: o.align ?? 'left',
-      color: o.color ?? IVORY,
+      color: o.color ?? GRAPHITE,
       position: P(x, y, o.z ?? 0.3),
       rotation: [0, 0, o.rotate ?? 0],
       blocks,
@@ -116,7 +126,9 @@ export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
     const height = size * 1.5
     const blocks = [...cut(at, until), b('pop', f(at), f(24)), ...(fadeOut ? [b('fade-out', f(until - 8), f(8))] : [])]
     return [
-      text(value, value, x + width / 2, y, { size, color: ink, align: 'center', rotate: -3.5, z: 0.32 }, blocks),
+      // Yazı kutusu satır yüksekliğine göre ortalanıyor, büyük harfler ise satırın üst kısmında duruyor: harfler kutunun
+      // tam ortasına gelsin diye yazı aşağı (ve sondaki noktanın boşluğu kadar sağa) kaydırılır. Karede ölçüldü.
+      text(value, value, x + width / 2 + size * PILL_NUDGE[0], y + size * PILL_NUDGE[1], { size, color: ink, align: 'center', rotate: -3.5, z: 0.32 }, blocks),
       layer({ name: `${value} ${k('layers.label')}`, kind: 'shape', shape: 'rounded', shapeWidth: width * U, shapeHeight: height * U, color: box, position: P(x + width / 2, y, 0.3), rotation: [0, 0, -3.5], blocks }),
     ]
   }
@@ -137,28 +149,30 @@ export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
 
   const layers: Layer[] = [
     // --- 1. çekim: kapalı → açık ---
-    eyebrow(k('brand'), LEFT, 236, CHAMPAGNE, A, 6),
-    word(k('folded'), LEFT, 500, 156, IVORY, 8, 120),
-    text(k('layers.subline'), k('foldedSub'), LEFT + 4, 660, { size: 42, weight: 400, font: 'inter-medium', spacing: -0.01, color: CHAMPAGNE }, [...cut(10, 120), b('typewriter', f(10), f(32)), b('fade-out', f(112), f(8))]),
-    word(k('un'), LEFT, 444, 144, IVORY, 126, 240, false),
-    word(k('unfolded'), LEFT, 584, 114, IVORY, 158, 240, false),
+    eyebrow(k('brand'), LEFT, 236, TAUPE, A, 6),
+    word(k('folded'), LEFT, 500, 156, GRAPHITE, 8, 120),
+    text(k('layers.subline'), k('foldedSub'), LEFT + 4, 660, { size: 42, weight: 400, font: 'inter-medium', spacing: -0.01, color: TAUPE }, [...cut(10, 120), b('typewriter', f(10), f(32)), b('fade-out', f(112), f(8))]),
+    word(k('un'), LEFT, 444, 144, GRAPHITE, 126, 240, false),
+    word(k('unfolded'), LEFT, 584, 114, GRAPHITE, 158, 240, false),
     phone(k('layers.phone'), A, closedHinge(PHONE, 1.4), 1.4, [0, 80, 0], 0, [
       // küçükten büyüyerek, y ekseninde bir tur dönerek gelir (1–30)
-      ...enter(0, 30, { rotY: -360, scaleBy: 0.3 }),
+      ...enter(0, 30, { rotY: -360, scaleBy: 0.3, ...body(80) }),
       move(30, 132, { rotY: 8 }, 'linear'),
-      // açılır: yarılar ayrılırken telefon kameraya döner ve küçülür (136–200)
-      fold(138, 196, 180),
-      move(134, 200, { rotY: -94, rotX: 4, scaleBy: 0.908 / 1.4, dx: 1300 - closedHinge(PHONE, 1.4) }),
-      move(200, 240, { rotY: 3 }, 'linear'),
+      // açılır (referansta 140'ta başlar, 164'te kapak yarısı kameraya dik): menteşe ve telefonun dönüşü aynı
+      // karelerde ve aynı eğriyle, böylece sağ yarı yerinde durur, bulanıklık yalnızca savrulan yarıda olur
+      // Açılma 140–210: iç ekranın bulanıklığı açıyla çekildiği için son yarı uzun tutuldu (50 karede "bir anda gidiyordu").
+      fold(140, 210, 180, UNFOLD),
+      move(140, 210, { rotY: -94, rotX: 4, scaleBy: 0.908 / 1.4, dx: 1300 - closedHinge(PHONE, 1.4) }, UNFOLD),
+      move(210, 240, { rotY: 2 }, 'linear'),
     ]),
-    ...backdrop(k('layers.background'), ESPRESSO, COGNAC, PHONE, 0.7, A),
+    ...backdrop(k('layers.background'), IVORY, WHITE, PHONE, 0.95, A),
 
     // --- 2. çekim: açık telefon solda, kelimeler sağda; sonra 90° döner ---
-    eyebrow(k('brand'), RIGHT, 205, GRAPHITE, B, 248),
+    eyebrow(k('brand'), RIGHT, 205, TAUPE, B, 248),
     word(k('wide1'), RIGHT, 335, 102, GRAPHITE, 250, 360),
     word(k('wide2'), RIGHT, 466, 102, GRAPHITE, 280, 360),
     word(k('wide3'), RIGHT, 597, 102, GRAPHITE, 310, 360),
-    ...pill(k('wide4'), RIGHT, 748, 84, GRAPHITE, IVORY, 340, 360),
+    ...pill(k('wide4'), RIGHT, 748, 84, GRAPHITE, WHITE, 340, 360),
     word(k('turn'), RIGHT, 453, 144, GRAPHITE, 368, 480, false),
     word(k('turnIt'), RIGHT, 627, 144, GRAPHITE, 398, 480, false),
     phone(k('layers.phone'), B, 590, 0.846, [3, 8, -2], 180, [
@@ -168,45 +182,44 @@ export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
       move(361, 412, { rotate: 360, scaleBy: 0.94 / 0.846 }),
       move(412, 480, { rotY: 4 }, 'linear'),
     ]),
-    ...backdrop(k('layers.background'), '#e9e3d9', '#ffffff', 590, 0.9, B),
+    ...backdrop(k('layers.background'), SAND, WHITE, 590, 0.95, B),
 
     // --- 3. çekim: koyu fon, kapalı telefon ---
-    eyebrow(k('export'), LEFT, 236, AMBER, C, 488),
-    word(k('tweak1'), LEFT, 344, 114, IVORY, 488, 720, false),
-    word(k('tweak2'), LEFT, 479, 114, IVORY, 518, 720, false),
-    word(k('tweak3'), LEFT, 614, 114, IVORY, 548, 720, false),
-    ...pill(k('tweak4'), LEFT, 762, 72, AMBER, GRAPHITE, 608, 720, false),
+    eyebrow(k('export'), LEFT, 236, MANGO, C, 488),
+    word(k('tweak1'), LEFT, 344, 114, GRAPHITE, 488, 720, false),
+    word(k('tweak2'), LEFT, 479, 114, GRAPHITE, 518, 720, false),
+    word(k('tweak3'), LEFT, 614, 114, GRAPHITE, 548, 720, false),
+    ...pill(k('tweak4'), LEFT, 762, 72, MANGO, WHITE, 608, 720, false),
     phone(k('layers.phone'), C, closedHinge(PHONE, 1.34), 1.34, [0, 82, 0], 0, [
       // yatık halde yukarıdan düşer (481–506)
       ...enter(480, 506, { rotX: -88, scaleBy: 0.45, dy: -200 }),
-      move(506, 604, { rotY: 6 }, 'linear'),
-      // etiket gelirken bir takla (604–626)
-      move(604, 626, { rotX: 360 }),
-      move(626, 720, { rotY: -5 }, 'linear'),
+      // yerinde, çok hafif salınır (referanstaki takla kaldırıldı: kullanıcı kararı, telefon gereksiz yere dönüyordu)
+      move(506, 612, { rotY: 6 }, 'linear'),
+      move(612, 720, { rotY: -5 }, 'linear'),
     ]),
-    ...backdrop(k('layers.background'), OBSIDIAN, COGNAC, PHONE, 0.38, C),
+    ...backdrop(k('layers.background'), STONE, WHITE, PHONE, 0.95, C),
 
     // --- 4. ve 5. çekim: dikey açık → yatay → katlanır → döner; kapanış ---
-    eyebrow(k('brand'), LEFT, 236, CHAMPAGNE, [720, 960], 728),
-    word(k('foldIt'), LEFT, 466, 114, IVORY, 730, 842),
-    ...pill(k('midEdit'), LEFT, 622, 84, IVORY, GRAPHITE, 756, 842),
-    word(k('keep'), LEFT, 453, 144, IVORY, 848, 960),
-    word(k('creating'), LEFT, 614, 120, IVORY, 876, 960),
+    eyebrow(k('brand'), LEFT, 236, TAUPE, [720, 960], 728),
+    word(k('foldIt'), LEFT, 466, 114, GRAPHITE, 730, 842),
+    ...pill(k('midEdit'), LEFT, 622, 84, GRAPHITE, WHITE, 756, 842),
+    word(k('keep'), LEFT, 453, 144, GRAPHITE, 848, 960),
+    word(k('creating'), LEFT, 614, 120, GRAPHITE, 876, 960),
     text(k('layers.wordmark'), k('brand'), LEFT, 487, { size: 86, spacing: 0.08 }, [...cut(968, 1200), b('fade-in', f(968), f(14)), b('slide-up', f(968), f(26), { params: { distance: 0.25 } })]),
-    text(k('layers.subline'), k('tagline'), LEFT + 4, 606, { size: 44, weight: 400, font: 'inter-medium', spacing: -0.01, color: CHAMPAGNE }, [...cut(994, 1200), b('fade-in', f(994), f(14))]),
-    text(k('layers.domain'), 'mangostudio.design', LEFT + 4, 672, { size: 44, weight: 700, font: 'inter-medium', spacing: -0.01, color: AMBER }, [...cut(1004, 1200), b('fade-in', f(1004), f(14))]),
+    text(k('layers.subline'), k('tagline'), LEFT + 4, 606, { size: 44, weight: 400, font: 'inter-medium', spacing: -0.01, color: TAUPE }, [...cut(994, 1200), b('fade-in', f(994), f(14))]),
+    text(k('layers.domain'), 'mangostudio.design', LEFT + 4, 672, { size: 44, weight: 700, font: 'inter-medium', spacing: -0.01, color: MANGO }, [...cut(1004, 1200), b('fade-in', f(1004), f(14))]),
     phone(k('layers.phone'), D, 1300, 0.91, [0, -6, 0], 180, [
       // eğik ve küçük gelip düzelir (720–762)
       ...enter(720, 762, { rotate: 26, scaleBy: 0.86 }),
       // katlanır: yarılar kapanırken kapak ekranı kameraya döner ve büyür (776–838)
-      fold(780, 834, 0),
-      move(776, 838, { rotY: 88, scaleBy: 1.38 / 0.91, dx: closedHinge(PHONE, 1.38) - 1300 }),
-      move(846, 872, { rotY: 360 }),
+      fold(776, 828, 0),
+      move(776, 828, { rotY: 88, scaleBy: 1.38 / 0.91, dx: closedHinge(PHONE, 1.38) - 1300 }, GLIDE),
+      move(846, 872, { rotY: 360, ...body(82) }),
+      // kapanışta ikinci tur yok (kullanıcı kararı): marka adı gelirken telefon yerinde, hafifçe salınır
       move(872, 964, { rotY: -6 }, 'linear'),
-      move(964, 990, { rotY: 360 }),
-      move(990, 1200, { rotY: 8 }, 'linear'),
+      move(964, 1200, { rotY: 8 }, 'linear'),
     ]),
-    ...backdrop(k('layers.background'), ESPRESSO, COGNAC, PHONE, 0.7, D),
+    ...backdrop(k('layers.background'), IVORY, WHITE, PHONE, 0.95, D),
   ]
 
   return {
@@ -217,8 +230,9 @@ export function buildFoldPromo({ t, b, layer, camera, project }: Kit): Project {
       dof: { enabled: false, bokeh: 5, range: 1.4 },
       bloom: { enabled: false, intensity: 0.35, threshold: 0.9 },
       vignette: { enabled: false, darkness: 0.35 },
-      // referansta hızlı dönüşlerde hareket bulanıklığı var
-      motionBlur: { enabled: true, samples: 6, shutter: 0.5 },
+      // referansın ayırt edici yanı: açılıp katlanırken ve dönerken savrulan yarıdaki hareket bulanıklığı. Örnek sayısı
+      // üst sınır (duran karelerde tek çizim); 6 örnekte hızlı dönüşlerde kopyalar tek tek seçiliyordu
+      motionBlur: { enabled: true, samples: 32, shutter: 0.5 },
     },
   }
 }

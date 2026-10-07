@@ -78,7 +78,7 @@ export function EffectsPanel() {
       )}
       {!design && effects.motionBlur.enabled && (
         <>
-          <Slider id="fx-mb-samples" label={t('effects.samples')} value={effects.motionBlur.samples} min={2} max={16} step={1} onChange={(v) => update({ motionBlur: { samples: v } })} />
+          <Slider id="fx-mb-samples" label={t('effects.samples')} value={effects.motionBlur.samples} min={2} max={32} step={1} onChange={(v) => update({ motionBlur: { samples: v } })} />
           <Slider id="fx-mb-shutter" label={t('effects.shutter')} value={effects.motionBlur.shutter} min={0.1} max={1} step={0.05} onChange={(v) => update({ motionBlur: { shutter: v } })} />
           <p className="hint">{t('effects.motionBlurHint')}</p>
         </>
