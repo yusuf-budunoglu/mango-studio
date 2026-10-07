@@ -40,7 +40,18 @@ export function LayerFields({ layer }: { layer: Layer }) {
       {/* Menteşe: açıklık ve ona bağlı ekran bulanıklığı. Cihazın kendi özelliği olduğu için görsel alanlarının üstünde. */}
       {layer.kind === 'foldable' && (
         <>
-          <NumberField id="layer-fold" label={t('layer.foldAngle')} value={layer.foldAngle ?? 180} step={5} onChange={(v) => update({ foldAngle: Math.min(180, Math.max(0, v)) })} />
+          {/* Katlanma seviyesi: kaydırıcıyla kabaca, sayıyla tam derece. İkisi de aynı değeri (`foldAngle`) yazar. */}
+          <div className="slider">
+            <label htmlFor="layer-fold">
+              {t('layer.fold')} <span>{t('layer.foldDegrees', { angle: Math.round(layer.foldAngle ?? 180) })}</span>
+            </label>
+            <input id="layer-fold" type="range" min={0} max={180} step={1} value={layer.foldAngle ?? 180} onChange={(e) => update({ foldAngle: Number(e.target.value) })} />
+            <div className="slider-ends" aria-hidden="true">
+              <span>{t('layer.foldClosed')}</span>
+              <span>{t('layer.foldOpen')}</span>
+            </div>
+          </div>
+          <NumberField id="layer-fold-angle" label={t('layer.foldAngle')} value={layer.foldAngle ?? 180} step={5} onChange={(v) => update({ foldAngle: Math.min(180, Math.max(0, v)) })} />
           <label className="fx-toggle" htmlFor="layer-fold-blur">
             <input id="layer-fold-blur" type="checkbox" checked={layer.foldBlur !== false} onChange={(e) => update({ foldBlur: e.target.checked ? undefined : false })} /> {t('layer.foldBlur')}
           </label>
