@@ -975,6 +975,7 @@ const tr: Translation = {
   design: {
     badge: 'Tasarım',
     layers: 'Katmanlar',
+    dragToReorder: 'Sıralamak için sürükle: üstteki katman önde',
     noLayers: 'Henüz bir şey yok. Yukarıdan cihaz, metin ya da görsel ekle.',
     forward: '{{name}} öne getir',
     backward: '{{name}} arkaya gönder',

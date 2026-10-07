@@ -240,6 +240,10 @@ button.danger-solid { background: var(--danger); border-color: transparent; colo
 .dlayer:hover { background: var(--panel-2); }
 .dlayer.is-selected { background: var(--accent-soft); }
 .dlayer.is-hidden .dlayer-name { opacity: 0.45; }
+/* sürüklenen satır diğerlerinin üstünde, hafif gölgeli */
+.dlayer.is-dragging { position: relative; z-index: 2; background: var(--panel-2); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+.dlayer-name { cursor: grab; touch-action: none; }
+.dlayer.is-dragging .dlayer-name { cursor: grabbing; }
 .dlayer-name { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; padding: 5px 6px; border: 0; background: transparent; font-size: 12.5px; text-align: left; }
 .dlayer-name:hover:not(:disabled) { border: 0; }
 .dlayer-name svg { flex: none; color: var(--muted); }

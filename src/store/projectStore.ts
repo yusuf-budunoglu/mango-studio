@@ -55,7 +55,7 @@ interface ProjectStore {
   addLayer: (kind: LayerKind, time: number) => string
   removeLayer: (layerId: string) => void
   /** Katmanı listede `toIndex` konumuna taşır (0 = en üst = en önde). */
-  moveLayer: (layerId: string, toIndex: number) => void
+  moveLayer: (layerId: string, toIndex: number, patch?: Pick<Layer, 'position' | 'scale'>) => void
   duplicateLayer: (layerId: string) => void
   /** Bloğu başka bir satıra taşır; hedef, bloğun türüne uymuyorsa (kamera/katman) bir şey yapmaz. */
   moveBlockToTrack: (blockId: string, trackId: TrackId) => void
@@ -314,14 +314,15 @@ export const useProjectStore = create<ProjectStore>()(
           selectedBlockIds: [],
           selectedTrackId: s.selectedTrackId === layerId ? '' : s.selectedTrackId,
         })),
-      moveLayer: (layerId, toIndex) =>
+      moveLayer: (layerId, toIndex, patch) =>
         set((s) => {
           const layers = [...s.project.layers]
           const from = layers.findIndex((l) => l.id === layerId)
           const to = Math.max(0, Math.min(layers.length - 1, toIndex))
           if (from === -1 || from === to) return {}
           const [layer] = layers.splice(from, 1)
-          layers.splice(to, 0, layer)
+          // tasarımda sıra değişince katman görüntüde de o sıraya gelsin diye derinliği birlikte yazılır (tek geri alma adımı)
+          layers.splice(to, 0, patch ? { ...layer, ...patch } : layer)
           return { project: { ...s.project, layers } }
         }),
       duplicateLayer: (layerId) =>

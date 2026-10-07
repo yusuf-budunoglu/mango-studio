@@ -974,6 +974,7 @@ const en = {
   design: {
     badge: 'Design',
     layers: 'Layers',
+    dragToReorder: 'Drag to reorder: the layer on top is in front',
     noLayers: 'Nothing here yet. Add a device, text or image above.',
     forward: 'Bring {{name}} forward',
     backward: 'Send {{name}} backward',

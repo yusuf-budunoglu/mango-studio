@@ -6,6 +6,7 @@ import { Box3, Plane, Raycaster, Vector2, Vector3, type Camera, type Object3D, t
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import { routeToPath } from '../router'
+import { sceneLink } from '../editor/sceneLink'
 import { manualDrag, useEditorStore } from '../store/editorStore'
 import { usePlan } from '../store/planStore'
 import { usePlaybackStore, useProjectStore } from '../store/projectStore'
@@ -56,6 +57,8 @@ export function SelectionTracker() {
   useFrame(() => {
     link.camera = camera
     link.scene = scene
+    sceneLink.camera = camera
+    sceneLink.scene = scene
     const el = link.el
     if (!el) return
     const id = el.dataset.layer
