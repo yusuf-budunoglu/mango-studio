@@ -12,6 +12,11 @@ import { usePlaybackStore, useProjectStore } from '../store/projectStore'
 
 const SNAP_THRESHOLD = 0.12
 const CORNERS = ['nw', 'ne', 'sw', 'se'] as const
+/** döndürürken imlecin 1 pikseli kaç radyan (yarım derece) */
+const TURN_PER_PX = Math.PI / 360
+/** Shift basılıyken dönüş bu adıma yapışır (15°) */
+const TURN_STEP = Math.PI / 12
+const stepped = (angle: number, on: boolean) => (on ? Math.round(angle / TURN_STEP) * TURN_STEP : angle)
 
 /**
  * Kanvas (three.js) ile HTML seçim kutusu arasındaki bağ. Kutu kanvasın üstünde ayrı bir HTML katmanı:
@@ -78,9 +83,11 @@ export function SelectionTracker() {
 
 /**
  * Kutunun içinden sürükleme taşır (nesnenin derinliğinde, kameraya dik düzlemde), köşeden sürükleme ölçekler.
+ * `turn`: nesneyi tutup çevirir gibi, yatay sürükleme Y ekseninde, dikey sürükleme X ekseninde döndürür.
+ * `roll`: imlecin nesnenin merkezi etrafındaki açısı kadar Z ekseninde (kendi düzleminde) döndürür.
  * Bırakınca sonuç, animasyon etkisi korunarak katmanın temel değerlerine yazılır (Stage'deki tutamaçla aynı yol).
  */
-function startDrag(e: ReactPointerEvent<HTMLElement>, kind: 'move' | 'scale') {
+function startDrag(e: ReactPointerEvent<HTMLElement>, kind: 'move' | 'scale' | 'turn' | 'roll') {
   if (e.button !== 0) return
   e.stopPropagation()
   e.preventDefault()
@@ -112,12 +119,25 @@ function startDrag(e: ReactPointerEvent<HTMLElement>, kind: 'move' | 'scale') {
   const centerX = rect.left + ((center.x + 1) / 2) * rect.width
   const centerY = rect.top + ((1 - center.y) / 2) * rect.height
   const startDistance = Math.max(4, Math.hypot(e.clientX - centerX, e.clientY - centerY))
+  const startX = e.clientX
+  const startY = e.clientY
+  const startRotation = object.rotation.clone()
+  const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
   const snapping = useEditorStore.getState().snapping
   let moved = false
   manualDrag.layerId = layer.id
 
   const onMove = (ev: PointerEvent) => {
     moved = true
+    if (kind === 'turn') {
+      object.rotation.set(stepped(startRotation.x + (ev.clientY - startY) * TURN_PER_PX, ev.shiftKey), stepped(startRotation.y + (ev.clientX - startX) * TURN_PER_PX, ev.shiftKey), startRotation.z)
+      return
+    }
+    if (kind === 'roll') {
+      // ekranda y aşağı doğru: saat yönündeki sürükleme three.js'te negatif Z dönüşü
+      object.rotation.z = stepped(startRotation.z - (Math.atan2(ev.clientY - centerY, ev.clientX - centerX) - startAngle), ev.shiftKey)
+      return
+    }
     if (kind === 'scale') {
       object.scale.setScalar(Math.max(0.01, (startScale * Math.hypot(ev.clientX - centerX, ev.clientY - centerY)) / startDistance))
       return
@@ -222,12 +242,18 @@ function AiPrompt({ name }: { name: string }) {
   )
 }
 
-/** Önizlemedeki seçili katmanın mavi düzenleme kutusu: taşı, köşelerden ölçekle, sağ üstte yapay zekâ. */
+/**
+ * Önizlemedeki seçili katmanın mavi düzenleme kutusu: taşı, köşelerden ölçekle, sağ üstte yapay zekâ.
+ * Üstteki yuvarlak tutamaç her modda nesneyi X/Y ekseninde çevirir. Döndürme aracı (E) seçiliyken kutunun içi de
+ * çevirir, köşeler Z ekseninde döndürür.
+ */
 export function SelectionOverlay() {
   const layers = useProjectStore((s) => s.project.layers)
   const selectedId = useProjectStore((s) => s.selectedTrackId)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const clean = useEditorStore((s) => s.cleanRenders > 0)
+  const rotating = useEditorStore((s) => s.transformMode === 'rotate')
+  const { t } = useTranslation()
   const layer = layers.find((l) => l.id === selectedId)
   if (!layer || layer.locked || layer.hidden || isPlaying || clean) return null
 
@@ -237,13 +263,14 @@ export function SelectionOverlay() {
       ref={(el) => {
         link.el = el
       }}
-      className="sel-box"
+      className={`sel-box${rotating ? ' is-rotate' : ''}`}
       data-layer={layer.id}
-      onPointerDown={(e) => startDrag(e, 'move')}
+      onPointerDown={(e) => startDrag(e, rotating ? 'turn' : 'move')}
     >
       {CORNERS.map((c) => (
-        <span key={c} className={`sel-handle sel-handle--${c}`} onPointerDown={(e) => startDrag(e, 'scale')} />
+        <span key={c} className={`sel-handle sel-handle--${c}`} onPointerDown={(e) => startDrag(e, rotating ? 'roll' : 'scale')} />
       ))}
+      <span className="sel-handle sel-handle--turn" title={t('editor.tools.turn')} onPointerDown={(e) => startDrag(e, 'turn')} />
       <AiPrompt key={layer.id} name={layer.name} />
     </div>
   )

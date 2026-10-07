@@ -207,6 +207,7 @@ button.danger { color: var(--danger); }
 .export-upgrade:hover { text-decoration: underline; }
 .export-error { color: var(--danger); font-size: 12px; max-width: 260px; }
 .inspector .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inspector .row--3 { grid-template-columns: 1fr 1fr 1fr; }
 .hint { margin: 0; color: var(--muted); font-size: 13px; }
 .block-title { margin: 0; font-weight: 600; font-size: 15px; }
 .block-title span { color: var(--muted); font-weight: 400; }
@@ -534,6 +535,14 @@ button.danger { color: var(--danger); }
 .sel-handle--ne { right: -5px; top: -5px; cursor: nesw-resize; }
 .sel-handle--sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
 .sel-handle--se { right: -5px; bottom: -5px; cursor: nwse-resize; }
+/* çevirme tutamacı: kutunun üstünde, ince bir sapla bağlı yuvarlak düğme (sürükle: X ve Y dönüşü) */
+.sel-handle--turn { left: 50%; top: -34px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; cursor: grab; }
+.sel-handle--turn::after { content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: 17px; margin-left: -1px; background: var(--select); }
+.sel-handle--turn:active { cursor: grabbing; }
+/* döndürme aracı seçiliyken kutunun içi çevirir, köşeler kendi düzleminde döndürür */
+.sel-box.is-rotate { cursor: grab; }
+.sel-box.is-rotate:active { cursor: grabbing; }
+.sel-box.is-rotate .sel-handle--nw, .sel-box.is-rotate .sel-handle--ne, .sel-box.is-rotate .sel-handle--sw, .sel-box.is-rotate .sel-handle--se { cursor: crosshair; border-radius: 50%; }
 .sel-ai { position: absolute; left: calc(100% + 8px); top: -4px; cursor: default; }
 .sel-box.is-tight .sel-ai { left: auto; right: 8px; top: 8px; }
 .sel-box.is-tight .sel-ai-chat { left: auto; right: calc(100% + 6px); }

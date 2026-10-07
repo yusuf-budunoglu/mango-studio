@@ -1,4 +1,4 @@
-import { Environment, Lightformer, Line, TransformControls } from '@react-three/drei'
+import { Environment, Lightformer } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Bloom, BrightnessContrast, DepthOfField, EffectComposer, HueSaturation, Noise, Vignette, wrapEffect } from '@react-three/postprocessing'
 import { BlendFunction, EffectPass, type DepthOfFieldEffect } from 'postprocessing'
@@ -9,11 +9,10 @@ import { lensFrame, lensPasses, resolveEffects, type ProjectEffects } from '../e
 import { isDesign } from '../engine/design'
 import { evaluate } from '../engine/evaluate'
 import { motionSamples, subframeTimes } from '../engine/motion'
-import { manualTransformPatch } from '../engine/manualTransform'
-import type { Layer, LayerState, Project } from '../engine/types'
+import type { Project } from '../engine/types'
 import * as bridgeModule from '../export/bridge'
 import { exportBridge, renderTimeOverride } from '../export/bridge'
-import { gizmoJustReleased, manualDrag, useEditorStore } from '../store/editorStore'
+import { gizmoJustReleased, useEditorStore } from '../store/editorStore'
 import { overscanFov, previewLayout, previewView } from '../editor/previewFrame'
 import { FlareEffect, LensEffect, LightLeakEffect } from '../render/lensEffects'
 import { LayerNode } from './layers/LayerNode'
@@ -23,93 +22,6 @@ import { useProjectStore, usePlaybackStore } from '../store/projectStore'
 
 /** Tutamaç ve kılavuzların toplandığı grup; tek karelik yakalamalarda gizlenir. */
 const EDITOR_HELPERS = 'editor-helpers'
-const GUIDE_COLOR = '#ff4fd8'
-/** Döndürme tutamacının rengi: seçim kutusuyla aynı belirgin mavi (beyaz/renkli eksenler önizlemede kayboluyordu). */
-const GIZMO_BLUE = '#2b7fff'
-
-/**
- * Seçili katmanı döndürme tutamacı (E). Taşıma ve ölçekleme önizlemenin üstündeki mavi seçim kutusuyla
- * yapılır (SelectionOverlay). Bırakınca sonuç, animasyon etkisi korunarak katmanın temel değerlerine
- * yazılır (manualTransformPatch).
- */
-function LayerGizmo({ project }: { project: Project }) {
-  const selectedId = useProjectStore((s) => s.selectedTrackId)
-  const mode = useEditorStore((s) => s.transformMode)
-  const snapping = useEditorStore((s) => s.snapping)
-  const clean = useEditorStore((s) => s.cleanRenders > 0)
-  const isPlaying = usePlaybackStore((s) => s.isPlaying)
-  const scene = useThree((s) => s.scene)
-  const [target, setTarget] = useState<Object3D | null>(null)
-  // three.js nesneleri değiştirilebilir; tutamaç işlemleri nesneyi her seferinde sahneden bulur.
-  const object = () => (layer ? scene.getObjectByName(`layer:${layer.id}`) : undefined)
-  const [guides, setGuides] = useState<{ x: number | null; y: number | null; z: number } | null>(null)
-  const drag = useRef<{ layer: Layer; evaluated: LayerState; candidates: { x: number[]; y: number[] } } | null>(null)
-  const layer = project.layers.find((l) => l.id === selectedId)
-  const controls = useRef<Object3D | null>(null)
-
-  // Katmanın three.js nesnesi React çiziminden sonra oluşur; o yüzden efektte bulunur.
-  useEffect(() => {
-    // eslint-disable-next-line react/set-state-in-effect -- three.js sahnesiyle eşitleme: nesne ancak çizimden sonra var.
-    setTarget(layer ? (scene.getObjectByName(`layer:${layer.id}`) ?? null) : null)
-  }, [layer, scene])
-
-  // Tutamacın eksen ve halkaları mavi; three.js üzerine gelinince rengini `_color`'dan geri yüklediği için ikisi de yazılır.
-  useEffect(() => {
-    controls.current?.traverse((o) => {
-      const material = (o as Mesh).material as (MeshBasicMaterial & { _color?: Color }) | undefined
-      if (!material || !('color' in material) || o.name === 'picker' || o.parent?.name === 'picker') return
-      material.color.set(GIZMO_BLUE)
-      material._color?.set(GIZMO_BLUE)
-    })
-  })
-
-  if (!layer || !target || clean || isPlaying || layer.locked || layer.hidden || mode !== 'rotate') return null
-
-  const onStart = () => {
-    const frame = evaluate(project, usePlaybackStore.getState().time)
-    const others = project.layers.filter((l) => l.id !== layer.id).map((l) => frame.layers[l.id])
-    drag.current = {
-      layer,
-      evaluated: frame.layers[layer.id],
-      // Yapışma çizgileri: ekran ortası ve diğer katmanların o anki konumları.
-      candidates: { x: [0, ...others.map((o) => o.x)], y: [0, ...others.map((o) => o.y)] },
-    }
-    manualDrag.layerId = layer.id
-  }
-
-  const onEnd = () => {
-    const d = drag.current
-    drag.current = null
-    manualDrag.layerId = null
-    manualDrag.releasedAt = performance.now()
-    setGuides(null)
-    const obj = object()
-    if (!d || !obj) return
-    const patch = manualTransformPatch(d.layer, d.evaluated, {
-      position: [obj.position.x, obj.position.y, obj.position.z],
-      rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
-      scale: obj.scale.x,
-    })
-    useProjectStore.getState().updateLayer(d.layer.id, patch)
-  }
-
-  return (
-    <group name={EDITOR_HELPERS}>
-      <TransformControls
-        ref={controls as never}
-        object={target}
-        mode={mode}
-        size={0.8}
-        rotationSnap={snapping ? Math.PI / 12 : null}
-        onMouseDown={onStart}
-        onMouseUp={onEnd}
-      />
-      {guides?.x != null && <Line points={[[guides.x, -20, guides.z], [guides.x, 20, guides.z]]} color={GUIDE_COLOR} lineWidth={1} dashed dashSize={0.1} gapSize={0.06} />}
-      {guides?.y != null && <Line points={[[-40, guides.y, guides.z], [40, guides.y, guides.z]]} color={GUIDE_COLOR} lineWidth={1} dashed dashSize={0.1} gapSize={0.06} />}
-    </group>
-  )
-}
-
 const Flare = wrapEffect(FlareEffect, { blendFunction: BlendFunction.NORMAL, opacity: 1 })
 const LightLeak = wrapEffect(LightLeakEffect, { blendFunction: BlendFunction.NORMAL, opacity: 1 })
 
@@ -488,7 +400,6 @@ function Scene({ project }: { project: Project }) {
         </mesh>
       </group>
       <SceneEffects effects={effects} passes={passes} dofRef={dofRef} lensRef={lensRef} flareRef={flareRef} sweepRef={sweepRef} leakRef={leakRef} />
-      <LayerGizmo project={project} />
       <SelectionTracker />
       <ExportBridge />
       {effects.motionBlur.enabled && !isDesign(project) && <PreviewMotionBlur samples={effects.motionBlur.samples} shutter={effects.motionBlur.shutter} fps={project.fps} />}

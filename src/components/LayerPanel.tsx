@@ -181,12 +181,14 @@ export function LayerFields({ layer }: { layer: Layer }) {
       </div>
       <div className="row">
         <NumberField id="layer-z" label={t('layer.depth')} value={layer.position[2]} onChange={(v) => setVec('position', 2, v)} />
-        <NumberField id="layer-roty" label={t('layer.rotationY')} value={layer.rotation[1]} step={1} onChange={(v) => setVec('rotation', 1, v)} />
-      </div>
-      <div className="row">
         <NumberField id="layer-scale" label={t('layer.scale')} value={layer.scale} step={0.05} onChange={(v) => update({ scale: Math.max(0.01, v) })} />
-        <NumberField id="layer-opacity" label={t('layer.opacity')} value={layer.opacity} step={0.05} onChange={(v) => update({ opacity: Math.min(1, Math.max(0, v)) })} />
       </div>
+      <div className="row row--3">
+        <NumberField id="layer-rotx" label={t('layer.rotationX')} value={layer.rotation[0]} step={1} onChange={(v) => setVec('rotation', 0, v)} />
+        <NumberField id="layer-roty" label={t('layer.rotationY')} value={layer.rotation[1]} step={1} onChange={(v) => setVec('rotation', 1, v)} />
+        <NumberField id="layer-rotz" label={t('layer.rotationZ')} value={layer.rotation[2]} step={1} onChange={(v) => setVec('rotation', 2, v)} />
+      </div>
+      <NumberField id="layer-opacity" label={t('layer.opacity')} value={layer.opacity} step={0.05} onChange={(v) => update({ opacity: Math.min(1, Math.max(0, v)) })} />
       <button type="button" className="danger" onClick={() => removeLayer(layer.id)}>
         {t('layer.delete')}
       </button>
