@@ -55,6 +55,8 @@ function useRevealMaterial() {
     () => ({
       uRevealEdge: { value: 1e6 },
       uRevealSoft: { value: 1e-3 },
+      uHideEdge: { value: -1e6 },
+      uHideSoft: { value: 1e-3 },
       uGlowOn: { value: 0 },
       uGlowFront: { value: 0 },
       uGlowTail: { value: 0 },
@@ -70,10 +72,10 @@ function useRevealMaterial() {
     m.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, uniforms)
       shader.vertexShader = `varying float vRevealX;\n${shader.vertexShader}`.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRevealX = transformed.x;')
-      const defs = 'uniform float uRevealEdge;\nuniform float uRevealSoft;\nuniform float uGlowOn;\nuniform float uGlowFront;\nuniform float uGlowTail;\nuniform float uGlowSoft;\nuniform float uGlowHalo;\nuniform vec3 uGlowColor;\nuniform vec3 uGlowEdge;\nvarying float vRevealX;\n'
+      const defs = 'uniform float uRevealEdge;\nuniform float uRevealSoft;\nuniform float uHideEdge;\nuniform float uHideSoft;\nuniform float uGlowOn;\nuniform float uGlowFront;\nuniform float uGlowTail;\nuniform float uGlowSoft;\nuniform float uGlowHalo;\nuniform vec3 uGlowColor;\nuniform vec3 uGlowEdge;\nvarying float vRevealX;\n'
       shader.fragmentShader = `${defs}${shader.fragmentShader}`
         .replace('#include <opaque_fragment>', GLOW_FRAGMENT)
-        .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= clamp((uRevealEdge - vRevealX) / uRevealSoft, 0.0, 1.0);')
+        .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= clamp((uRevealEdge - vRevealX) / uRevealSoft, 0.0, 1.0) * clamp((vRevealX - uHideEdge) / uHideSoft, 0.0, 1.0);')
     }
     return m
   }, [uniforms])
@@ -128,6 +130,15 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
         reveal.uniforms.uRevealSoft.value = soft
       } else {
         reveal.uniforms.uRevealEdge.value = 1e6
+      }
+      // soft-hide: silme kenarı soldan sağa ilerler; kenarın solundaki harfler görünmez
+      if (s.softHide > 0 && bounds) {
+        const [minX, , maxX] = bounds
+        const soft = Math.max(1e-3, (maxX - minX) * s.hideSoftness)
+        reveal.uniforms.uHideEdge.value = minX - soft + (maxX - minX + soft) * s.softHide
+        reveal.uniforms.uHideSoft.value = soft
+      } else {
+        reveal.uniforms.uHideEdge.value = -1e6
       }
       // glow-sweep: ön ve arka kenar metin genişliğine göre; ışıma troika'nın bulanık konturuyla (yalnızca dalga sürerken)
       const glowing = s.glow !== null && !!bounds

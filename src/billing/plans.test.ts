@@ -37,7 +37,7 @@ describe('planlar', () => {
   it('ücretsiz planda kredi yok, ücretli planlarda artar, en üst plan sınırsız', () => {
     expect(getPlan('free').aiCredits).toBe(0)
     expect(creditsLeft(getPlan('free'), 0)).toBe(0)
-    expect(creditsLeft(getPlan('starter'), 5)).toBe(295)
+    expect(creditsLeft(getPlan('starter'), 5)).toBe(145)
     expect(creditsLeft(getPlan('starter'), 999)).toBe(0)
     expect(creditsLeft(getPlan('unlimited'), 1e9)).toBe(Infinity)
     const limits = PLANS.map((p) => p.aiCredits ?? Infinity)

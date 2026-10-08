@@ -175,6 +175,10 @@ export interface LayerState {
   softReveal: number
   /** soft-reveal kenarının genişliği, metin genişliğine oranla */
   revealSoftness: number
+  /** 0..1: harfler soldan sağa yumuşak kenarla silinir (soft-hide; 0 = hepsi görünür) */
+  softHide: number
+  /** soft-hide kenarının genişliği, metin genişliğine oranla */
+  hideSoftness: number
   /** harf aralığına eklenen (tracking-in) */
   letterSpacing: number
   /** metnin sonunda yazı imleci (|) görünsün mü */

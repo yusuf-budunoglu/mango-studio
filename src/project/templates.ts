@@ -11,6 +11,7 @@ import { buildCrystal } from './crystal'
 import { buildLaunchAd } from './launchAd'
 import { buildIconCloseup, buildIconCloseupImage } from './iconCloseup'
 import { buildFoldRock } from './foldRock'
+import { buildFeatureDrop } from './featureDrop'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -109,7 +110,7 @@ export function fitClip(layer: Layer, total: number): Layer {
 export interface Template {
   id: string
   /** kart önizlemesinin oranı (proje boyutuyla aynı; test kontrol eder) */
-  format: '16:9' | '9:16' | '1:1' | '2:3'
+  format: '16:9' | '9:16' | '1:1' | '2:3' | '4:5'
   /** kartta gösterilen süre (sn, bir ondalık; test kontrol eder). Görsel şablonda `DESIGN_DURATION`, kartta gösterilmez. */
   seconds: number
   /** 'design': tek karelik görsel şablon (PNG/JPG çıktısı); kartta süre yerine "Görsel" yazar, döngü videosu yoktur */
@@ -480,6 +481,15 @@ export const TEMPLATES: Template[] = [
     tags: ['saas', 'ad', 'light', 'ui', 'typography', '3d-device'],
     sound: true,
     build: () => buildLaunchAd({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'feature-drop',
+    format: '4:5',
+    seconds: 25.3,
+    accent: '#5365EF',
+    tags: ['saas', 'ad', 'light', 'vertical', 'ui', 'typography', '3d-device'],
+    sound: true,
+    build: () => buildFeatureDrop({ t, b, layer, camera, project }),
   },
   {
     id: 'icon-closeup',

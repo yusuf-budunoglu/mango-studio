@@ -278,6 +278,34 @@ describe('tasarım modu', () => {
   })
 })
 
+describe('yapay zekâ düzenlemesi', () => {
+  it('alanları ve blokları birlikte uygular; tek geri alma adımıdır', () => {
+    const before = titleLayer()
+    const [first, second] = before.blocks
+    store().applyLayerEdit(before.id, {
+      patch: { color: '#ff7a00', position: [1, 2, 0] },
+      addBlocks: [{ preset: 'spin', start: 1, duration: 0.5 }],
+      updateBlocks: [{ id: second.id, patch: { start: 0.2, duration: 1, params: { trail: 3 } } }],
+      removeBlockIds: [first.id],
+    })
+    const after = titleLayer()
+    expect(after).toMatchObject({ color: '#ff7a00', position: [1, 2, 0], name: before.name })
+    expect(after.blocks.map((b) => b.preset)).toEqual([second.preset, 'spin'])
+    expect(after.blocks[0]).toMatchObject({ id: second.id, start: 0.2, duration: 1, params: { trail: 3 } })
+    expect(after.blocks[1].id).toMatch(/^b-/)
+    useProjectStore.temporal.getState().undo()
+    expect(titleLayer()).toEqual(before)
+  })
+
+  it('klip aralığı da aynı adımda değişir', () => {
+    const before = titleLayer()
+    store().applyLayerEdit(before.id, { patch: { opacity: 0.5 }, clip: { start: before.start + 1, end: before.start + 1 + before.duration }, addBlocks: [], updateBlocks: [], removeBlockIds: [] })
+    expect(titleLayer()).toMatchObject({ start: before.start + 1, duration: before.duration, opacity: 0.5 })
+    useProjectStore.temporal.getState().undo()
+    expect(titleLayer()).toEqual(before)
+  })
+})
+
 describe('ses parçaları', () => {
   const clip = { id: 'a1', name: 'Müzik', asset: 'asset:x', start: 0, offset: 0, duration: 4, sourceDuration: 4, volume: 1, fadeIn: 0, fadeOut: 0 }
   const audio = () => store().project.audio![0]

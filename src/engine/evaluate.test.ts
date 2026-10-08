@@ -133,6 +133,11 @@ describe('evaluate', () => {
     expect(evaluateLayer(soft, 0.5).softReveal).toBeCloseTo(0.5)
     expect(evaluateLayer(soft, 0.5).revealSoftness).toBe(0.5)
     expect(evaluateLayer(soft, 2).softReveal).toBe(1)
+    const hide = layer([{ id: 'b', preset: 'soft-hide', start: 0, duration: 1, easing: 'linear', params: { softness: 0.4 } }])
+    expect(evaluateLayer(hide, -1).softHide).toBe(0)
+    expect(evaluateLayer(hide, 0.5).softHide).toBeCloseTo(0.5)
+    expect(evaluateLayer(hide, 0.5).hideSoftness).toBe(0.4)
+    expect(evaluateLayer(hide, 2).softHide).toBe(1)
 
     const glow = layer([{ id: 'b', preset: 'glow-sweep', start: 0, duration: 1, easing: 'linear', params: { glowHue: 120, glowWidth: 1, softness: 0.2, halo: 0.5 } }])
     expect(evaluateLayer(glow, -0.5).glow).toBeNull()

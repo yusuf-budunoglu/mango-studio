@@ -17,7 +17,7 @@ export function PlanCard({ plan, current, onChoose }: { plan: Plan; current: boo
 
   const features = [
     t(plan.resolutions.length === 1 ? 'pricing.features.exportOnly' : 'pricing.features.export', { resolution: RESOLUTION_LABEL[maxRes], fps: maxFps }),
-    ...(plan.aiCredits === 0 ? [] : [plan.aiCredits === null ? t('pricing.features.aiUnlimited') : t('pricing.features.aiCredits', { credits: plan.aiCredits.toLocaleString(i18n.language) })]),
+    ...(plan.aiCredits === 0 ? [] : [plan.aiCredits === null ? t('pricing.features.aiUnlimited', { messages: plan.aiMessages.toLocaleString(i18n.language) }) : t('pricing.features.aiCredits', { credits: plan.aiCredits.toLocaleString(i18n.language) })]),
     t('pricing.features.templates'),
     ...(plan.aiCredits === null ? [t('pricing.features.everything')] : []),
   ]

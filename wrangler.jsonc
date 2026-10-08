@@ -2,7 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mango-studio",
   "compatibility_date": "2026-09-30",
-  // MCP sunucusu (Claude Code bağlantısı): yalnızca /mcp ve OAuth keşif adresleri Worker'a gelir, gerisi statik site.
+  // MCP sunucusu (Claude Code bağlantısı) ve editördeki yapay zekâ ucu: yalnızca /mcp, OAuth keşif adresleri ve
+  // /api/* Worker'a gelir, gerisi statik site. Anthropic anahtarı burada yazmaz: `npx wrangler secret put ANTHROPIC_API_KEY`
+  // (yerelde `.dev.vars` dosyası).
   "main": "src/mcp/worker.ts",
   "vars": {
     // Herkese açık değerler (tarayıcıdaki uygulamaya da gömülü); erişimi RLS sınırlar. .env ile aynı olmalı.
@@ -12,7 +14,7 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/mcp", "/.well-known/*"],
+    "run_worker_first": ["/mcp", "/.well-known/*", "/api/*"],
     // /templates, /t/<şablon> gibi sayfa adresleri dosya değil: hepsi index.html'e düşer, yönlendirme tarayıcıda.
     "not_found_handling": "single-page-application"
   },

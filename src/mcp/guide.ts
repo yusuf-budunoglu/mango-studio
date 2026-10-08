@@ -30,6 +30,7 @@ export const PRESET_NOTES: Record<string, string> = {
   'word-reveal': 'text appears word by word',
   'wipe-in': 'text is revealed left to right with a hard edge',
   'soft-reveal': 'text is revealed left to right with a soft edge (`softness`)',
+  'soft-hide': 'text is erased left to right with a soft edge (`softness`) and stays hidden; pair with a soft-reveal on the next text for a wipe swap',
   'glow-sweep': 'a wave of light crosses the text left to right in hue `glowHue`, then letters return to their colour',
   'tracking-in': 'letters start spread apart by `amount` and settle while fading in',
   'tracking-out': 'letters squeeze together by `amount` and fade out at the end',

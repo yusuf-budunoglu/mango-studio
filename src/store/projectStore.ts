@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
+import type { LayerEdit } from '../ai/edit'
 import type { EffectsPatch } from '../engine/effects'
 import { isDesign } from '../engine/design'
 import { newId } from '../engine/ids'
@@ -45,6 +46,11 @@ interface ProjectStore {
   pasteBlocks: (at: number) => void
   duplicateBlocks: (blockIds: string[]) => void
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
+  /**
+   * Yapay zekânın döndürdüğü düzenleme: klip aralığı, katman alanları ve blok ekleme/değiştirme/silme birlikte,
+   * tek geri alma adımında. Blok zamanları (yeni) klibin başına göre.
+   */
+  applyLayerEdit: (layerId: string, edit: LayerEdit) => void
   /** Cihaz ekranı: aynı ekran görüntüsünü paylaşan aynı türdeki cihazlar da (bir animasyonun çekimleri) birlikte değişir. */
   setScreenImage: (layerId: string, image: string | undefined) => void
   /**
@@ -279,6 +285,27 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) },
         })),
+      applyLayerEdit: (layerId, edit) => {
+        // Klip önce: kırpma blokları mutlak yerinde tutar, sonraki blok zamanları yeni klibe göredir.
+        // İki `set` aynı anda geldiği için geri almada tek adımdır (bkz. `coalesce`).
+        if (edit.clip) get().setClipTimes({ [layerId]: edit.clip })
+        const added = edit.addBlocks.map((b) => ({ ...b, id: newId('b') }))
+        set((s) => ({
+          project: {
+            ...s.project,
+            layers: s.project.layers.map((l) => {
+              if (l.id !== layerId) return l
+              const kept = l.blocks.filter((b) => !edit.removeBlockIds.includes(b.id))
+              const blocks = kept.map((b) => {
+                const update = edit.updateBlocks.find((u) => u.id === b.id)
+                return update ? { ...b, ...update.patch } : b
+              })
+              return { ...l, ...edit.patch, blocks: [...blocks, ...added] }
+            }),
+          },
+          selectedBlockIds: s.selectedBlockIds.filter((id) => !edit.removeBlockIds.includes(id)),
+        }))
+      },
       setScreenImage: (layerId, image) => get().setScreen(layerId, 'screen', 'image', image),
       setScreen: (layerId, slot, kind, ref) =>
         set((s) => {

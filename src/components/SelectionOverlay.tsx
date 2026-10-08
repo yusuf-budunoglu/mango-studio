@@ -1,14 +1,16 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { ArrowUp, Sparkles } from 'lucide-react'
+import { ArrowUp, LoaderCircle, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box3, Plane, Raycaster, Vector2, Vector3, type Camera, type Object3D, type Scene } from 'three'
+import { AiRequestError, buildEditRequest, requestLayerEdit, type AiFailure } from '../ai/client'
+import { MAX_MESSAGE, type EditRequest } from '../ai/edit'
 import { evaluate } from '../engine/evaluate'
 import { manualTransformPatch, snapToGuides } from '../engine/manualTransform'
 import { routeToPath } from '../router'
 import { sceneLink } from '../editor/sceneLink'
 import { manualDrag, useEditorStore } from '../store/editorStore'
-import { usePlan } from '../store/planStore'
+import { usePlanStore } from '../store/planStore'
 import { usePlaybackStore, useProjectStore } from '../store/projectStore'
 
 const SNAP_THRESHOLD = 0.12
@@ -169,19 +171,48 @@ function startDrag(e: ReactPointerEvent<HTMLElement>, kind: 'move' | 'scale' | '
   window.addEventListener('pointerup', onUp)
 }
 
+type AiNote = { text: string; tone: 'reply' | 'error'; upgrade?: boolean }
+
+/** Hata adı → kullanıcıya gösterilen metin; plan ve kredi hatalarında yükseltme bağlantısı da çıkar. */
+const AI_ERRORS: Record<AiFailure, { key: 'paidOnly' | 'noCredits' | 'messageLimit' | 'rateLimited' | 'signIn' | 'unavailable' | 'refused' | 'busy' | 'failed'; upgrade?: boolean }> = {
+  plan_required: { key: 'paidOnly', upgrade: true },
+  no_credits: { key: 'noCredits', upgrade: true },
+  message_limit: { key: 'messageLimit' },
+  rate_limited: { key: 'rateLimited' },
+  signin: { key: 'signIn' },
+  unauthorized: { key: 'signIn' },
+  unavailable: { key: 'unavailable' },
+  not_configured: { key: 'unavailable' },
+  refused: { key: 'refused' },
+  busy: { key: 'busy' },
+  failed: { key: 'failed' },
+  bad_request: { key: 'failed' },
+}
+
 /**
  * Seçili katmanı yapay zekâyla düzenleme: kutunun sağ üstündeki simge, yanında tek satırlık sohbet kutusu açar.
- * Yapay zekâ henüz bağlı değil; ücretli planların özelliği olacak (ücretsiz planda yükseltme önerilir).
+ * İstek Worker'daki uca gider (`ai/client.ts`); dönen düzenleme `applyLayerEdit` ile tek geri alma adımında uygulanır,
+ * modelin tek cümlelik yanıtı kutunun altında görünür. Plan ve kredi sunucuda denetlenir (ücretsizde yükseltme önerir).
  */
-function AiPrompt({ name }: { name: string }) {
+function AiPrompt({ layerId, name }: { layerId: string; name: string }) {
   const { t } = useTranslation()
-  const { plan } = usePlan()
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
-  const [notice, setNotice] = useState<'paid' | 'soon' | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<AiNote | null>(null)
   const [flip, setFlip] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLInputElement>(null)
+  // Bu kutudaki önceki istekler: "biraz daha" gibi takip istekleri anlaşılsın diye modele gider.
+  const history = useRef<EditRequest['history']>([])
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   useEffect(() => {
     // Önizleme alanı taşmayı gizliyor; odak onu kaydırmasın.
@@ -194,7 +225,35 @@ function AiPrompt({ name }: { name: string }) {
     const own = wrap.current?.getBoundingClientRect()
     setFlip(!!view && !!own && view.right - own.right < 320)
     setOpen((o) => !o)
-    setNotice(null)
+    setNote(null)
+  }
+
+  const send = async () => {
+    const message = text.trim()
+    const { project } = useProjectStore.getState()
+    const layer = project.layers.find((l) => l.id === layerId)
+    const request = layer && message && !busy ? buildEditRequest(project, layer, usePlaybackStore.getState().time, message, history.current) : null
+    if (!request) return
+    setBusy(true)
+    setNote(null)
+    try {
+      const result = await requestLayerEdit(request)
+      // Seçim bu arada değişmiş olsa da düzenleme istenen katmana uygulanır: kredisi düştü, geri alınabilir.
+      if (result.edit) {
+        useProjectStore.getState().applyLayerEdit(layerId, result.edit)
+        usePlanStore.getState().spendCredits(1)
+      }
+      if (!mounted.current) return
+      history.current = [...history.current, { user: message, reply: result.reply }].slice(-3)
+      setText('')
+      setNote({ text: result.reply || t(result.edit ? 'aiEdit.done' : 'aiEdit.noChange'), tone: 'reply' })
+    } catch (err) {
+      if (!mounted.current) return
+      const { key, upgrade } = AI_ERRORS[err instanceof AiRequestError ? err.code : 'failed']
+      setNote({ text: t(`aiEdit.${key}`), tone: 'error', upgrade })
+    } finally {
+      if (mounted.current) setBusy(false)
+    }
   }
 
   return (
@@ -205,9 +264,10 @@ function AiPrompt({ name }: { name: string }) {
       {open && (
         <form
           className="sel-ai-chat"
+          aria-busy={busy}
           onSubmit={(e) => {
             e.preventDefault()
-            if (text.trim()) setNotice(plan.aiCredits === 0 ? 'paid' : 'soon')
+            void send()
           }}
         >
           <div className="sel-ai-row">
@@ -215,27 +275,29 @@ function AiPrompt({ name }: { name: string }) {
             <input
               ref={input}
               value={text}
-              placeholder={t('aiEdit.placeholder', { name })}
+              placeholder={busy ? t('aiEdit.thinking') : t('aiEdit.placeholder', { name })}
               aria-label={t('aiEdit.button')}
-              maxLength={300}
+              maxLength={MAX_MESSAGE}
+              // yanıt beklenirken odak kutuda kalsın diye kapatmak yerine salt okunur
+              readOnly={busy}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
                 e.stopPropagation()
                 if (e.key === 'Escape') setOpen(false)
               }}
             />
-            <button type="submit" className="sel-ai-send" disabled={!text.trim()} aria-label={t('aiEdit.send')}>
-              <ArrowUp size={14} strokeWidth={2.5} />
+            <button type="submit" className="sel-ai-send" disabled={busy || !text.trim()} aria-label={t('aiEdit.send')}>
+              {busy ? <LoaderCircle className="sel-ai-spin" size={14} strokeWidth={2.5} /> : <ArrowUp size={14} strokeWidth={2.5} />}
             </button>
           </div>
-          {notice && (
-            <p className="sel-ai-note" role="status">
-              {notice === 'paid' ? (
+          {note && (
+            <p className={`sel-ai-note is-${note.tone}`} role="status">
+              {note.text}
+              {note.upgrade && (
                 <>
-                  {t('aiEdit.paidOnly')} <a href={routeToPath({ screen: 'pricing' })}>{t('aiEdit.upgrade')}</a>
+                  {' '}
+                  <a href={routeToPath({ screen: 'pricing' })}>{t('aiEdit.upgrade')}</a>
                 </>
-              ) : (
-                t('aiEdit.soon')
               )}
             </p>
           )}
@@ -274,7 +336,7 @@ export function SelectionOverlay() {
         <span key={c} className={`sel-handle sel-handle--${c}`} onPointerDown={(e) => startDrag(e, rotating ? 'roll' : 'scale')} />
       ))}
       <span className="sel-handle sel-handle--turn" title={t('editor.tools.turn')} onPointerDown={(e) => startDrag(e, 'turn')} />
-      <AiPrompt key={layer.id} name={layer.name} />
+      <AiPrompt key={layer.id} layerId={layer.id} name={layer.name} />
     </div>
   )
 }

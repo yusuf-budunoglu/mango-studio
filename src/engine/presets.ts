@@ -219,6 +219,13 @@ export const PRESETS: Record<string, Preset> = {
     params: [{ key: 'softness', default: 0.3, min: 0.02, max: 1, step: 0.02 }],
     apply: (s, e, _p, { softness }) => { s.softReveal = Math.min(s.softReveal, e); s.revealSoftness = softness },
   },
+  'soft-hide': {
+    // soft-reveal'ın tersi: harfler soldan sağa, yumuşak bir kenarla silinir ve silinmiş kalır. Aynı yere soft-reveal ile
+    // gelen yeni metinle birlikte kullanılınca eski yazı silinirken yenisi arkasından belirir.
+    target: 'layer', category: 'text', defaultEasing: 'ease-in-out', defaultDuration: 0.5,
+    params: [{ key: 'softness', default: 0.3, min: 0.02, max: 1, step: 0.02 }],
+    apply: (s, e, _p, { softness }) => { s.softHide = Math.max(s.softHide, e); s.hideSoftness = softness },
+  },
   'glow-sweep': {
     // Metnin üstünden soldan sağa geçen ışık dalgası: harfler önce beyaza yakın, sonra `glowHue` tonunda parlar ve
     // etraflarına yumuşak ışıma yayar; dalga geçince harfler yumuşakça kendi renklerine döner. Yalnızca blok sürerken.

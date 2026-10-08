@@ -38,6 +38,8 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     wipe: 1,
     softReveal: 1,
     revealSoftness: 0.3,
+    softHide: 0,
+    hideSoftness: 0.3,
     letterSpacing: 0,
     caret: false,
     trail: 0,

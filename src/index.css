@@ -562,7 +562,11 @@ button.danger { color: var(--danger); }
 .sel-ai-row input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 13px; color: var(--ink); padding: 4px 0; }
 .sel-ai-send { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: var(--select); color: #fff; flex: none; }
 .sel-ai-send:disabled { opacity: 0.4; }
+.sel-ai-chat[aria-busy='true'] .sel-ai-send:disabled { opacity: 1; }
+.sel-ai-spin { animation: sel-ai-spin 0.8s linear infinite; }
+@keyframes sel-ai-spin { to { transform: rotate(360deg); } }
 .sel-ai-note { margin: 0; padding: 4px 6px 2px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.sel-ai-note.is-reply { color: var(--ink-2); }
 .sel-ai-note a { color: var(--accent); font-weight: 600; }
 /* Oynatırken hareket bulanıklığı önizlemesi: kanvasın üstünde, alt karelerin ortalandığı 2B kanvas */
 .stage-blur {

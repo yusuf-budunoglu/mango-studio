@@ -1,5 +1,5 @@
 // Abonelik planları: fiyat, video çıktısı sınırları ve aylık yapay zekâ kredisi.
-// Ödeme ve yapay zekâ API'si henüz bağlı değil; sınırlar ve krediler buradan okunur.
+// Ödeme henüz bağlı değil; sınırlar ve krediler buradan okunur. Yapay zekâ kredisini sunucu da sayar (ai_usage göçü, aynı rakamlar).
 
 export type Resolution = 720 | 1080 | 1440 | 2160
 export type Fps = 30 | 60
@@ -13,8 +13,13 @@ export interface Plan {
   launchPrice: number
   resolutions: Resolution[]
   fps: Fps[]
-  /** aylık yapay zekâ kredisi; 0 = planda kredi yok; null = sınırsız */
+  /** aylık yapay zekâ kredisi (bir şey değiştiren düzenleme başına 1); 0 = planda kredi yok; null = sınırsız */
   aiCredits: number | null
+  /**
+   * aylık yapay zekâ mesajı üst sınırı: modele giden her istek sayılır (bir şey değiştirmeyenler de). Zarar sınırı:
+   * en pahalı istekle bile plan fiyatının altında kalır (hesap: `AI_COST`). Sunucudaki `ai_message_limit` ile aynı olmalı.
+   */
+  aiMessages: number
   /** yüklenen dosyalar için depolama kotası (bayt, 1 GB = 10⁹); sunucudaki `storage_quota` ile aynı olmalı */
   storageBytes: number
 }
@@ -23,13 +28,24 @@ export interface Plan {
 export const LAUNCH_DISCOUNT = 0.5
 
 export const PLANS: Plan[] = [
-  { id: 'free', price: 0, launchPrice: 0, resolutions: [1080], fps: [30], aiCredits: 0, storageBytes: 500e6 },
-  { id: 'starter', price: 9.99, launchPrice: 4.99, resolutions: [720, 1080, 1440], fps: [30, 60], aiCredits: 300, storageBytes: 5e9 },
-  { id: 'pro', price: 19.99, launchPrice: 9.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: 1000, storageBytes: 20e9 },
-  { id: 'unlimited', price: 39.99, launchPrice: 19.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: null, storageBytes: 100e9 },
+  { id: 'free', price: 0, launchPrice: 0, resolutions: [1080], fps: [30], aiCredits: 0, aiMessages: 0, storageBytes: 500e6 },
+  { id: 'starter', price: 9.99, launchPrice: 4.99, resolutions: [720, 1080, 1440], fps: [30, 60], aiCredits: 150, aiMessages: 300, storageBytes: 5e9 },
+  { id: 'pro', price: 19.99, launchPrice: 9.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: 500, aiMessages: 750, storageBytes: 20e9 },
+  { id: 'unlimited', price: 39.99, launchPrice: 19.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: null, aiMessages: 1500, storageBytes: 100e9 },
 ]
 
 export const DEFAULT_PLAN: PlanId = 'free'
+
+/** Bir üyenin günde gönderebileceği yapay zekâ mesajı (her planda; sunucudaki `ai_begin` ile aynı). */
+export const AI_DAILY_MESSAGES = 150
+
+/**
+ * Yapay zekâ mesajının bize maliyeti (USD), 2026-10-09'da Claude Haiku 5.5 ile ölçüldü (0,10 $ / 0,50 $ milyon
+ * token): `typical` önbellek sıcakken sıradan istek, `cold` önbellek soğukken (5 dakikadır istek yokken) sıradan
+ * istek, `ceiling` olabilecek en pahalı istek (en büyük bağlam + çıktının tamamı). Mesaj sınırları `ceiling` ile
+ * hesaplanır; model, fiyat ya da `max_tokens` değişirse yeniden ölç (`plans.test.ts` sınırı denetler).
+ */
+export const AI_COST = { typical: 0.0003, cold: 0.0009, ceiling: 0.004 }
 
 export function getPlan(id: PlanId): Plan {
   return PLANS.find((p) => p.id === id) ?? PLANS[0]
