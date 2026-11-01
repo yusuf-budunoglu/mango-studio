@@ -1,6 +1,6 @@
 import { isDesign } from '../engine/design'
 import type { Project } from '../engine/types'
-import { exportBridge, pendingModelLoads, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
+import { exportBridge, pendingImageLoads, pendingModelLoads, pendingTextSyncs, renderTimeOverride } from '../export/bridge'
 import { previewView } from '../editor/previewFrame'
 import { manualDrag } from '../store/editorStore'
 import { usePlaybackStore } from '../store/projectStore'
@@ -12,7 +12,7 @@ import { usePlaybackStore } from '../store/projectStore'
  */
 export async function renderThumbnail(project: Project): Promise<string | undefined> {
   const bridge = exportBridge.current
-  if (!bridge || usePlaybackStore.getState().isPlaying || manualDrag.layerId || renderTimeOverride.current !== null || pendingModelLoads.size) return undefined
+  if (!bridge || usePlaybackStore.getState().isPlaying || manualDrag.layerId || renderTimeOverride.current !== null || pendingModelLoads.size || pendingImageLoads.size) return undefined
   renderTimeOverride.current = isDesign(project) ? 0 : Math.min(project.duration * 0.6, 4)
   bridge.setHelpersVisible(false)
   try {

@@ -31,7 +31,7 @@ export function TemplateCard({ template }: { template: Template | PublishedTempl
         aria-label={t('templatesPage.open', { name: card.name })}
       >
         {posterFailed ? (
-          <span className="tcard-fallback" style={{ background: `radial-gradient(circle at 30% 30%, ${card.accent}, #0a0a0b 75%)` }} />
+          <span className="tcard-fallback" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${card.accent} 35%, var(--panel)), var(--panel) 70%)` }} />
         ) : (
           <img src={card.posterUrl} alt="" loading="lazy" onError={() => setPosterFailed(true)} />
         )}
@@ -41,7 +41,7 @@ export function TemplateCard({ template }: { template: Template | PublishedTempl
         <div className="tcard-text">
           <span className="tcard-title">{card.name}</span>
           <span className="tcard-meta">
-            {t('templatesPage.free')} · {card.format} · {card.image ? t('templatesPage.image') : t('templatesPage.seconds', { value: seconds })}
+            {t(card.premium ? 'templatesPage.paid' : 'templatesPage.free')} · {card.format} · {card.image ? t('templatesPage.image') : t('templatesPage.seconds', { value: seconds })}
           </span>
         </div>
         <button

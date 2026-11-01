@@ -43,23 +43,51 @@ float sweepMask() {
 }
 `
 
-/** light-sweep uniform'ları ve görsel malzemesine eklenen shader parçası */
+// blur-in / blur-out: dokudan disk üzerinde altın açılı 24 örnek (yarıçap uBlur, doku koordinatında; x görsel oranına göre
+// daraltılır). Örnekler aralarındaki boşluğa uygun mip katmanından okunur (ızgara/benek görünmesin); renkler alfa ile
+// ağırlıklandırılır: saydam PNG kenarındaki siyah pikseller bulanık kenarı karartmasın.
+const BLUR_MAP_FRAGMENT = /* glsl */ `
+#ifdef USE_MAP
+  vec4 sampledDiffuseColor;
+  if (uBlur > 0.0) {
+    vec4 acc = vec4(0.0);
+    float bias = log2(max(1.0, 0.36 * uBlur * uBlurTexels));
+    for (int i = 0; i < 24; i++) {
+      float r = sqrt((float(i) + 0.5) / 24.0);
+      float a = float(i) * 2.39996323;
+      vec4 c = texture2D(map, vMapUv + vec2(cos(a), sin(a)) * r * vec2(uBlur / uBlurAspect, uBlur), bias);
+      acc += vec4(c.rgb * c.a, c.a);
+    }
+    acc /= 24.0;
+    sampledDiffuseColor = acc.a > 1e-5 ? vec4(acc.rgb / acc.a, acc.a) : vec4(0.0);
+  } else {
+    sampledDiffuseColor = texture2D(map, vMapUv);
+  }
+  diffuseColor *= sampledDiffuseColor;
+#endif
+`
+
+/** light-sweep ve blur-in/out uniform'ları ve görsel malzemesine eklenen shader parçası */
 function useSweep() {
   // uniform'lar ref'te: her karede değerleri değişir (React durumu değil)
   const ref = useRef({
     uSweep: { value: 0 }, uSweepOn: { value: 0 }, uSweepCount: { value: 2 }, uSweepWidth: { value: 0.1 }, uSweepFloor: { value: 0 },
     uSweepRadius: { value: 0.5 }, uSweepInset: { value: 0 }, uSweepAspect: { value: 1 }, uSweepHeight: { value: 1 },
+    uBlur: { value: 0 }, uBlurAspect: { value: 1 }, uBlurTexels: { value: 1 },
   })
   const onBeforeCompile = useCallback((shader: { uniforms: Record<string, unknown>; vertexShader: string; fragmentShader: string }) => {
     Object.assign(shader.uniforms, ref.current)
     shader.vertexShader = `uniform float uSweepHeight;\nvarying vec2 vSweepPos;\n${shader.vertexShader}`.replace('#include <begin_vertex>', '#include <begin_vertex>\nvSweepPos = transformed.xy / uSweepHeight;')
-    shader.fragmentShader = `${SWEEP_GLSL}\n${shader.fragmentShader}`.replace(
-      '#include <dithering_fragment>',
-      '#include <dithering_fragment>\nif (uSweepOn > 0.5) gl_FragColor.a *= sweepMask();',
-    )
+    shader.fragmentShader = `${SWEEP_GLSL}\nuniform float uBlur; uniform float uBlurAspect; uniform float uBlurTexels;\n${shader.fragmentShader}`
+      .replace('#include <map_fragment>', BLUR_MAP_FRAGMENT)
+      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\nif (uSweepOn > 0.5) gl_FragColor.a *= sweepMask();')
   }, [])
-  const update = useCallback((s: LayerState, aspect: number, height: number) => {
+  const update = useCallback((s: LayerState, aspect: number, height: number, texels = 1) => {
     const u = ref.current
+    // bulanıklık yarıçapı sahne biriminde (katmanın kendi ölçeğinde) → doku koordinatında (görsel yüksekliği = 1)
+    u.uBlur.value = s.blur > 1e-4 ? s.blur / height : 0
+    u.uBlurAspect.value = aspect
+    u.uBlurTexels.value = texels
     u.uSweepAspect.value = aspect
     u.uSweepHeight.value = height
     u.uSweepOn.value = s.sweep === null ? 0 : 1
@@ -78,7 +106,8 @@ export function ImageLayer({ layer, register }: LayerProps) {
   const width = 3
   const height = image ? width / image.aspect : width * 0.6
   const sweep = useSweep()
-  const node = useLayerNode(layer, register, (_g, s) => sweep.update(s, width / height, height))
+  const texels = image ? (image.texture.image as { height: number }).height : 1
+  const node = useLayerNode(layer, register, (_g, s) => sweep.update(s, width / height, height, texels))
   return (
     <group {...node}>
       <mesh>
@@ -86,7 +115,9 @@ export function ImageLayer({ layer, register }: LayerProps) {
         {/* saydam PNG'ler (logo, gölgeli etiket) kenarlarıyla karışsın; opak görsellerde fark yok.
             `tint`: görsel katman rengiyle çarpılır (beyaz çizilmiş ışık/çerçeve görselleri istenen renge boyanır)
             light-sweep bloğu varsa görsel yalnızca kenar yolunda dönen ışıkların olduğu yerde görünür */}
-        {image ? <meshBasicMaterial key={image.url} map={image.texture} color={layer.tint ? layer.color : '#ffffff'} transparent toneMapped={false} onBeforeCompile={sweep.onBeforeCompile} /> : <meshBasicMaterial color="#2a303a" />}
+        {/* yüklenene kadar hiçbir şey çizilmez: gri yer tutucu, her karesi ayrı görsel olan dizilerde oynatırken
+            anlamsız gri kutular olarak görünüyordu */}
+        {image ? <meshBasicMaterial key={image.url} map={image.texture} color={layer.tint ? layer.color : '#ffffff'} transparent toneMapped={false} onBeforeCompile={sweep.onBeforeCompile} /> : <meshBasicMaterial visible={false} />}
       </mesh>
     </group>
   )

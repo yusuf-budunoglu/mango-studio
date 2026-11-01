@@ -62,6 +62,19 @@ export function promptCardRatio(prompt: LibraryPrompt): number {
   return Math.min(2, Math.max(9 / 16, prompt.width / prompt.height))
 }
 
+const postId = (prompt: LibraryPrompt) => prompt.postUrl.match(/(\d+)$/)?.[1] ?? ''
+
+/** Yeniden eskiye: önce gün; aynı günde X gönderi kimliği (zamanla artar) büyük olan önce. Listeyi değiştirmez. */
+export function newestFirst(list: LibraryPrompt[]): LibraryPrompt[] {
+  return [...list].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1
+    const x = postId(a)
+    const y = postId(b)
+    if (x.length !== y.length) return y.length - x.length
+    return x < y ? 1 : x > y ? -1 : 0
+  })
+}
+
 /** Yalnızca X gönderisi adresleri bağlantı olur (liste dışarıdan derlendi). */
 export const isPostUrl = (url: string) => /^https:\/\/(x|twitter)\.com\/[^/]+\/status\/\d+$/.test(url)
 

@@ -27,6 +27,12 @@ export const pendingTextSyncs = new Set<Promise<void>>()
 export const pendingModelLoads = new Set<Promise<void>>()
 
 /**
+ * Dokusu henüz sahneye girmemiş görseller; video/görsel çıktısı ve küçük resim bunları bekler. Beklenmeyince çok görselli
+ * şablonlarda (her karesi ayrı görsel olan diziler) ilk saniyelerin kareleri görselsiz çiziliyordu.
+ */
+export const pendingImageLoads = new Set<Promise<void>>()
+
+/**
  * Dışa aktarmada her kare çizilmeden önce beklenen hazırlıklar (ör. video katmanının o
  * anki karesini çözmesi). Katmanlar kendini ekler ve çıkarır.
  */

@@ -1,5 +1,7 @@
+import { getPlan } from '../billing/plans'
 import { repository } from '../persistence/repository'
 import { navigate } from '../router'
+import { usePlanStore } from '../store/planStore'
 import { blankProject, TEMPLATES } from './templates'
 
 /**
@@ -9,6 +11,11 @@ import { blankProject, TEMPLATES } from './templates'
 export async function createFromTemplate(templateId: string, folderId?: string) {
   const template = TEMPLATES.find((t) => t.id === templateId)
   if (!template) return
+  // Premium şablon ücretli planlarda; önizleme sayfası düğmeyi zaten yükseltmeye çevirir.
+  if (template.premium && !getPlan(usePlanStore.getState().planId).premiumTemplates) {
+    navigate({ screen: 'pricing' })
+    return
+  }
   const project = template.build()
   // editörde açılıp kapanana kadar kartta şablonun kapak görseli görünür
   await repository.save(project, `${import.meta.env.BASE_URL}templates/posters/${template.id}.jpg`)

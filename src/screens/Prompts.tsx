@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PromptCard, PromptDialog } from '../components/PromptCard'
 import { AppShell } from '../layout/AppShell'
-import { loadPromptLibrary, matchesPromptFilter, PROMPT_FILTERS, promptSearchText, type LibraryPrompt, type PromptFilter } from '../project/promptLibrary'
+import { loadPromptLibrary, matchesPromptFilter, newestFirst, PROMPT_FILTERS, promptSearchText, type LibraryPrompt, type PromptFilter } from '../project/promptLibrary'
 import { parsePath, routeToPath } from '../router'
 import { matchesSearch, useUiStore } from '../store/uiStore'
 
@@ -26,7 +26,7 @@ export function Prompts({ promptId }: { promptId?: string }) {
   useEffect(() => {
     let alive = true
     loadPromptLibrary().then(
-      (list) => alive && setLibrary(list),
+      (list) => alive && setLibrary(newestFirst(list)),
       () => alive && setFailed(true),
     )
     return () => {

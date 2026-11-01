@@ -17,9 +17,11 @@ export function PlanCard({ plan, current, onChoose }: { plan: Plan; current: boo
 
   const features = [
     t(plan.resolutions.length === 1 ? 'pricing.features.exportOnly' : 'pricing.features.export', { resolution: RESOLUTION_LABEL[maxRes], fps: maxFps }),
+    plan.exportsPerMonth === null ? t('pricing.features.exportsUnlimited') : t('pricing.features.exportsLimited', { n: plan.exportsPerMonth }),
+    plan.mcpProjects === null ? t('pricing.features.claudeUnlimited') : t('pricing.features.claudeLimited', { n: plan.mcpProjects }),
+    t(plan.premiumTemplates ? 'pricing.features.templates' : 'pricing.features.templatesFree'),
     ...(plan.aiCredits === 0 ? [] : [plan.aiCredits === null ? t('pricing.features.aiUnlimited', { messages: plan.aiMessages.toLocaleString(i18n.language) }) : t('pricing.features.aiCredits', { credits: plan.aiCredits.toLocaleString(i18n.language) })]),
-    t('pricing.features.templates'),
-    ...(plan.aiCredits === null ? [t('pricing.features.everything')] : []),
+    ...(plan.brandKit ? [t('pricing.features.brandKit')] : []),
   ]
 
   return (

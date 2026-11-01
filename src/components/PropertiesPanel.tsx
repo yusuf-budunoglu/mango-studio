@@ -10,6 +10,7 @@ import { findAudio, findBlock, trackOffset, useProjectStore } from '../store/pro
 import { AnimationPanel, BlockList } from './AnimationPanel'
 import { AudioPanel } from './AudioPanel'
 import { CurveEditor } from './CurveEditor'
+import { BrandKitApply } from './BrandKitApply'
 import { EffectsPanel } from './EffectsPanel'
 import { LayerFields } from './LayerPanel'
 import { ProjectSettings } from './ProjectSettings'
@@ -199,6 +200,9 @@ export function PropertiesPanel() {
         {projectTab === 'project' ? (
           <>
             <ProjectSettings />
+            <section>
+              <BrandKitApply />
+            </section>
             {/* tasarımdaki kamera blokları yalnızca kareyi sabitlemek için (tasarım olarak kaydet); düzenlenmez */}
             {selectedTrackId === 'camera' && !isDesign(project) && (
               <section>

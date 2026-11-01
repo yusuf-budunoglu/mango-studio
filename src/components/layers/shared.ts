@@ -2,6 +2,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { SRGBColorSpace, TextureLoader, type Group, type Material, type Mesh, type Object3D, type Texture } from 'three'
 import type { Layer, LayerState } from '../../engine/types'
+import { pendingImageLoads } from '../../export/bridge'
 import { resolveAssetUrl } from '../../persistence/assets'
 import { manualDrag } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -84,25 +85,46 @@ export function useLayerNode(layer: Layer, register: Register, extra?: (group: G
   return { ref, name: `layer:${layer.id}`, onClick: selectOnClick(layer) }
 }
 
-/** Görsel dokusu: `asset:<id>`, data URL ya da adres olabilir. */
+/**
+ * Görsel dokusu: `asset:<id>`, data URL ya da adres olabilir. Doku sahneye girene kadar `pendingImageLoads`'ta bekler
+ * (yüklenemezse de bekleme biter).
+ */
 export function useImageTexture(url: string | undefined) {
   const [loaded, setLoaded] = useState<{ url: string; texture: Texture; aspect: number } | null>(null)
+  const waiting = useRef<{ url: string; done: () => void } | null>(null)
   useEffect(() => {
     if (!url) return
     let alive = true
-    void resolveAssetUrl(url).then((src) => {
-      if (!alive || !src) return
-      new TextureLoader().load(src, (texture) => {
-        texture.colorSpace = SRGBColorSpace
-        const img = texture.image as { width: number; height: number }
-        if (alive) setLoaded({ url, texture, aspect: img.width / img.height })
-        else texture.dispose()
+    let done = () => {}
+    const pending = new Promise<void>((resolve) => (done = resolve))
+    pendingImageLoads.add(pending)
+    void pending.then(() => pendingImageLoads.delete(pending))
+    waiting.current = { url, done }
+    resolveAssetUrl(url)
+      .then((src) => {
+        if (!alive || !src) return done()
+        new TextureLoader().load(
+          src,
+          (texture) => {
+            texture.colorSpace = SRGBColorSpace
+            const img = texture.image as { width: number; height: number }
+            if (alive) setLoaded({ url, texture, aspect: img.width / img.height })
+            else texture.dispose()
+          },
+          undefined,
+          done,
+        )
       })
-    })
+      .catch(done)
     return () => {
       alive = false
+      done()
     }
   }, [url])
+  // bekleme doku React'te işlendikten sonra biter: bir sonraki çizimde malzemede olsun
+  useEffect(() => {
+    if (loaded && waiting.current?.url === loaded.url) waiting.current.done()
+  }, [loaded])
   useEffect(() => () => loaded?.texture.dispose(), [loaded])
   return url && loaded?.url === url ? loaded : null
 }

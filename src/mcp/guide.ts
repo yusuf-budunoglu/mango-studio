@@ -16,6 +16,8 @@ export const PRESET_NOTES: Record<string, string> = {
   'slide-down': 'drops from `distance` above while fading in',
   'slide-left': 'slides in from `distance` to the right while fading in',
   'scale-in': 'grows from 60% while fading in',
+  'blur-in': 'text/image only: comes into focus from a blur of radius `amount` (scene units at the layer scale) while fading in',
+  'blur-out': 'text/image only: blurs to radius `amount` while fading out',
   pop: 'scales from 0 with a bouncy spring',
   'rotate-in': 'swings in around the Y axis from `angle` degrees',
   'fade-out': 'opacity 1 → 0',

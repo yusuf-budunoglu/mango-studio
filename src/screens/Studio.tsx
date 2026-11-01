@@ -457,7 +457,7 @@ export function Studio({ folderId, view }: { folderId?: string; view?: StudioVie
               </span>
               <h2>{t(`studio.empty.${emptyKey}.title`)}</h2>
               <p>{t(`studio.empty.${emptyKey}.body`)}</p>
-              <a className="button-primary" href={routeToPath({ screen: 'new', folderId })}>
+              <a className="studio-empty-action" href={routeToPath({ screen: 'new', folderId })}>
                 <Plus size={15} strokeWidth={2} aria-hidden="true" />
                 {t('studio.newProject')}
               </a>

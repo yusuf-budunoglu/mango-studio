@@ -16,7 +16,8 @@ import { motionSamples, subframeTimes } from '../engine/motion'
 import type { Project } from '../engine/types'
 import i18n from '../i18n'
 import { usePlaybackStore } from '../store/projectStore'
-import { exportBridge, pendingModelLoads, pendingTextSyncs, prepareFrameHooks, renderTimeOverride } from './bridge'
+import { exportBridge, pendingImageLoads, pendingModelLoads, pendingTextSyncs, prepareFrameHooks, renderTimeOverride } from './bridge'
+import { createWatermark } from './watermark'
 
 const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
 
@@ -59,6 +60,8 @@ export async function exportVideo(
   options: ExportOptions,
   onProgress: (ratio: number) => void,
   signal?: AbortSignal,
+  /** `watermark`: ücretsiz planın köşe etiketi her kareye çizilir (yalnızca çıktı düğmesi ister) */
+  extras: { watermark?: boolean } = {},
 ): Promise<Blob> {
   const bridge = exportBridge.current
   if (!bridge) throw new Error(i18n.t('exportVideo.notReady'))
@@ -90,6 +93,7 @@ export async function exportVideo(
   const blur = resolveEffects(project.effects).motionBlur
   // ayardaki sayı üst sınır: her kare, o andaki hareketin gerektirdiği kadar alt kareyle çizilir
   const maxSamples = blur.enabled ? Math.max(1, Math.round(blur.samples)) : 1
+  const watermark = extras.watermark ? await createWatermark(width, height) : null
   let output: Output | null = null
 
   try {
@@ -97,6 +101,8 @@ export async function exportVideo(
     await wait(100)
     // Cihaz modelleri henüz yükleniyorsa ilk kareler yedek maketle çizilmesin.
     if (pendingModelLoads.size) await Promise.all(pendingModelLoads)
+    // görseller de (yüklenmemiş görsel karede boş kalır)
+    if (pendingImageLoads.size) await Promise.all(pendingImageLoads)
 
     output = new Output({ format, target: new BufferTarget() })
     const video = new CanvasSource(frameCanvas, { codec, bitrate: QUALITY_HIGH })
@@ -127,6 +133,7 @@ export async function exportVideo(
         ctx.drawImage(bridge.canvas, 0, 0, width, height)
       }
       ctx.globalAlpha = 1
+      watermark?.draw(ctx)
       await video.add(t, 1 / fps)
       if (frame % 5 === 0) {
         // oynatma kafası arayüzde ilerlemeyi göstersin (seyrek)

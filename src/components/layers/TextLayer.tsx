@@ -16,6 +16,8 @@ interface TroikaText extends Mesh {
   colorRanges: Record<number, number> | null
   outlineBlur: number | string
   outlineWidth: number | string
+  outlineColor: string | number
+  outlineOpacity: number
   textRenderInfo?: { blockBounds: [number, number, number, number] }
   sync: (callback?: () => void) => void
 }
@@ -94,7 +96,10 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
       const mesh = text.current
       if (!group.current || !mesh) return
       applyTransform(group.current, s, layer.id)
-      mesh.fillOpacity = s.opacity
+      // blur-in / blur-out: harfler yalnızca troika'nın bulanık konturuyla çizilir (dolgu gizli). Bulanıklık sıfıra inerken
+      // kontur kenar yumuşatmasıyla dolgunun aynısına döner: net metne geçiş dikişsiz. Işık dalgası sürerken bulanıklık yok.
+      const blurred = s.blur > 1e-4 && s.glow === null
+      mesh.fillOpacity = blurred ? 0 : s.opacity
       let needsSync = false
       const str = displayText(layer, s, numberLocale)
       if (mesh.text !== str) {
@@ -160,11 +165,18 @@ export function TextLayer({ layer, register, numberLocale }: LayerProps) {
         reveal.uniforms.uGlowOn.value = 0
       }
       // harfin etrafında yumuşak ışıma (kontur genişliği 0: kalın kontur harfleri lekeye, ince kontur çizgiye çeviriyordu)
-      const blur = glowing ? '12%' : 0
+      const blur = glowing ? '12%' : blurred ? s.blur : 0
       if (mesh.outlineBlur !== blur) {
         mesh.outlineBlur = blur
         mesh.outlineWidth = 0
       }
+      // bulanık metin: kontur metnin renginde ve katmanın opaklığında (ışımada kontur rengini gölgelendirici verir)
+      // Gerçek bulanıklıkta harfin enerjisi yayılır, tepe parlaklığı düşer: bulanıklık harf kalınlığını (~0.08 em) aştıkça
+      // kontur soluklaşır (yoksa bulanık metin kalın bir leke gibi görünüyordu).
+      const stroke = 0.08 * (layer.fontSize ?? 0.4)
+      const outlineOpacity = blurred ? s.opacity * Math.min(1, (1.35 * stroke) / (stroke + 0.5 * s.blur)) : 1
+      if (mesh.outlineOpacity !== outlineOpacity) mesh.outlineOpacity = outlineOpacity
+      if (blurred && mesh.outlineColor !== layer.color) mesh.outlineColor = layer.color
     })
   })
 

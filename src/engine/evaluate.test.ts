@@ -154,6 +154,28 @@ describe('evaluate', () => {
     expect(evaluateLayer(tracking, 1).letterSpacing).toBeCloseTo(0)
   })
 
+  it('bulanıktan netleşme ve bulanıklaşarak çıkış', () => {
+    const blurIn = layer([{ id: 'b', preset: 'blur-in', start: 0, duration: 1, easing: 'linear', params: { amount: 0.2 } }])
+    // başlamadan önce görünmez ve en bulanık halde; yarıda opaklık dolmuş, bulanıklık yarıya inmiş; sonra net
+    expect(evaluateLayer(blurIn, -1).opacity).toBe(0)
+    expect(evaluateLayer(blurIn, 0.25).blur).toBeCloseTo(0.15)
+    expect(evaluateLayer(blurIn, 0.25).opacity).toBeCloseTo(0.5)
+    expect(evaluateLayer(blurIn, 0.5).opacity).toBe(1)
+    expect(evaluateLayer(blurIn, 2).blur).toBe(0)
+    const blurOut = layer([{ id: 'b', preset: 'blur-out', start: 0, duration: 1, easing: 'linear', params: { amount: 0.2 } }])
+    expect(evaluateLayer(blurOut, -1).blur).toBe(0)
+    expect(evaluateLayer(blurOut, 0.5).blur).toBeCloseTo(0.1)
+    expect(evaluateLayer(blurOut, 0.5).opacity).toBe(1)
+    expect(evaluateLayer(blurOut, 0.75).opacity).toBeCloseTo(0.5)
+    expect(evaluateLayer(blurOut, 2).opacity).toBe(0)
+    // art arda bloklarda en bulanık olanı geçerli
+    const both = layer([
+      { id: 'a', preset: 'blur-in', start: 0, duration: 1, easing: 'linear', params: { amount: 0.2 } },
+      { id: 'b', preset: 'blur-out', start: 0.5, duration: 1, easing: 'linear', params: { amount: 0.4 } },
+    ])
+    expect(evaluateLayer(both, 0.75).blur).toBeCloseTo(0.1)
+  })
+
   it('kamera push-in kamerayı öne taşır', () => {
     const start = evaluate(sampleProject, 0).camera.z
     const end = evaluate(sampleProject, 8).camera.z
@@ -188,7 +210,8 @@ describe('şablon klipleri', () => {
         }
       })
     }
-  })
+    // şablon sayısı arttıkça uzuyor (her şablon iki kez kurulur): varsayılan 5 sn sınırına dayanmıştı
+  }, 20_000)
 })
 
 describe('videonun sonu', () => {

@@ -40,6 +40,7 @@ export function evaluateLayer(layer: Layer, time: number): LayerState {
     revealSoftness: 0.3,
     softHide: 0,
     hideSoftness: 0.3,
+    blur: 0,
     letterSpacing: 0,
     caret: false,
     trail: 0,

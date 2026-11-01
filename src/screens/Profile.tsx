@@ -1,15 +1,18 @@
-import { Crown, FolderOpen, LogOut, Sparkles, UserRound } from 'lucide-react'
+import { CreditCard, Crown, FolderOpen, LogOut, Sparkles, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { openBillingPortal } from '../billing/checkout'
 import { creditPeriod, RESOLUTION_LABEL } from '../billing/plans'
+import { BrandKitCard } from '../components/BrandKitCard'
 import { supabase } from '../cloud/client'
 import { AppShell } from '../layout/AppShell'
 import { repository } from '../persistence/repository'
 import { routeToPath } from '../router'
 import { useAuthStore } from '../store/authStore'
 import { usePlan, usePlanStore } from '../store/planStore'
+import { useProfileStore } from '../store/profileStore'
 
-/** Profil: hesap (e-posta, üyelik tarihi), plan ve yapay zekâ kredisi, projeler, çıkış. Girişsizken giriş daveti. */
+/** Profil: hesap (e-posta, üyelik tarihi), plan, abonelik yönetimi ve yapay zekâ kredisi, projeler, çıkış. Girişsizken giriş daveti. */
 export function Profile() {
   const { t, i18n } = useTranslation()
   const status = useAuthStore((s) => s.status)
@@ -18,6 +21,8 @@ export function Profile() {
   const signOut = useAuthStore((s) => s.signOut)
   const { plan, used, left } = usePlan()
   const anchor = usePlanStore((s) => s.anchor)
+  const subscription = useProfileStore((s) => s.subscription)
+  const [portal, setPortal] = useState<'idle' | 'opening' | 'failed'>('idle')
   const [projects, setProjects] = useState<number>()
   // Yenileme tarihi için sayfanın açıldığı an yeterli.
   const [now] = useState(() => Date.now())
@@ -38,6 +43,12 @@ export function Profile() {
   const planName = t(`pricing.plans.${plan.id}`)
   const maxRes = Math.max(...plan.resolutions) as keyof typeof RESOLUTION_LABEL
   const maxFps = Math.max(...plan.fps)
+  const subscribed = signedIn && !!subscription?.subscribed
+
+  const manage = async () => {
+    setPortal('opening')
+    if ((await openBillingPortal()) !== 'redirecting') setPortal('failed')
+  }
 
   return (
     <AppShell current={{ screen: 'profile' }} title={t('profile.title')}>
@@ -105,6 +116,23 @@ export function Profile() {
               <p className="hint">{t('profile.renews', { used, date: date(creditPeriod(anchor, now).end) })}</p>
             </>
           )}
+          {subscribed && subscription && (
+            <div className="profile-row">
+              <span role="status">
+                {portal === 'failed'
+                  ? t('profile.manageFailed')
+                  : subscription.status === 'past_due'
+                    ? t('profile.pastDue')
+                    : subscription.periodEnd === null
+                      ? t('profile.subscribed')
+                      : t(subscription.cancelAtPeriodEnd ? 'profile.endsOn' : 'profile.nextPayment', { date: date(subscription.periodEnd) })}
+              </span>
+              <button type="button" className="profile-manage" disabled={portal === 'opening'} onClick={() => void manage()}>
+                <CreditCard size={14} strokeWidth={1.75} aria-hidden="true" />
+                {t('profile.manage')}
+              </button>
+            </div>
+          )}
           {plan.aiCredits === 0 && (
             <p className="hint profile-note">
               <Sparkles size={13} strokeWidth={1.75} aria-hidden="true" />
@@ -112,6 +140,8 @@ export function Profile() {
             </p>
           )}
         </section>
+
+        {(signedIn || !supabase) && <BrandKitCard />}
 
         <section className="profile-card">
           <div className="profile-card-head">

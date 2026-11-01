@@ -52,8 +52,8 @@ export function Landing() {
       navigate({ screen: 'templates' })
       return
     }
-    await startCheckout(plan.id)
-    setNotice(true)
+    // Ziyaretçide giriş penceresi açılır; üye Stripe'a gider. Yazı yalnızca ödeme bu yayında kurulu değilse çıkar.
+    setNotice((await startCheckout(plan.id)) === 'unavailable')
   }
 
   const nav = [

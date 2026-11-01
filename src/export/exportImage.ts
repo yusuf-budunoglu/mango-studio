@@ -1,7 +1,8 @@
 import type { Project } from '../engine/types'
 import i18n from '../i18n'
-import { exportBridge, pendingModelLoads, pendingTextSyncs, prepareFrameHooks, renderTimeOverride } from './bridge'
+import { exportBridge, pendingImageLoads, pendingModelLoads, pendingTextSyncs, prepareFrameHooks, renderTimeOverride } from './bridge'
 import { supersampleFactor } from './exportVideo'
+import { createWatermark } from './watermark'
 
 export type ImageFormat = 'png' | 'jpg'
 
@@ -29,16 +30,19 @@ const wait = (ms = 0) => new Promise((r) => setTimeout(r, ms))
  * sahne büyük çizilip küçültülür (kenar yumuşatma), cihaz modelleri ve metinler hazır olana kadar beklenir,
  * düzenleme yardımcıları (tutamaç, kılavuz) çıktıda görünmez.
  */
-export async function exportImage(project: Project, options: ImageOptions, time = 0): Promise<Blob> {
+export async function exportImage(project: Project, options: ImageOptions, time = 0, extras: { watermark?: boolean } = {}): Promise<Blob> {
   const bridge = exportBridge.current
   if (!bridge) throw new Error(i18n.t('exportVideo.notReady'))
   const { width, height } = imageSize(project, options.scale)
   const ss = supersampleFactor(width, height)
+  // ücretsiz planın köşe etiketi (çıktı düğmesi ister)
+  const watermark = extras.watermark ? await createWatermark(width, height) : null
   const restore = bridge.begin(Math.round(width * ss), Math.round(height * ss))
   try {
     // yeni çözünürlüğün (ve efekt katmanlarının yeniden boyutlanmasının) uygulanmasını bekle
     await wait(100)
     if (pendingModelLoads.size) await Promise.all(pendingModelLoads)
+    if (pendingImageLoads.size) await Promise.all(pendingImageLoads)
     renderTimeOverride.current = time
     if (prepareFrameHooks.size) await Promise.all([...prepareFrameHooks].map((hook) => hook(time)))
     bridge.renderFrame()
@@ -55,6 +59,7 @@ export async function exportImage(project: Project, options: ImageOptions, time 
     ctx.imageSmoothingQuality = 'high'
     // çizimden hemen sonra (aynı görevde) kopyala
     ctx.drawImage(bridge.canvas, 0, 0, width, height)
+    watermark?.draw(ctx)
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, options.format === 'png' ? 'image/png' : 'image/jpeg', options.format === 'jpg' ? 0.92 : undefined),
     )

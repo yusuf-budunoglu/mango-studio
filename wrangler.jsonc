@@ -2,14 +2,17 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mango-studio",
   "compatibility_date": "2026-09-30",
-  // MCP sunucusu (Claude Code bağlantısı) ve editördeki yapay zekâ ucu: yalnızca /mcp, OAuth keşif adresleri ve
-  // /api/* Worker'a gelir, gerisi statik site. Anthropic anahtarı burada yazmaz: `npx wrangler secret put ANTHROPIC_API_KEY`
-  // (yerelde `.dev.vars` dosyası).
+  // MCP sunucusu (Claude Code bağlantısı), editördeki yapay zekâ ucu ve ödeme uçları (/api/billing/*): yalnızca /mcp,
+  // OAuth keşif adresleri ve /api/* Worker'a gelir, gerisi statik site. Gizli değerler burada yazmaz, tek tek
+  // `npx wrangler secret put <AD>` ile verilir (yerelde `.dev.vars` dosyası): ANTHROPIC_API_KEY, STRIPE_SECRET_KEY,
+  // STRIPE_WEBHOOK_SECRET, SUPABASE_SECRET_KEY.
   "main": "src/mcp/worker.ts",
   "vars": {
     // Herkese açık değerler (tarayıcıdaki uygulamaya da gömülü); erişimi RLS sınırlar. .env ile aynı olmalı.
     "SUPABASE_URL": "https://vwizhnlkfzlzyxhzqobj.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_v8DIJAc3CsE2Nen_spqnNg_9Sp4jb3z"
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_v8DIJAc3CsE2Nen_spqnNg_9Sp4jb3z",
+    // Ödemeler Stripe Managed Payments ile (satıcı Stripe / Link; vergi ve itirazlar onlarda). "false": normal ödeme.
+    "STRIPE_MANAGED_PAYMENTS": "true"
   },
   "assets": {
     "directory": "./dist",

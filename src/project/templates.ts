@@ -11,7 +11,11 @@ import { buildCrystal } from './crystal'
 import { buildLaunchAd } from './launchAd'
 import { buildIconCloseup, buildIconCloseupImage } from './iconCloseup'
 import { buildFoldRock } from './foldRock'
+import { buildGiftIdeas } from './giftIdeas'
 import { buildFeatureDrop } from './featureDrop'
+import { buildComingSoon } from './comingSoon'
+import { buildHiddenGem } from './hiddenGem'
+import { buildProductStory } from './productStory'
 import i18n, { currentNumberLocale } from '../i18n'
 import { PROJECT_VERSION, type Block, type CameraTrack, type Layer, type Project } from '../engine/types'
 
@@ -74,12 +78,15 @@ export function buildUnfitted(template: Template): Project {
 export function fitClip(layer: Layer, total: number): Layer {
   const step = 1 / 60
   const full = { ...layer, start: 0, duration: total }
+  // Görünürlük taramasında yalnızca opaklık okunur: `move` bloğu opaklığa dokunmaz, atlanır (kare kare `move` blokları
+  // olan şablonlarda tarama çok yavaşlıyordu; sonuç aynı).
+  const probe = { ...full, blocks: layer.blocks.filter((b) => b.preset !== 'move') }
   let first = -1
   let last = -1
   // Tam sayı adımlarla örnekle: art arda toplamak kayan nokta hatası biriktirip kesme anını kaçırıyordu.
   for (let i = 0; i < Math.round(total / step); i++) {
     const t = i * step
-    if (evaluateLayer(full, t).opacity > 0.001) {
+    if (evaluateLayer(probe, t).opacity > 0.001) {
       if (first < 0) first = t
       last = t
     }
@@ -121,6 +128,8 @@ export interface Template {
   tags: string[]
   /** döngü videosunda ses var (ses efektli şablon): önizleme sayfasında ses düğmesi çıkar */
   sound?: boolean
+  /** premium şablon: yalnızca ücretli planlarda kullanılır (`billing/plans.ts` `premiumTemplates`); önizlemesi herkese açık */
+  premium?: boolean
   build: () => Project
 }
 
@@ -471,6 +480,7 @@ export const TEMPLATES: Template[] = [
     seconds: 27.6,
     accent: '#56eeba',
     tags: ['app-promo', 'dark', 'cinematic', 'vertical', '3d-device'],
+    premium: true,
     build: () => buildCrystal({ t, b, layer, camera, project }),
   },
   {
@@ -479,6 +489,7 @@ export const TEMPLATES: Template[] = [
     seconds: 33,
     accent: '#FF7A00',
     tags: ['saas', 'ad', 'light', 'ui', 'typography', '3d-device'],
+    premium: true,
     sound: true,
     build: () => buildLaunchAd({ t, b, layer, camera, project }),
   },
@@ -488,8 +499,37 @@ export const TEMPLATES: Template[] = [
     seconds: 25.3,
     accent: '#5365EF',
     tags: ['saas', 'ad', 'light', 'vertical', 'ui', 'typography', '3d-device'],
+    premium: true,
     sound: true,
     build: () => buildFeatureDrop({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'coming-soon',
+    format: '4:5',
+    seconds: 6.3,
+    accent: '#FF5A1F',
+    tags: ['saas', 'ad', 'light', 'vertical', 'ui', 'typography'],
+    premium: true,
+    sound: true,
+    build: () => buildComingSoon({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'hidden-gem',
+    format: '16:9',
+    seconds: 9.5,
+    accent: '#4758DD',
+    tags: ['saas', 'ad', 'typography', 'ui', '3d-device'],
+    sound: true,
+    build: () => buildHiddenGem({ t, b, layer, camera, project }),
+  },
+  {
+    id: 'product-story',
+    format: '16:9',
+    seconds: 20.8,
+    accent: '#5B64DB',
+    tags: ['saas', 'ad', 'light', 'ui', 'typography', '3d-device'],
+    sound: true,
+    build: () => buildProductStory({ t, b, layer, camera, project }),
   },
   {
     id: 'icon-closeup',
@@ -509,12 +549,23 @@ export const TEMPLATES: Template[] = [
     build: () => buildIconCloseupImage({ t, b, layer, camera, project }),
   },
   {
+    id: 'gift-ideas',
+    format: '16:9',
+    seconds: 7.1,
+    accent: '#9C5DA0',
+    tags: ['holiday', 'ad', 'light', 'ui', 'typography', '3d-device'],
+    premium: true,
+    sound: true,
+    build: () => buildGiftIdeas({ t, b, layer, camera, project }),
+  },
+  {
     id: 'fold-rock',
     format: '2:3',
     seconds: DESIGN_DURATION,
     mode: 'design',
     accent: '#FF7A00',
     tags: ['image', 'app-promo', 'dark', 'cinematic', 'vertical', 'foldable', '3d-device'],
+    premium: true,
     build: () => buildFoldRock({ t, b, layer, camera, project }),
   },
 ]

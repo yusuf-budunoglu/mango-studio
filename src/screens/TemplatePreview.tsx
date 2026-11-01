@@ -9,6 +9,7 @@ import { createFromTemplate } from '../project/actions'
 import { createFromPublished, getPublished, listPublished, unpublishTemplate, type PublishedTemplate } from '../project/publishedTemplates'
 import { TEMPLATES, templateAbout, type Template } from '../project/templates'
 import { navigate, routeToPath } from '../router'
+import { usePlan } from '../store/planStore'
 import { useProfileStore } from '../store/profileStore'
 import { useUiStore } from '../store/uiStore'
 
@@ -75,6 +76,7 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
   const favorite = useUiStore((s) => s.favorites.includes(templateId))
   const toggleFavorite = useUiStore((s) => s.toggleFavorite)
   const isAdmin = useProfileStore((s) => s.isAdmin)
+  const { plan } = usePlan()
   const video = useRef<HTMLVideoElement>(null)
   const [paused, setPaused] = useState(false)
   // Video sessiz başlar (tarayıcılar sesli otomatik oynatmaya izin vermez); ses düğmesiyle açılır.
@@ -117,6 +119,8 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
   }
 
   const card = cardInfo(template)
+  // Premium şablon ücretsiz planda kullanılamaz: düğme fiyat sayfasına götürür, önizleme açık kalır.
+  const locked = !!card.premium && !plan.premiumTemplates
   const base = import.meta.env.BASE_URL
   const [w, h] = card.ratio
   const seconds = card.seconds.toLocaleString(i18n.language, { maximumFractionDigits: 1 })
@@ -187,9 +191,15 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
                 <path d="M12 20.5s-7.5-4.6-9.2-9.3C1.7 8 3.9 4.5 7.4 4.5c2 0 3.4 1.1 4.6 2.7 1.2-1.6 2.6-2.7 4.6-2.7 3.5 0 5.7 3.5 4.6 6.7-1.7 4.7-9.2 9.3-9.2 9.3z" />
               </svg>
             </button>
-            <button type="button" className="primary tp-use" onClick={() => void use()} disabled={creating}>
-              {creating ? t('templatePreview.creating') : t('templatePreview.useFree')}
-            </button>
+            {locked ? (
+              <a className="button-primary tp-use" href={routeToPath({ screen: 'pricing' })}>
+                {t('templatePreview.upgradeToUse')}
+              </a>
+            ) : (
+              <button type="button" className="primary tp-use" onClick={() => void use()} disabled={creating}>
+                {creating ? t('templatePreview.creating') : t(card.premium ? 'templatePreview.use' : 'templatePreview.useFree')}
+              </button>
+            )}
           </div>
         </header>
         {error && <p className="page-error">{error}</p>}
@@ -221,7 +231,7 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
             ) : card.posterUrl ? (
               <img src={card.posterUrl} alt="" />
             ) : (
-              <span className="tcard-fallback" style={{ background: `radial-gradient(circle at 30% 30%, ${card.accent}, #0a0a0b 75%)` }} />
+              <span className="tcard-fallback" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${card.accent} 35%, var(--panel)), var(--panel) 70%)` }} />
             )}
           </div>
         </div>
@@ -245,7 +255,7 @@ export function TemplatePreview({ templateId }: { templateId: string }) {
                 </div>
                 <div>
                   <dt>{t('templatePreview.price')}</dt>
-                  <dd>{t('templatePreview.free')}</dd>
+                  <dd>{t(card.premium ? 'templatePreview.paidPlans' : 'templatePreview.free')}</dd>
                 </div>
               </dl>
             </section>

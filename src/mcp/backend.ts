@@ -46,6 +46,10 @@ export function createSupabaseBackend(options: { url: string; publishableKey: st
     const text = await res.text()
     if (!res.ok) {
       if (text.includes('storage_quota_exceeded')) throw new BackendError('The storage quota of this account is full. Delete files in the Studio or upgrade the plan.')
+      if (text.includes('mcp_project_limit_reached'))
+        throw new BackendError(
+          'This account is on the free plan, which includes 3 new Claude-built projects per month, and they are used up. Do not retry. You can still edit an existing project (pass its id to save_project). Tell the user they can upgrade for unlimited Claude projects at https://mangostudio.design/pricing.',
+        )
       throw new BackendError(`Mango Studio could not complete the request (${res.status}): ${text.slice(0, 300)}`)
     }
     return text ? (JSON.parse(text) as unknown) : undefined

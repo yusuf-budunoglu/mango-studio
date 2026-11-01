@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { creditPeriod, creditsLeft, DEFAULT_PLAN, getPlan, isPlanId, type PlanId } from '../billing/plans'
 
-// Ödeme sağlayıcısı bağlanana kadar plan ve kredi kullanımı bu tarayıcıda tutulur.
-// Gerçek sınır sunucuda uygulanmalı: localStorage kullanıcı tarafından değiştirilebilir.
+// Plan ve kredi göstergesi. Girişli üyede tek kaynak sunucu: `profileStore` plan, dönem başı ve harcanan krediyi
+// `billing_status` ile okuyup `applyServer` ile buraya yazar (plan Stripe aboneliğinden gelir). Buradaki değer yalnızca
+// arayüz içindir (localStorage kullanıcı tarafından değiştirilebilir); yapay zekâ ve depolama sınırı sunucuda uygulanır.
 const PLAN_KEY = 'motion-studio.plan'
 
 interface Saved {
@@ -47,6 +48,8 @@ function write(saved: Saved) {
 
 interface PlanStore extends Saved {
   setPlan: (planId: PlanId) => void
+  /** Sunucudaki plan, kredi döneminin başı ve o dönemde harcanan kredi. */
+  applyServer: (server: { planId: PlanId; anchor: number; used: number }) => void
   /** Yapay zekâ işlemi için kredi düşer; yetmezse hiçbir şey düşmez ve false döner. */
   spendCredits: (amount: number) => boolean
   /** Dönem dolduysa kredileri yeniler (uzun açık kalan sekmeler için). */
@@ -66,6 +69,11 @@ export const usePlanStore = create<PlanStore>()((set, get) => {
     ...read(),
     setPlan: (planId) => {
       if (planId !== get().planId) commit(fresh(planId))
+    },
+    applyServer: ({ planId, anchor, used }) => {
+      const next = { planId, anchor, used, periodStart: creditPeriod(anchor, Date.now()).start }
+      const now = get()
+      if (next.planId !== now.planId || next.anchor !== now.anchor || next.used !== now.used || next.periodStart !== now.periodStart) commit(next)
     },
     spendCredits: (amount) => {
       const saved = current()

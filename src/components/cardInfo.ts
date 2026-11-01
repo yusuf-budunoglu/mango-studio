@@ -16,6 +16,8 @@ export interface CardInfo {
   accent: string
   /** döngü videosu sesli: önizleme sayfasında ses düğmesi gösterilir */
   sound?: boolean
+  /** premium şablon: kartta rozet, kullanmak için ücretli plan */
+  premium?: boolean
 }
 
 export function cardInfo(template: Template | PublishedTemplate): CardInfo {
@@ -33,6 +35,7 @@ export function cardInfo(template: Template | PublishedTemplate): CardInfo {
       loopUrl: template.mode === 'design' ? undefined : `${base}templates/loops/${template.id}.mp4`,
       accent: template.accent,
       sound: template.sound,
+      premium: template.premium,
     }
   }
   return {

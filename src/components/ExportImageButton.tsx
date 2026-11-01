@@ -2,9 +2,12 @@ import { Download } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { logExport } from '../cloud/exportLog'
+import { exportBlocked, useExportQuotaStore } from '../cloud/exportQuota'
 import { canScale, DEFAULT_IMAGE, exportImage, imageSize, type ImageOptions } from '../export/exportImage'
 import { safeFileName } from '../persistence/thumbnail'
+import { usePlan } from '../store/planStore'
 import { useProjectStore } from '../store/projectStore'
+import { ExportQuotaNote } from './ExportQuotaNote'
 
 type Status = { kind: 'idle' } | { kind: 'running' } | { kind: 'error'; message: string }
 
@@ -23,10 +26,12 @@ function readOptions(): ImageOptions {
 export function ExportImageButton() {
   const { t } = useTranslation()
   const project = useProjectStore((s) => s.project)
+  const { plan } = usePlan()
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState<ImageOptions>(readOptions)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const popover = useRef<HTMLDivElement>(null)
+  const blocked = useExportQuotaStore((s) => exportBlocked(s.quota))
   // 2× GPU sınırını aşıyorsa 1×'e düşer (kayıtlı tercih korunur)
   const scale = canScale(project, options.scale) ? options.scale : 1
   const size = imageSize(project, scale)
@@ -40,6 +45,11 @@ export function ExportImageButton() {
     return () => window.removeEventListener('mousedown', onDown)
   }, [open, status.kind])
 
+  // Pencere açılınca aylık çıktı sayısı sunucudan okunur (video çıktılarıyla ortak sayaç).
+  useEffect(() => {
+    if (open) void useExportQuotaStore.getState().refresh()
+  }, [open])
+
   const choose = (patch: Partial<ImageOptions>) => {
     const next = { ...options, ...patch }
     setOptions(next)
@@ -51,16 +61,18 @@ export function ExportImageButton() {
   }
 
   const run = async () => {
+    if (exportBlocked(await useExportQuotaStore.getState().refresh())) return
     setStatus({ kind: 'running' })
     try {
       const current = useProjectStore.getState().project
-      const blob = await exportImage(current, { ...options, scale })
+      const blob = await exportImage(current, { ...options, scale }, 0, { watermark: plan.watermark })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `${safeFileName(current.name)}${scale > 1 ? `@${scale}x` : ''}.${options.format}`
       a.click()
       logExport({ kind: 'image', format: options.format, ...imageSize(current, scale) })
+      useExportQuotaStore.getState().count()
       setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus({ kind: 'idle' })
       setOpen(false)
@@ -98,9 +110,12 @@ export function ExportImageButton() {
             </div>
           </div>
           <p className="hint">{t(options.format === 'png' ? 'exportImage.pngHint' : 'exportImage.jpgHint', { width: size.width, height: size.height })}</p>
-          <button type="button" className="primary" onClick={() => void run()} disabled={status.kind === 'running'}>
-            {status.kind === 'running' ? t('exportImage.running') : t('exportImage.start', { format: options.format.toUpperCase() })}
-          </button>
+          <ExportQuotaNote />
+          {!blocked && (
+            <button type="button" className="primary" onClick={() => void run()} disabled={status.kind === 'running'}>
+              {status.kind === 'running' ? t('exportImage.running') : t('exportImage.start', { format: options.format.toUpperCase() })}
+            </button>
+          )}
           {status.kind === 'error' && <p className="export-error">{status.message}</p>}
         </div>
       )}

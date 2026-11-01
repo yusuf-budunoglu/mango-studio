@@ -46,6 +46,8 @@ interface ProjectStore {
   pasteBlocks: (at: number) => void
   duplicateBlocks: (blockIds: string[]) => void
   updateLayer: (layerId: string, patch: Partial<Omit<Layer, 'id' | 'blocks'>>) => void
+  /** Birden çok katmanı tek geri alma adımında günceller (marka kitini uygulama). */
+  patchLayers: (patches: Record<string, Partial<Omit<Layer, 'id' | 'blocks'>>>) => void
   /**
    * Yapay zekânın döndürdüğü düzenleme: klip aralığı, katman alanları ve blok ekleme/değiştirme/silme birlikte,
    * tek geri alma adımında. Blok zamanları (yeni) klibin başına göre.
@@ -285,6 +287,12 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({
           project: { ...s.project, layers: s.project.layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l)) },
         })),
+      patchLayers: (patches) => {
+        if (!Object.keys(patches).length) return
+        set((s) => ({
+          project: { ...s.project, layers: s.project.layers.map((l) => (patches[l.id] ? { ...l, ...patches[l.id] } : l)) },
+        }))
+      },
       applyLayerEdit: (layerId, edit) => {
         // Klip önce: kırpma blokları mutlak yerinde tutar, sonraki blok zamanları yeni klibe göredir.
         // İki `set` aynı anda geldiği için geri almada tek adımdır (bkz. `coalesce`).

@@ -179,6 +179,8 @@ export interface LayerState {
   softHide: number
   /** soft-hide kenarının genişliği, metin genişliğine oranla */
   hideSoftness: number
+  /** blur-in / blur-out: bulanıklık yarıçapı (sahne birimi, katmanın kendi ölçeğinde; 0 = net). Metin ve görselde çizilir. */
+  blur: number
   /** harf aralığına eklenen (tracking-in) */
   letterSpacing: number
   /** metnin sonunda yazı imleci (|) görünsün mü */

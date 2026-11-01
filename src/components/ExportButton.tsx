@@ -2,12 +2,14 @@ import { Download, Lock } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { logExport } from '../cloud/exportLog'
+import { exportBlocked, useExportQuotaStore } from '../cloud/exportQuota'
 import { cheapestPlanFor, clampExport, RESOLUTION_LABEL, RESOLUTIONS, type Fps } from '../billing/plans'
 import { DEFAULT_EXPORT, ExportCanceledError, exportSize, exportVideo, type ExportOptions } from '../export/exportVideo'
 import { safeFileName } from '../persistence/thumbnail'
 import { routeToPath } from '../router'
 import { usePlan } from '../store/planStore'
 import { useProjectStore } from '../store/projectStore'
+import { ExportQuotaNote } from './ExportQuotaNote'
 
 type Status = { kind: 'idle' } | { kind: 'running'; progress: number } | { kind: 'error'; message: string }
 
@@ -24,7 +26,8 @@ function readOptions(): ExportOptions {
 
 /**
  * "Dışa aktar" düğmesi ve seçenek penceresi: çözünürlük, kare hızı, format; ilerleme ve iptal.
- * Plan dışındaki çözünürlük ve kare hızları kilitli görünür; kayıtlı tercih plana indirilir.
+ * Plan dışındaki çözünürlük ve kare hızları kilitli görünür; kayıtlı tercih plana indirilir. Aylık çıktı sınırı
+ * (ücretsiz plan) dolmuşsa başlatma düğmesi yerine yükseltme bağlantısı çıkar.
  */
 export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   const { t } = useTranslation()
@@ -39,6 +42,7 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const abort = useRef<AbortController | null>(null)
   const popover = useRef<HTMLDivElement>(null)
+  const blocked = useExportQuotaStore((s) => exportBlocked(s.quota))
   // Kayıtlı tercih korunur (plan yükselince geri gelir); kullanılan ve gösterilen, planın izin verdiği.
   const effective = clampExport(plan, options)
   const size = exportSize(project, effective.resolution)
@@ -55,6 +59,11 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
     return () => window.removeEventListener('mousedown', onDown)
   }, [open, status.kind])
 
+  // Pencere açılınca aylık çıktı sayısı sunucudan okunur.
+  useEffect(() => {
+    if (open) void useExportQuotaStore.getState().refresh()
+  }, [open])
+
   const choose = (patch: Partial<ExportOptions>) => {
     const next = { ...options, ...patch }
     setOptions(next)
@@ -66,18 +75,21 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
   }
 
   const run = async () => {
+    // Başka sekmede alınmış çıktılar da sayılsın diye başlamadan hemen önce yeniden sorulur.
+    if (exportBlocked(await useExportQuotaStore.getState().refresh())) return
     beforeExport()
     abort.current = new AbortController()
     setStatus({ kind: 'running', progress: 0 })
     try {
       const current = useProjectStore.getState().project
-      const blob = await exportVideo(current, effective, (progress) => setStatus({ kind: 'running', progress }), abort.current.signal)
+      const blob = await exportVideo(current, effective, (progress) => setStatus({ kind: 'running', progress }), abort.current.signal, { watermark: plan.watermark })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `${safeFileName(current.name)}.${options.container}`
       a.click()
       logExport({ kind: 'video', format: options.container, ...exportSize(current, effective.resolution), fps: effective.fps, duration: current.duration })
+      useExportQuotaStore.getState().count()
       setTimeout(() => URL.revokeObjectURL(url), 10_000)
       setStatus({ kind: 'idle' })
       setOpen(false)
@@ -148,9 +160,14 @@ export function ExportButton({ beforeExport }: { beforeExport: () => void }) {
               </button>
             </>
           ) : (
-            <button type="button" className="primary" onClick={() => void run()}>
-              {t('exportVideo.start')}
-            </button>
+            <>
+              <ExportQuotaNote />
+              {!blocked && (
+                <button type="button" className="primary" onClick={() => void run()}>
+                  {t('exportVideo.start')}
+                </button>
+              )}
+            </>
           )}
           {status.kind === 'error' && <p className="export-error">{status.message}</p>}
         </div>

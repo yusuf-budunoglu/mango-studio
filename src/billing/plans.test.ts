@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import quotaSql from '../../supabase/migrations/20261002000001_studio_share_publish.sql?raw'
+import perksSql from '../../supabase/migrations/20261014000002_plan_perks.sql?raw'
 import { addMonths, cheapestPlanFor, clampExport, creditPeriod, creditsLeft, exportAllowed, formatBytes, getPlan, LAUNCH_DISCOUNT, PLANS } from './plans'
 
 const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime()
@@ -51,6 +52,30 @@ describe('planlar', () => {
     expect(creditPeriod(jan31, at(2026, 2, 27))).toEqual({ start: jan31, end: addMonths(jan31, 1) })
     expect(creditPeriod(jan31, at(2026, 3, 5)).start).toBe(addMonths(jan31, 1))
     expect(creditPeriod(jan31, at(2026, 7, 31)).start).toBe(addMonths(jan31, 6))
+  })
+
+  it('aylık çıktı: ücretsiz planda 5, ücretli planlarda sınırsız; sunucudaki export_limit ile aynı', () => {
+    expect(PLANS.map((p) => p.exportsPerMonth)).toEqual([5, null, null, null])
+    const fn = perksSql.slice(perksSql.indexOf('function public.export_limit'), perksSql.indexOf('function public.export_status'))
+    const unlimited = fn.match(/p_plan in \(([^)]*)\) then null/)?.[1].replace(/['\s]/g, '').split(',')
+    expect(unlimited).toEqual(PLANS.filter((p) => p.exportsPerMonth === null).map((p) => p.id))
+    expect(Number(fn.match(/else (\d+) end/)?.[1])).toBe(getPlan('free').exportsPerMonth)
+  })
+
+  it('Claude projeleri: ücretsiz planda ayda 3, ücretli planlarda sınırsız; sunucudaki mcp_project_limit ile aynı', () => {
+    expect(PLANS.map((p) => p.mcpProjects)).toEqual([3, null, null, null])
+    const fn = perksSql.slice(perksSql.indexOf('function public.mcp_project_limit'), perksSql.indexOf('function public.enforce_mcp_project_limit'))
+    const unlimited = fn.match(/p_plan in \(([^)]*)\) then null/)?.[1].replace(/['\s]/g, '').split(',')
+    expect(unlimited).toEqual(PLANS.filter((p) => p.mcpProjects === null).map((p) => p.id))
+    expect(Number(fn.match(/else (\d+) end/)?.[1])).toBe(getPlan('free').mcpProjects)
+  })
+
+  it('filigran yalnızca ücretsiz planda; premium şablonlar ücretli planlarda; marka kiti Pro ve Unlimited (sunucudaki can_use_brand_kit ile aynı)', () => {
+    expect(PLANS.filter((p) => p.watermark).map((p) => p.id)).toEqual(['free'])
+    expect(PLANS.filter((p) => p.premiumTemplates).map((p) => p.id)).toEqual(['starter', 'pro', 'unlimited'])
+    const fn = perksSql.slice(perksSql.indexOf('function public.can_use_brand_kit'), perksSql.indexOf('create table public.brand_kits'))
+    const allowed = fn.match(/'free'\) in \(([^)]*)\)/)?.[1].replace(/['\s]/g, '').split(',')
+    expect(allowed).toEqual(PLANS.filter((p) => p.brandKit).map((p) => p.id))
   })
 
   it('depolama kotası: 500 MB / 5 GB / 20 GB / 100 GB, sunucudaki storage_quota ile aynı', () => {

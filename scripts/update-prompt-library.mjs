@@ -105,7 +105,8 @@ function detailFrom(html) {
   const resolve = (value) => (/^\$[0-9a-f]+$/.test(value) && chunks[value.slice(1)] != null ? chunks[value.slice(1)] : value)
   const meta = {}
   for (const m of data.matchAll(/"dt",null,\{"className":"[^"]*","children":"([^"]+)"\}\],\["\$","dd",null,\{"className":"[^"]*","children":"((?:[^"\\]|\\.)*)"/g)) meta[m[1]] = unescape(m[2])
-  const prompt = data.match(/"text":"((?:[^"\\]|\\.)*)","label":"Copy prompt"/)
+  // galeri Ekim 2026'da alanı değiştirdi: önce `"text":…,"label":"Copy prompt"` idi
+  const prompt = data.match(/"prompt":"((?:[^"\\]|\\.)*)","translation":/) ?? data.match(/"text":"((?:[^"\\]|\\.)*)","label":"Copy prompt"/)
   return {
     post: data.match(/"href":"(https:\/\/(?:x|twitter)\.com\/[^"/]+\/status\/\d+)"/)?.[1],
     prompt: prompt ? resolve(unescape(prompt[1])) : undefined,
@@ -152,7 +153,7 @@ async function scanRepo() {
   if (!Array.isArray(list) || list.length < MIN_REPO_ITEMS) throw new Error(`Depo listesinde yalnızca ${list?.length} kayıt var; biçim değişmiş olabilir. Liste değiştirilmedi.`)
   const gallery = new Map()
   const html = await get(REPO_GALLERY)
-  for (const match of html.matchAll(/\{slug:"([^"]+)",authorHandle:[\s\S]*?remakePreviewUrl:"[^"]*"\}/g)) {
+  for (const match of html.matchAll(/\{slug:"([^"]+)",authorHandle:[\s\S]*?remakePreviewUrl:"[^"]*"[^{}]*\}/g)) {
     const width = Number(match[0].match(/,width:(\d+)/)?.[1])
     const height = Number(match[0].match(/,height:(\d+)/)?.[1])
     const preview = match[0].match(/,originalPreviewUrl:"([^"]+)"/)?.[1]

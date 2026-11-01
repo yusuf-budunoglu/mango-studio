@@ -77,6 +77,19 @@ export const PRESETS: Record<string, Preset> = {
     params: [distance(2)],
     apply: (s, e, _p, { distance }) => { s.x += (1 - e) * distance; s.opacity *= Math.min(1, e * 1.4) },
   },
+  // Odak dışından gelir gibi bulanıktan netleşerek belirir (blur-out: tersi). `amount` başlangıçtaki bulanıklık yarıçapı,
+  // sahne birimiyle ve katmanın kendi ölçeğinde (0.12 ≈ 0.4 boyundaki yazıda harf kalınlığının iki katı). Opaklık ilk
+  // yarıda dolar (çıkışta son yarıda söner): bulanık hal görünsün diye. Metin ve görsel katmanlarında.
+  'blur-in': {
+    target: 'layer', category: 'in', defaultEasing: 'ease-out', defaultDuration: 0.5, kinds: ['text', 'image'],
+    params: [{ key: 'amount', default: 0.12, min: 0, max: 2, step: 0.01 }],
+    apply: (s, e, _p, { amount }) => { s.blur = Math.max(s.blur, (1 - e) * amount); s.opacity *= Math.min(1, e * 2) },
+  },
+  'blur-out': {
+    target: 'layer', category: 'out', defaultEasing: 'ease-in', defaultDuration: 0.4, kinds: ['text', 'image'],
+    params: [{ key: 'amount', default: 0.12, min: 0, max: 2, step: 0.01 }],
+    apply: (s, e, _p, { amount }) => { s.blur = Math.max(s.blur, e * amount); s.opacity *= Math.min(1, (1 - e) * 2) },
+  },
   'scale-in': {
     target: 'layer', category: 'in', defaultEasing: 'ease-out-expo', defaultDuration: 0.8,
     apply: (s, e) => { s.scale *= 0.6 + 0.4 * e; s.opacity *= e },

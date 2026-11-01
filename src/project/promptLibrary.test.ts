@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import libraryJson from '../../public/prompts/library.json?raw'
-import { DETAILED_LENGTH, isPostUrl, matchesPromptFilter, promptCardRatio, type LibraryPrompt } from './promptLibrary'
+import { DETAILED_LENGTH, isPostUrl, matchesPromptFilter, newestFirst, promptCardRatio, type LibraryPrompt } from './promptLibrary'
 
 const library = JSON.parse(libraryJson) as LibraryPrompt[]
 // yalnızca dosya adları gerekli: glob tembel, dosyalar yüklenmez
@@ -51,6 +51,19 @@ describe('prompt kütüphanesi', () => {
     // kare video ne yatay ne dikey
     expect(matchesPromptFilter(sample({ width: 1080, height: 1080 }), 'landscape')).toBe(false)
     expect(matchesPromptFilter(sample({ width: 1080, height: 1080 }), 'vertical')).toBe(false)
+  })
+
+  it('yeniden eskiye sıralar; aynı günde sonra paylaşılan önce, liste değişmez', () => {
+    const list = [
+      sample({ id: 'eski', date: '2026-09-25', postUrl: 'https://x.com/a/status/900' }),
+      sample({ id: 'yeni-erken', date: '2026-10-05', postUrl: 'https://x.com/a/status/950' }),
+      sample({ id: 'yeni-gec', date: '2026-10-05', postUrl: 'https://x.com/a/status/1200' }),
+    ]
+    expect(newestFirst(list).map((p) => p.id)).toEqual(['yeni-gec', 'yeni-erken', 'eski'])
+    expect(list[0].id).toBe('eski')
+    const sorted = newestFirst(library)
+    expect(sorted).toHaveLength(library.length)
+    for (let i = 1; i < sorted.length; i++) expect(sorted[i - 1].date >= sorted[i].date, sorted[i].id).toBe(true)
   })
 
   it('kart oranı aşırı uzun ya da yayvan videoda sınırlanır', () => {

@@ -4,7 +4,7 @@ import { routeToPath } from '../router'
 
 /** Sayfalarda görünen iletişim adresi ve son güncelleme tarihi; metinler `legal.*` çevirilerinde. */
 export const LEGAL_CONTACT = 'yusufbudunoglucrs@gmail.com'
-const UPDATED = new Date(2026, 9, 5)
+const UPDATED = new Date(2026, 9, 14)
 
 /** Bölüm sırası; her bölümün `title` ve `body` metni çeviri dosyasında (`body`: satır başına bir paragraf). */
 const SECTIONS = {

@@ -1,4 +1,4 @@
-// Abonelik planları: fiyat, video çıktısı sınırları ve aylık yapay zekâ kredisi.
+// Abonelik planları: fiyat, çıktı sınırları (çözünürlük, kare hızı, aylık çıktı sayısı) ve aylık yapay zekâ kredisi.
 // Ödeme henüz bağlı değil; sınırlar ve krediler buradan okunur. Yapay zekâ kredisini sunucu da sayar (ai_usage göçü, aynı rakamlar).
 
 export type Resolution = 720 | 1080 | 1440 | 2160
@@ -22,16 +22,29 @@ export interface Plan {
   aiMessages: number
   /** yüklenen dosyalar için depolama kotası (bayt, 1 GB = 10⁹); sunucudaki `storage_quota` ile aynı olmalı */
   storageBytes: number
+  /**
+   * aylık çıktı sınırı (video + görsel, yalnızca başarılı çıktılar); null = sınırsız. Sunucudaki `export_limit` ile
+   * aynı olmalı. Çıktı tarayıcıda üretildiği için sınır arayüzde uygulanır (`cloud/exportQuota.ts`).
+   */
+  exportsPerMonth: number | null
+  /** çıktının köşesinde küçük "mangostudio.design" etiketi (`export/watermark.ts`); ücretli planlarda yok */
+  watermark: boolean
+  /** Claude (MCP) ile ayda kurulabilecek yeni proje; null = sınırsız. Sunucudaki `mcp_project_limit` ile aynı olmalı. */
+  mcpProjects: number | null
+  /** premium şablonları (`Template.premium`) kullanabilir */
+  premiumTemplates: boolean
+  /** marka kiti (`project/brandKit.ts`); sunucudaki `can_use_brand_kit` ile aynı olmalı */
+  brandKit: boolean
 }
 
 /** Çıkışa özel indirim: tüm ücretli planlar yarı fiyatına. */
 export const LAUNCH_DISCOUNT = 0.5
 
 export const PLANS: Plan[] = [
-  { id: 'free', price: 0, launchPrice: 0, resolutions: [1080], fps: [30], aiCredits: 0, aiMessages: 0, storageBytes: 500e6 },
-  { id: 'starter', price: 9.99, launchPrice: 4.99, resolutions: [720, 1080, 1440], fps: [30, 60], aiCredits: 150, aiMessages: 300, storageBytes: 5e9 },
-  { id: 'pro', price: 19.99, launchPrice: 9.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: 500, aiMessages: 750, storageBytes: 20e9 },
-  { id: 'unlimited', price: 39.99, launchPrice: 19.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: null, aiMessages: 1500, storageBytes: 100e9 },
+  { id: 'free', price: 0, launchPrice: 0, resolutions: [1080], fps: [30], aiCredits: 0, aiMessages: 0, storageBytes: 500e6, exportsPerMonth: 5, watermark: true, mcpProjects: 3, premiumTemplates: false, brandKit: false },
+  { id: 'starter', price: 9.99, launchPrice: 4.99, resolutions: [720, 1080, 1440], fps: [30, 60], aiCredits: 150, aiMessages: 300, storageBytes: 5e9, exportsPerMonth: null, watermark: false, mcpProjects: null, premiumTemplates: true, brandKit: false },
+  { id: 'pro', price: 19.99, launchPrice: 9.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: 500, aiMessages: 750, storageBytes: 20e9, exportsPerMonth: null, watermark: false, mcpProjects: null, premiumTemplates: true, brandKit: true },
+  { id: 'unlimited', price: 39.99, launchPrice: 19.99, resolutions: [720, 1080, 1440, 2160], fps: [30, 60], aiCredits: null, aiMessages: 1500, storageBytes: 100e9, exportsPerMonth: null, watermark: false, mcpProjects: null, premiumTemplates: true, brandKit: true },
 ]
 
 export const DEFAULT_PLAN: PlanId = 'free'
